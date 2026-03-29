@@ -455,8 +455,14 @@ function openQuick(){document.getElementById('gpsLoading').style.display='none';
 function openFull(pre={}){
   editId=null;selTags=pre.tags?[...pre.tags]:[];pendingCoords=null;
   document.getElementById('addTitle').textContent='✍️ Add Place';
-  document.getElementById('pName').value=pre.name||'';document.getElementById('pLocation').value=pre.location||'';document.getElementById('pNotes').value=pre.notes||'';document.getElementById('pLink').value=pre.link||'';
-  document.getElementById('igUrl').value='';document.getElementById('igResult').style.display='none';document.getElementById('btnDelete').style.display='none';
+  document.getElementById('pName').value=pre.name||'';
+  document.getElementById('pLocation').value=pre.location||'';
+  document.getElementById('pNotes').value=pre.notes||'';
+  document.getElementById('pLink').value=pre.link||'';
+  document.getElementById('igResult').style.display='none';
+  document.getElementById('uploadContent').style.display='block';
+  document.getElementById('scanLoading').style.display='none';
+  document.getElementById('btnDelete').style.display='none';
   document.querySelectorAll('.topt').forEach(t=>t.classList.toggle('sel',selTags.includes(t.dataset.t)));
   openOverlay('addOverlay');
 }
@@ -464,8 +470,14 @@ function editPlace(id){
   const p=places.find(x=>x._id===id);if(!p)return;
   editId=id;selTags=[...(p.tags||[])];pendingCoords={lat:p.lat,lng:p.lng};
   document.getElementById('addTitle').textContent='✏️ Edit Place';
-  document.getElementById('pName').value=p.name;document.getElementById('pLocation').value=p.location||'';document.getElementById('pNotes').value=p.notes||'';document.getElementById('pLink').value=p.link||'';
-  document.getElementById('igUrl').value='';document.getElementById('igResult').style.display='none';document.getElementById('btnDelete').style.display='block';
+  document.getElementById('pName').value=p.name;
+  document.getElementById('pLocation').value=p.location||'';
+  document.getElementById('pNotes').value=p.notes||'';
+  document.getElementById('pLink').value=p.link||'';
+  document.getElementById('igResult').style.display='none';
+  document.getElementById('uploadContent').style.display='block';
+  document.getElementById('scanLoading').style.display='none';
+  document.getElementById('btnDelete').style.display='block';
   document.querySelectorAll('.topt').forEach(t=>t.classList.toggle('sel',selTags.includes(t.dataset.t)));
   if(gmap){infoWin.close();gmap.panTo({lat:p.lat,lng:p.lng});}
   showMap();openOverlay('addOverlay');
@@ -512,7 +524,6 @@ async function quickGPS(){
 async function scanImage(input){
   const file=input.files[0];
   if(!file)return;
-  const zone=document.getElementById('uploadZone');
   const content=document.getElementById('uploadContent');
   const loading=document.getElementById('scanLoading');
   const result=document.getElementById('igResult');
@@ -520,39 +531,24 @@ async function scanImage(input){
   loading.style.display='block';
   result.style.display='none';
   try{
-    // Convert image to base64
     const base64=await new Promise((res,rej)=>{
       const r=new FileReader();
       r.onload=()=>res(r.result.split(',')[1]);
       r.onerror=rej;
       r.readAsDataURL(file);
     });
-    // Call Claude Vision API
-    const response=await fetch('https://api.anthropic.com/v1/messages',{
+    const response=await apiFetch('/api/scan-image',{
       method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','x-api-key':anthropicKey},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:300,
-        messages:[{
-          role:'user',
-          content:[
-            {type:'image',source:{type:'base64',media_type:file.type,data:base64}},
-            {type:'text',text:'Look at this image. Extract the place name and address/location if visible. Reply ONLY with JSON like this: {"name":"Place Name","location":"City, Country","address":"full address if visible"} - if you cannot find a place name or location, reply with {"name":"","location":"","address":""}'}
-          ]
-        }]
-      })
+      body:JSON.stringify({imageBase64:base64,mediaType:file.type})
     });
-    const data=await response.json();
-    const text=data.content[0].text.trim();
-    const parsed=JSON.parse(text.replace(/```json|```/g,'').trim());
-    if(parsed.name||parsed.location){
+    const parsed=await response.json();
+    if(parsed.name||parsed.location||parsed.address){
       if(parsed.name) document.getElementById('pName').value=parsed.name;
-      if(parsed.location||parsed.address) document.getElementById('pLocation').value=parsed.address||parsed.location;
+      if(parsed.address||parsed.location) document.getElementById('pLocation').value=parsed.address||parsed.location;
       result.style.background='var(--sky-light)';
       result.style.borderColor='var(--sky-mid)';
       result.style.color='var(--sky)';
-      result.innerHTML=`✅ <strong>Detected: ${parsed.name||''} ${parsed.location?'– '+parsed.location:''}</strong>${parsed.address?'<br><small style="font-weight:600;opacity:.75">'+parsed.address+'</small>':''}`;
+      result.innerHTML=`✅ <strong>${parsed.name||''}</strong>${parsed.address?'<br><small style="font-weight:600;opacity:.8">📍 '+parsed.address+'</small>':''}`;
     } else {
       result.style.background='var(--amber-light)';
       result.style.borderColor='rgba(245,166,35,.4)';
