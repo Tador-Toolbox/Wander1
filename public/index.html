@@ -455,8 +455,14 @@ function openQuick(){document.getElementById('gpsLoading').style.display='none';
 function openFull(pre={}){
   editId=null;selTags=pre.tags?[...pre.tags]:[];pendingCoords=null;
   document.getElementById('addTitle').textContent='✍️ Add Place';
-  document.getElementById('pName').value=pre.name||'';document.getElementById('pLocation').value=pre.location||'';document.getElementById('pNotes').value=pre.notes||'';document.getElementById('pLink').value=pre.link||'';
-  document.getElementById('igUrl').value='';document.getElementById('igResult').style.display='none';document.getElementById('btnDelete').style.display='none';
+  document.getElementById('pName').value=pre.name||'';
+  document.getElementById('pLocation').value=pre.location||'';
+  document.getElementById('pNotes').value=pre.notes||'';
+  document.getElementById('pLink').value=pre.link||'';
+  document.getElementById('igResult').style.display='none';
+  document.getElementById('uploadContent').style.display='block';
+  document.getElementById('scanLoading').style.display='none';
+  document.getElementById('btnDelete').style.display='none';
   document.querySelectorAll('.topt').forEach(t=>t.classList.toggle('sel',selTags.includes(t.dataset.t)));
   openOverlay('addOverlay');
 }
@@ -464,8 +470,14 @@ function editPlace(id){
   const p=places.find(x=>x._id===id);if(!p)return;
   editId=id;selTags=[...(p.tags||[])];pendingCoords={lat:p.lat,lng:p.lng};
   document.getElementById('addTitle').textContent='✏️ Edit Place';
-  document.getElementById('pName').value=p.name;document.getElementById('pLocation').value=p.location||'';document.getElementById('pNotes').value=p.notes||'';document.getElementById('pLink').value=p.link||'';
-  document.getElementById('igUrl').value='';document.getElementById('igResult').style.display='none';document.getElementById('btnDelete').style.display='block';
+  document.getElementById('pName').value=p.name;
+  document.getElementById('pLocation').value=p.location||'';
+  document.getElementById('pNotes').value=p.notes||'';
+  document.getElementById('pLink').value=p.link||'';
+  document.getElementById('igResult').style.display='none';
+  document.getElementById('uploadContent').style.display='block';
+  document.getElementById('scanLoading').style.display='none';
+  document.getElementById('btnDelete').style.display='block';
   document.querySelectorAll('.topt').forEach(t=>t.classList.toggle('sel',selTags.includes(t.dataset.t)));
   if(gmap){infoWin.close();gmap.panTo({lat:p.lat,lng:p.lng});}
   showMap();openOverlay('addOverlay');
