@@ -277,6 +277,8 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
   </div>
   <div class="app-content">
     <div id="mapContainer" style="position:fixed;top:60px;left:0;right:0;bottom:0;z-index:1;"><div id="gmap" style="width:100%;height:100%;"></div></div>
+    <!-- Locate Me Button -->
+    <button id="locateBtn" onclick="locateMe()" style="position:fixed;bottom:calc(40px + env(safe-area-inset-bottom));right:90px;z-index:9999;width:50px;height:50px;border-radius:50%;border:2px solid var(--border);background:#fff;font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;transition:var(--tr);">📍</button>
     <div id="listView">
       <div class="list-top">
         <div class="search-wrap"><span class="sico">🔍</span><input type="text" id="listSearch" placeholder="Search places, cities…" oninput="renderList()"></div>
@@ -391,7 +393,7 @@ function injectMaps(key){if(window.google){bootMap();return;}window.__mapsReady=
 
 function bootMap(){
   infoWin=new google.maps.InfoWindow();
-  gmap=new google.maps.Map(document.getElementById('gmap'),{center:{lat:25,lng:15},zoom:2,disableDefaultUI:true,zoomControl:true,zoomControlOptions:{position:google.maps.ControlPosition.LEFT_BOTTOM},styles:MAP_STYLE});
+  gmap=new google.maps.Map(document.getElementById('gmap'),{center:{lat:25,lng:15},zoom:2,disableDefaultUI:true,zoomControl:true,zoomControlOptions:{position:google.maps.ControlPosition.RIGHT_BOTTOM},styles:MAP_STYLE});
   gmap.addListener('click',closeFab);
   places.forEach(p=>addMarker(p));
   setupAC();
@@ -421,8 +423,8 @@ function openIW(place,marker){
 
 function setupAC(){const input=document.getElementById('pLocation');autocomplete=new google.maps.places.Autocomplete(input,{fields:['geometry','name','formatted_address','place_id']});autocomplete.addListener('place_changed',()=>{const pl=autocomplete.getPlace();if(!pl.geometry)return;pendingCoords={lat:pl.geometry.location.lat(),lng:pl.geometry.location.lng()};if(!document.getElementById('pName').value.trim())document.getElementById('pName').value=pl.name||'';});}
 
-function showMap(){document.getElementById('mapContainer').style.display='block';document.getElementById('listView').style.display='none';document.getElementById('fab').style.display='block';document.getElementById('btnMap').classList.add('on');document.getElementById('btnList').classList.remove('on');if(gmap)google.maps.event.trigger(gmap,'resize');}
-function showList(){document.getElementById('mapContainer').style.display='none';document.getElementById('listView').style.display='flex';document.getElementById('fab').style.display='none';document.getElementById('btnMap').classList.remove('on');document.getElementById('btnList').classList.add('on');renderList();}
+function showMap(){document.getElementById('mapContainer').style.display='block';document.getElementById('listView').style.display='none';document.getElementById('fab').style.display='block';document.getElementById('locateBtn').style.display='flex';document.getElementById('btnMap').classList.add('on');document.getElementById('btnList').classList.remove('on');if(gmap)google.maps.event.trigger(gmap,'resize');}
+function showList(){document.getElementById('mapContainer').style.display='none';document.getElementById('listView').style.display='flex';document.getElementById('fab').style.display='none';document.getElementById('locateBtn').style.display='none';document.getElementById('btnMap').classList.remove('on');document.getElementById('btnList').classList.add('on');renderList();}
 
 function toggleFab(){fabOpen=!fabOpen;document.getElementById('fabMenu').classList.toggle('open',fabOpen);document.getElementById('fabMain').classList.toggle('open',fabOpen);}
 function closeFab(){fabOpen=false;document.getElementById('fabMenu').classList.remove('open');document.getElementById('fabMain').classList.remove('open');}
@@ -509,6 +511,16 @@ function renderList(){
 }
 function focusPlace(id){const p=places.find(x=>x._id===id);if(!p)return;showMap();if(gmap){gmap.panTo({lat:p.lat,lng:p.lng});gmap.setZoom(13);setTimeout(()=>{if(window._m[id])openIW(p,window._m[id]);},500);}}
 function setChip(el){document.querySelectorAll('.chips-row .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');activeTag=el.dataset.t;renderList();}
+function locateMe(){
+  if(!navigator.geolocation){toast('Geolocation not supported','err');return;}
+  const btn=document.getElementById('locateBtn');
+  btn.textContent='⏳';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const{latitude:lat,longitude:lng}=pos.coords;
+    if(gmap){gmap.panTo({lat,lng});gmap.setZoom(14);}
+    btn.textContent='📍';
+  },()=>{toast('Location access denied 🙅','err');btn.textContent='📍';});
+}
 function updateCount(){document.getElementById('placeCount').textContent=places.length;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type}`;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
