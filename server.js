@@ -47,7 +47,16 @@ app.post('/api/scan-image', require('./middleware/auth'), async (req, res) => {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 } },
-            { type: 'text', text: 'Look at this image. Extract the place name and address/location if visible. Reply ONLY with JSON like this: {"name":"Place Name","location":"City, Country","address":"full address if visible"} - if you cannot find a place name or location, reply with {"name":"","location":"","address":""}' }
+            { type: 'text', text: `Look at this image carefully. Try to identify the place using TWO methods:
+1. TEXT: Read any visible text, signs, address, location tags, or captions in the image.
+2. VISUAL: If you recognize the place visually (famous landmark, restaurant, beach, etc.), identify it.
+
+Reply ONLY with JSON in this exact format:
+{"name":"Place Name","location":"City, Country","address":"full address if visible","method":"text"} 
+- method should be "text" if you found it from text/signs in the image
+- method should be "visual" if you recognized it visually without text
+- method should be "both" if both methods confirmed it
+- If you cannot identify any place at all, reply: {"name":"","location":"","address":"","method":"none"}` }
           ]
         }]
       })
