@@ -558,12 +558,14 @@ async function scanImage(input){
     const parsed=await response.json();
     if(parsed.name||parsed.location||parsed.address){
       if(parsed.name) document.getElementById('pName').value=parsed.name;
-      if(parsed.address||parsed.location) document.getElementById('pLocation').value=parsed.address||parsed.location;
+      const loc = parsed.formattedAddress || parsed.address || parsed.location;
+      if(loc) document.getElementById('pLocation').value=loc;
+      if(parsed.lat && parsed.lng) pendingCoords={lat:parsed.lat, lng:parsed.lng};
       const methodLabel = parsed.method==='text' ? '📝 Detected from text in image' : parsed.method==='visual' ? '👁 Detected by visual recognition' : parsed.method==='both' ? '📝👁 Detected from text + visual' : '✅ Detected';
       result.style.background='var(--sky-light)';
       result.style.borderColor='var(--sky-mid)';
       result.style.color='var(--sky)';
-      result.innerHTML=`✅ <strong>${parsed.name||''}</strong>${parsed.address?'<br><small style="font-weight:600;opacity:.8">📍 '+parsed.address+'</small>':''}<br><small style="font-weight:600;opacity:.65;font-size:10px;">${methodLabel}</small>`;
+      result.innerHTML=`✅ <strong>${parsed.name||''}</strong>${loc?'<br><small style="font-weight:600;opacity:.8">📍 '+loc+'</small>':''}<br><small style="font-weight:600;opacity:.65;font-size:10px;">${methodLabel}${parsed.lat?' · Ready to save 🎯':' · Enter location manually'}</small>`;
     } else {
       result.style.background='var(--amber-light)';
       result.style.borderColor='rgba(245,166,35,.4)';

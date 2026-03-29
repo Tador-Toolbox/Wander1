@@ -65,6 +65,21 @@ Reply ONLY with JSON in this exact format:
     const data = await response.json();
     const text = data.content?.[0]?.text || '{}';
     const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+    
+    // If we got a location, geocode it to lat/lng
+    if (parsed.name || parsed.location || parsed.address) {
+      const searchQuery = parsed.address || parsed.name + ' ' + parsed.location;
+      try {
+        const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${process.env.GOOGLE_MAPS_API_KEY}`);
+        const geoData = await geoRes.json();
+        if (geoData.results && geoData.results[0]) {
+          parsed.lat = geoData.results[0].geometry.location.lat;
+          parsed.lng = geoData.results[0].geometry.location.lng;
+          parsed.formattedAddress = geoData.results[0].formatted_address;
+        }
+      } catch(e) { /* geocode failed, frontend will handle */ }
+    }
+    
     res.json(parsed);
   } catch (err) {
     console.error('Scan error:', err);
