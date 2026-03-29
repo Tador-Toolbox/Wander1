@@ -393,7 +393,7 @@ function injectMaps(key){if(window.google){bootMap();return;}window.__mapsReady=
 
 function bootMap(){
   infoWin=new google.maps.InfoWindow();
-  gmap=new google.maps.Map(document.getElementById('gmap'),{center:{lat:25,lng:15},zoom:2,disableDefaultUI:true,zoomControl:true,zoomControlOptions:{position:google.maps.ControlPosition.RIGHT_BOTTOM},styles:MAP_STYLE});
+  gmap=new google.maps.Map(document.getElementById('gmap'),{center:{lat:25,lng:15},zoom:2,disableDefaultUI:true,zoomControl:true,zoomControlOptions:{position:google.maps.ControlPosition.LEFT_BOTTOM},styles:MAP_STYLE});
   gmap.addListener('click',closeFab);
   places.forEach(p=>addMarker(p));
   setupAC();
