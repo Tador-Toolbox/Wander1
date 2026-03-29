@@ -21,6 +21,11 @@ app.get('/api/config/maps-key', require('./middleware/auth'), (req, res) => {
   res.json({ key: process.env.GOOGLE_MAPS_API_KEY });
 });
 
+// Expose Anthropic key to frontend (authenticated requests only)
+app.get('/api/config/anthropic-key', require('./middleware/auth'), (req, res) => {
+  res.json({ key: process.env.ANTHROPIC_API_KEY });
+});
+
 // Routes
 app.use('/api/auth',   require('./routes/auth'));
 app.use('/api/places', require('./routes/places'));
