@@ -520,7 +520,18 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 let token=localStorage.getItem('wandr_token'),places=[],trips=[],gmap=null,infoWin=null,autocomplete=null,editId=null,selTags=[],activeTag='All',pendingCoords=null,fabOpen=false,isReg=false,anthropicKey=null,activeTrip=null,editTripId=null,selEmoji='✈️',selColor='#4a9eff',shareTargetTrip=null,importToken=null;
 
 window.addEventListener('load',()=>{
-  setTimeout(()=>{ token?( showScreen('mapScreen'),initApp() ):showScreen('loginScreen'); },1800);
+  setTimeout(async ()=>{
+    if(token){
+      // Verify token is still valid
+      try{
+        const r=await fetch('/api/places',{headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'}});
+        if(r.status===401){localStorage.removeItem('wandr_token');showScreen('loginScreen');}
+        else{showScreen('mapScreen');initApp();}
+      } catch {showScreen('mapScreen');initApp();}
+    } else {
+      showScreen('loginScreen');
+    }
+  },1800);
 });
 
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
