@@ -313,6 +313,13 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .import-places-preview{margin-top:10px;display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto;}
 .ipp{font-size:12px;font-weight:600;color:var(--txt2);padding:4px 0;border-bottom:1px solid var(--sky-mid);}
 .ipp:last-child{border-bottom:none;}
+/* ── TOGGLE SWITCH ── */
+#pPublic:checked+span{background:var(--sky)!important;}
+#pPublic:checked+span::before{transform:translateX(20px)!important;}
+/* ── EXPLORE ── */
+#exploreView{display:none;position:fixed;top:60px;left:0;right:0;bottom:0;z-index:2;}
+#exploreMap{width:100%;height:100%;}
+.explore-banner{position:fixed;top:68px;left:50%;transform:translateX(-50%);background:var(--sky);color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;padding:7px 16px;border-radius:20px;box-shadow:var(--sh);z-index:300;pointer-events:none;animation:riseUp .4s ease;white-space:nowrap;}
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(14px);background:#fff;border:2px solid var(--border);border-radius:18px;padding:11px 22px;font-size:13px;font-weight:700;color:var(--txt);z-index:2000;opacity:0;transition:all .28s ease;pointer-events:none;white-space:nowrap;box-shadow:0 8px 30px rgba(0,0,0,.1);}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .toast.ok{border-color:rgba(52,201,138,.4);background:var(--mint-light);color:var(--mint);}
@@ -373,6 +380,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <button class="hbtn on" id="btnMap" onclick="showMap()">🗺 Map</button>
       <button class="hbtn" id="btnList" onclick="showList()">☰ <span class="badge" id="placeCount">0</span></button>
       <button class="hbtn" id="btnTrips" onclick="showTrips()">✈️</button>
+      <button class="hbtn" id="btnExplore" onclick="showExplore()">🌍</button>
       <button class="hbtn" style="padding:7px 10px" onclick="logout()" title="Sign out">⎋</button>
     </div>
   </div>
@@ -422,6 +430,11 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <button class="btn-new-trip" onclick="openNewTrip()">+ New Trip</button>
       </div>
       <div class="trips-list" id="tripsList"></div>
+    </div>
+
+    <!-- EXPLORE VIEW -->
+    <div id="exploreView">
+      <div id="exploreMap"></div>
     </div>
   </div>
 </div>
@@ -593,6 +606,16 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div class="topt" data-t="Culture" onclick="toggleTag(this)">🏛 Culture</div>
       </div>
     </div>
+    <div class="mf" style="display:flex;align-items:center;justify-content:space-between;background:var(--sky-light);border:2px solid var(--sky-mid);border-radius:16px;padding:14px 16px;">
+      <div>
+        <div style="font-size:13px;font-weight:800;color:var(--txt);">🌍 Make Public</div>
+        <div style="font-size:11px;font-weight:600;color:var(--txt2);margin-top:2px;">Show on the public Explore map</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
+        <input type="checkbox" id="pPublic" style="opacity:0;width:0;height:0;">
+        <span onclick="togglePublic()" id="toggleSlider" style="position:absolute;cursor:pointer;inset:0;background:var(--border2);border-radius:24px;transition:.3s;"><span id="toggleDot" style="position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.3s;display:block;"></span></span>
+      </label>
+    </div>
     <div class="act-row">
       <button class="btn-cancel" onclick="closeOverlay('addOverlay')">Cancel</button>
       <button id="btnDelete" class="btn-del" onclick="deletePlace()" style="display:none">🗑</button>
@@ -646,7 +669,14 @@ async function doAuth(){
   finally{btn.disabled=false;btn.textContent=isReg?'Create Account 🌍':'Sign In 🚀';}
 }
 function showAuthErr(m){const e=document.getElementById('authErr');e.textContent=m;e.style.display='block';}
-function logout(){token=null;places=[];gmap=null;autocomplete=null;localStorage.removeItem('wandr_token');showScreen('loginScreen');document.getElementById('authEmail').value='';document.getElementById('authPass').value='';}
+function logout(){
+  if(!confirm('Sign out of Wandr?'))return;
+  token=null;places=[];gmap=null;autocomplete=null;
+  localStorage.removeItem('wandr_token');
+  showScreen('loginScreen');
+  document.getElementById('authEmail').value='';
+  document.getElementById('authPass').value='';
+}
 
 async function initApp(){
   await loadPlaces();
@@ -719,6 +749,20 @@ function bootMap(){
 
   places.forEach(p=>addMarker(p));
   setupAC();
+  // Zoom to user location on first load
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const{latitude:lat,longitude:lng}=pos.coords;
+      gmap.panTo({lat,lng}); gmap.setZoom(12);
+      if(!window._myDot){
+        window._myDot=new google.maps.Marker({
+          position:{lat,lng},map:gmap,
+          icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#4a9eff',fillOpacity:1,strokeColor:'#fff',strokeWeight:3},
+          title:'My Location',zIndex:999
+        });
+      }
+    },()=>{},{enableHighAccuracy:true,timeout:6000,maximumAge:30000});
+  }
 }
 
 function openFullFromDrop(lat,lng){
@@ -776,27 +820,19 @@ function openIW(place,marker){
 function setupAC(){const input=document.getElementById('pLocation');autocomplete=new google.maps.places.Autocomplete(input,{fields:['geometry','name','formatted_address','place_id']});autocomplete.addListener('place_changed',()=>{const pl=autocomplete.getPlace();if(!pl.geometry)return;pendingCoords={lat:pl.geometry.location.lat(),lng:pl.geometry.location.lng()};if(!document.getElementById('pName').value.trim())document.getElementById('pName').value=pl.name||'';});}
 
 function showMap(){
-  document.getElementById('mapContainer').style.display='block';
-  document.getElementById('listView').style.display='none';
-  document.getElementById('tripsView').style.display='none';
-  document.getElementById('fab').style.display='block';
-  document.getElementById('locateBtn').style.display='flex';
-  document.getElementById('zoomBtns').style.display='flex';
+  ['mapContainer'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='block';});
+  ['listView','tripsView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=id==='fab'?'block':'flex';});
+  ['btnMap','btnList','btnTrips','btnExplore'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
   document.getElementById('btnMap').classList.add('on');
-  document.getElementById('btnList').classList.remove('on');
-  document.getElementById('btnTrips').classList.remove('on');
   if(gmap)google.maps.event.trigger(gmap,'resize');
 }
 function showList(){
-  document.getElementById('mapContainer').style.display='none';
+  ['mapContainer','tripsView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('listView').style.display='flex';
-  document.getElementById('tripsView').style.display='none';
-  document.getElementById('fab').style.display='none';
-  document.getElementById('locateBtn').style.display='none';
-  document.getElementById('zoomBtns').style.display='none';
-  document.getElementById('btnMap').classList.remove('on');
+  ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  ['btnMap','btnList','btnTrips','btnExplore'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
   document.getElementById('btnList').classList.add('on');
-  document.getElementById('btnTrips').classList.remove('on');
   renderList();
 }
 
@@ -822,6 +858,7 @@ function openFull(pre={}){
   document.getElementById('coverPhotoSection').style.display='none';
   document.getElementById('gallerySection').style.display='none';
   resetRating();
+  document.getElementById('pPublic').checked=false;
   document.querySelectorAll('.topt').forEach(t=>t.classList.toggle('sel',selTags.includes(t.dataset.t)));
   openOverlay('addOverlay');
 }
@@ -840,6 +877,10 @@ function editPlace(id){
   document.getElementById('btnDelete').style.display='block';
   // Rating
   selRating=Number(p.rating)||0;
+  document.getElementById('pPublic').checked=!!p.isPublic;
+  const _dot=document.getElementById('toggleDot');const _sl=document.getElementById('toggleSlider');
+  if(p.isPublic){_sl.style.background='var(--sky)';_dot.style.transform='translateX(20px)';}
+  else{_sl.style.background='var(--border2)';_dot.style.transform='translateX(0)';}
   document.querySelectorAll('.star').forEach(s=>s.classList.toggle('on',Number(s.dataset.v)<=selRating));
   const labels=['','⭐ Poor','⭐⭐ OK','⭐⭐⭐ Good','⭐⭐⭐⭐ Great','⭐⭐⭐⭐⭐ Amazing'];
   document.getElementById('ratingLabel').textContent=labels[selRating]||'No rating';
@@ -859,7 +900,7 @@ async function savePlace(){
   if(pendingCoords){lat=pendingCoords.lat;lng=pendingCoords.lng;}
   else if(editId){const o=places.find(p=>p._id===editId);lat=o.lat;lng=o.lng;}
   else{toast('Please select a location from the suggestions 📍','err');return;}
-  const body={name,lat,lng,location:document.getElementById('pLocation').value.trim(),notes:document.getElementById('pNotes').value.trim(),link:document.getElementById('pLink').value.trim(),tags:[...selTags],trip:document.getElementById('pTrip').value||null,rating:selRating};
+  const body={name,lat,lng,location:document.getElementById('pLocation').value.trim(),notes:document.getElementById('pNotes').value.trim(),link:document.getElementById('pLink').value.trim(),tags:[...selTags],trip:document.getElementById('pTrip').value||null,rating:selRating,isPublic:document.getElementById('pPublic').checked};
   const btn=document.getElementById('btnSave');btn.disabled=true;btn.textContent='Saving…';
   try{
     if(editId){
@@ -985,16 +1026,44 @@ function populateTripSelect(){
 }
 
 function showTrips(){
-  document.getElementById('mapContainer').style.display='none';
-  document.getElementById('listView').style.display='none';
+  ['mapContainer','listView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('tripsView').style.display='flex';
-  document.getElementById('fab').style.display='none';
-  document.getElementById('locateBtn').style.display='none';
-  document.getElementById('zoomBtns').style.display='none';
-  document.getElementById('btnMap').classList.remove('on');
-  document.getElementById('btnList').classList.remove('on');
+  ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  ['btnMap','btnList','btnTrips','btnExplore'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
   document.getElementById('btnTrips').classList.add('on');
   renderTrips();
+}
+
+let exploreMap=null;
+async function showExplore(){
+  ['mapContainer','listView','tripsView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  document.getElementById('exploreView').style.display='block';
+  ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  ['btnMap','btnList','btnTrips','btnExplore'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
+  document.getElementById('btnExplore').classList.add('on');
+  if(!exploreMap){
+    exploreMap=new google.maps.Map(document.getElementById('exploreMap'),{
+      center:{lat:25,lng:15},zoom:2,disableDefaultUI:true,
+      zoomControl:true,zoomControlOptions:{position:google.maps.ControlPosition.LEFT_BOTTOM},
+      styles:MAP_STYLE
+    });
+  }
+  try{
+    const res=await fetch('/api/explore');
+    const pub=await res.json();
+    pub.forEach(p=>{
+      const m=new google.maps.Marker({position:{lat:p.lat,lng:p.lng},map:exploreMap,icon:mkIcon(p.tags),title:p.name});
+      const iw=new google.maps.InfoWindow();
+      const cover=p.coverPhoto?`<img src="${esc(p.coverPhoto)}" class="mp-cover" loading="lazy">`:'';
+      const stars=p.rating?`<div class="mp-stars">${starsHtml(p.rating)}</div>`:'';
+      const tags=(p.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('');
+      m.addListener('click',()=>{
+        iw.setContent(`<div class="map-popup">${cover}<div style="padding:14px 16px 12px">${stars}<div class="mp-name">${esc(p.name)}</div><div class="mp-loc">📍 ${esc(p.location||'')}</div>${tags?`<div class="mp-tags">${tags}</div>`:''}</div></div>`);
+        iw.open(exploreMap,m);
+      });
+    });
+    toast(`🌍 ${pub.length} public places loaded`,'ok');
+  }catch{toast('Could not load explore','err');}
 }
 
 function renderTrips(){
@@ -1188,6 +1257,21 @@ async function confirmImport(){
     toast(`✅ "${data.trip.name}" imported!`,'ok');
     showTrips();
   } catch{toast('Error importing trip','err');}
+}
+
+/* ── PUBLIC TOGGLE ── */
+function togglePublic(){
+  const cb=document.getElementById('pPublic');
+  cb.checked=!cb.checked;
+  const dot=document.getElementById('toggleDot');
+  const slider=document.getElementById('toggleSlider');
+  if(cb.checked){
+    slider.style.background='var(--sky)';
+    dot.style.transform='translateX(20px)';
+  } else {
+    slider.style.background='var(--border2)';
+    dot.style.transform='translateX(0)';
+  }
 }
 
 /* ── RATING ── */
