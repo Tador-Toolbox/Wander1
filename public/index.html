@@ -345,6 +345,48 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 @keyframes driftC{0%,100%{transform:translate(0,0);}50%{transform:translate(14px,-18px);}}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  height:calc(62px + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);
+  background:rgba(255,255,255,.96);
+  backdrop-filter:blur(20px);
+  border-top:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:space-around;
+  z-index:300;
+  box-shadow:0 -4px 20px rgba(0,0,0,.06);
+}
+.bnav-btn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;flex:1;padding:8px 4px;
+  background:none;border:none;cursor:pointer;
+  color:var(--txt3);font-family:'Nunito',sans-serif;font-size:10px;font-weight:700;
+  transition:var(--tr);letter-spacing:.2px;
+  -webkit-tap-highlight-color:transparent;
+}
+.bnav-btn svg{width:22px;height:22px;stroke:currentColor;transition:var(--tr);}
+.bnav-btn span{font-size:10px;font-weight:700;margin-top:1px;}
+.bnav-btn.on{color:var(--sky);}
+.bnav-btn.on svg{stroke:var(--sky);}
+.bnav-btn#btnLogout:hover{color:var(--coral);}
+.bnav-btn#btnLogout:hover svg{stroke:var(--coral);}
+/* Active dot indicator */
+.bnav-btn.on::after{
+  content:'';display:block;width:4px;height:4px;border-radius:50%;
+  background:var(--sky);margin-top:2px;
+}
+.bnav-btn::after{content:'';display:block;width:4px;height:4px;}
+
+/* Adjust app content for bottom nav */
+.app-content{flex:1;position:relative;overflow:hidden;padding-bottom:0;}
+#mapContainer{top:60px!important;bottom:calc(62px + env(safe-area-inset-bottom))!important;}
+#listView{top:60px!important;bottom:calc(62px + env(safe-area-inset-bottom))!important;}
+#tripsView{top:60px!important;bottom:calc(62px + env(safe-area-inset-bottom))!important;}
+#exploreView{top:60px!important;bottom:calc(62px + env(safe-area-inset-bottom))!important;}
+.fab{bottom:calc(72px + env(safe-area-inset-bottom) + 10px)!important;}
+#locateBtn{bottom:calc(72px + env(safe-area-inset-bottom) + 80px)!important;}
 </style>
 </head>
 <body>
@@ -381,14 +423,33 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div id="mapScreen" class="screen">
   <div class="app-header">
     <div class="h-logo">Wandr <span class="h-dot">·</span></div>
-    <div class="h-actions">
-      <button class="hbtn on" id="btnMap" onclick="showMap()">🗺 Map</button>
-      <button class="hbtn" id="btnList" onclick="showList()">☰ <span class="badge" id="placeCount">0</span></button>
-      <button class="hbtn" id="btnTrips" onclick="showTrips()">✈️</button>
-      <button class="hbtn" id="btnExplore" onclick="showExplore()">🌍</button>
-      <button class="hbtn" style="padding:7px 10px" onclick="logout()" title="Sign out">⎋</button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="badge" id="placeCount" style="background:var(--sky);color:#fff;font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;">0</span>
     </div>
   </div>
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="bnav-btn on" id="btnMap" onclick="showMap()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+      <span>Map</span>
+    </button>
+    <button class="bnav-btn" id="btnExplore" onclick="showExplore()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+      <span>Explore</span>
+    </button>
+    <button class="bnav-btn" id="btnList" onclick="showList()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span>List</span>
+    </button>
+    <button class="bnav-btn" id="btnTrips" onclick="showTrips()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5c-1.5-1.5-3.5-1.5-5 0L11 6 2.8 4.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L6 10l-2 3c-.3.4-.2 1 .2 1.3l.8.5c.4.3 1 .2 1.3-.2L8 12l4 4-1.3 3.2c-.1.4 0 .9.3 1.2l.5.4c.4.3.9.3 1.3 0l.5-.3c.4-.3.6-.7.5-1.3z"/></svg>
+      <span>Trips</span>
+    </button>
+    <button class="bnav-btn" id="btnLogout" onclick="logout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span>Logout</span>
+    </button>
+  </nav>
   <!-- Active trip banner -->
   <div id="activeTripBanner">
     <span id="activeTripName"></span>
@@ -612,6 +673,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <div style="display:flex;gap:8px;">
         <button type="button" class="vis-btn on" data-v="private" onclick="setVisibility(this)">🔒 Private</button>
         <button type="button" class="vis-btn" data-v="public" onclick="setVisibility(this)">🌍 Public</button>
+        <button type="button" class="vis-btn" data-v="both" onclick="setVisibility(this)">✨ Both</button>
       </div>
       <div style="font-size:11px;font-weight:600;color:var(--txt3);margin-top:6px;" id="visHint">Only visible to you</div>
       <input type="hidden" id="pPublic" value="false">
@@ -823,7 +885,7 @@ function showMap(){
   ['mapContainer'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='block';});
   ['listView','tripsView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=id==='fab'?'block':'flex';});
-  ['btnMap','btnList','btnTrips','btnExplore'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
+  ['btnMap','btnList','btnTrips','btnExplore','btnLogout'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
   document.getElementById('btnMap').classList.add('on');
   if(gmap)google.maps.event.trigger(gmap,'resize');
 }
@@ -831,7 +893,7 @@ function showList(){
   ['mapContainer','tripsView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('listView').style.display='flex';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
-  ['btnMap','btnList','btnTrips','btnExplore'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
+  ['btnMap','btnList','btnTrips','btnExplore','btnLogout'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
   document.getElementById('btnList').classList.add('on');
   renderList();
 }
@@ -897,7 +959,7 @@ async function savePlace(){
   if(pendingCoords){lat=pendingCoords.lat;lng=pendingCoords.lng;}
   else if(editId){const o=places.find(p=>p._id===editId);lat=o.lat;lng=o.lng;}
   else{toast('Please select a location from the suggestions 📍','err');return;}
-  const body={name,lat,lng,location:document.getElementById('pLocation').value.trim(),notes:document.getElementById('pNotes').value.trim(),link:document.getElementById('pLink').value.trim(),tags:[...selTags],trip:document.getElementById('pTrip').value||null,rating:selRating,isPublic:document.getElementById('pPublic').value==='true'};
+  const body={name,lat,lng,location:document.getElementById('pLocation').value.trim(),notes:document.getElementById('pNotes').value.trim(),link:document.getElementById('pLink').value.trim(),tags:[...selTags],trip:document.getElementById('pTrip').value||null,rating:selRating,isPublic:document.getElementById('pPublic').value==='true',visibility:document.getElementById('pPublic').dataset.v||'private'};
   const btn=document.getElementById('btnSave');btn.disabled=true;btn.textContent='Saving…';
   try{
     if(editId){
@@ -1026,7 +1088,7 @@ function showTrips(){
   ['mapContainer','listView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('tripsView').style.display='flex';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
-  ['btnMap','btnList','btnTrips','btnExplore'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
+  ['btnMap','btnList','btnTrips','btnExplore','btnLogout'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
   document.getElementById('btnTrips').classList.add('on');
   renderTrips();
 }
@@ -1036,7 +1098,7 @@ async function showExplore(){
   ['mapContainer','listView','tripsView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('exploreView').style.display='block';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
-  ['btnMap','btnList','btnTrips','btnExplore'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
+  ['btnMap','btnList','btnTrips','btnExplore','btnLogout'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
   document.getElementById('btnExplore').classList.add('on');
   if(!exploreMap){
     exploreMap=new google.maps.Map(document.getElementById('exploreMap'),{
@@ -1261,8 +1323,9 @@ function setVisibility(el){
   document.querySelectorAll('.vis-btn').forEach(b=>b.classList.remove('on'));
   el.classList.add('on');
   const v=el.dataset.v;
-  document.getElementById('pPublic').value = v==='public' ? 'true' : 'false';
-  const hints={private:'🔒 Only visible to you',public:'🌍 Visible to all Wandr users'};
+  document.getElementById('pPublic').value = (v==='public'||v==='both') ? 'true' : 'false';
+  document.getElementById('pPublic').dataset.v = v;
+  const hints={private:'🔒 Only visible to you',public:'🌍 Visible on public map only',both:'✨ Visible to you & on public map'};
   document.getElementById('visHint').textContent=hints[v]||'';
 }
 function resetVisibility(){
@@ -1274,11 +1337,11 @@ function resetVisibility(){
 }
 function syncVisibility(isPublic){
   document.querySelectorAll('.vis-btn').forEach(b=>b.classList.remove('on'));
-  const v = isPublic ? 'public' : 'private';
+  const v = isPublic ? 'both' : 'private';
   const btn=document.querySelector(`.vis-btn[data-v="${v}"]`);
   if(btn) btn.classList.add('on');
   document.getElementById('pPublic').value = isPublic ? 'true' : 'false';
-  const hints={private:'🔒 Only visible to you',public:'🌍 Visible to all Wandr users'};
+  const hints={private:'🔒 Only visible to you',public:'🌍 Visible on public map only',both:'✨ Visible to you & on public map'};
   document.getElementById('visHint').textContent=hints[v]||'';
 }
 
