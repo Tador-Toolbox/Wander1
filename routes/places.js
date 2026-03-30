@@ -7,7 +7,9 @@ router.use(auth);
 // GET /api/places
 router.get('/', async (req, res) => {
   try {
-    const places = await Place.find({ user: req.userId }).sort({ createdAt: -1 });
+    const filter = { user: req.userId };
+    if (req.query.trip) filter.trip = req.query.trip === 'none' ? null : req.query.trip;
+    const places = await Place.find(filter).sort({ createdAt: -1 });
     res.json(places);
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
@@ -15,10 +17,10 @@ router.get('/', async (req, res) => {
 // POST /api/places
 router.post('/', async (req, res) => {
   try {
-    const { name, location, placeId, notes, link, tags, lat, lng } = req.body;
+    const { name, location, placeId, notes, link, tags, lat, lng, trip } = req.body;
     if (!name || lat == null || lng == null)
       return res.status(400).json({ error: 'name, lat, lng are required' });
-    const place = await Place.create({ user: req.userId, name, location, placeId, notes, link, tags, lat, lng });
+    const place = await Place.create({ user: req.userId, trip: trip||null, name, location, placeId, notes, link, tags, lat, lng });
     res.status(201).json(place);
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
@@ -28,8 +30,8 @@ router.put('/:id', async (req, res) => {
   try {
     const place = await Place.findOne({ _id: req.params.id, user: req.userId });
     if (!place) return res.status(404).json({ error: 'Not found' });
-    const fields = ['name','location','placeId','notes','link','tags','lat','lng'];
-    fields.forEach(f => { if (req.body[f] !== undefined) place[f] = req.body[f]; });
+    const fields = ['name','location','placeId','notes','link','tags','lat','lng','trip'];
+    fields.forEach(f => { if (req.body[f] !== undefined) place[f] = req.body[f] || null; });
     await place.save();
     res.json(place);
   } catch { res.status(500).json({ error: 'Server error' }); }
