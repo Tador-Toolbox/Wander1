@@ -12,8 +12,9 @@ const PlaceSchema = new mongoose.Schema({
   lat:       { type: Number, required: true },
   lng:       { type: Number, required: true },
   rating:    { type: Number, min: 0, max: 5, default: 0 },
-  coverPhoto:{ type: String, default: '' },   // Cloudinary URL
-  photos:    { type: [String], default: [] }  // Cloudinary URLs array
+  isPublic:  { type: Boolean, default: false },
+  coverPhoto:{ type: String, default: '' },
+  photos:    { type: [String], default: [] }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Place', PlaceSchema);
