@@ -87,8 +87,17 @@ Reply ONLY with JSON in this exact format:
   }
 });
 
-// Routes
-app.use('/api/auth',   require('./routes/auth'));
+// Public explore – no auth needed
+app.get('/api/explore', async (req, res) => {
+  try {
+    const Place = require('./models/Place');
+    const places = await Place.find({ isPublic: true })
+      .select('name location lat lng tags rating coverPhoto notes')
+      .sort({ createdAt: -1 })
+      .limit(500);
+    res.json(places);
+  } catch { res.status(500).json({ error: 'Server error' }); }
+});
 app.use('/api/places', require('./routes/places'));
 app.use('/api/trips',  require('./routes/trips'));
 app.use('/api/share',  require('./routes/share'));
