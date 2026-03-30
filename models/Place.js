@@ -13,6 +13,7 @@ const PlaceSchema = new mongoose.Schema({
   lng:       { type: Number, required: true },
   rating:    { type: Number, min: 0, max: 5, default: 0 },
   isPublic:  { type: Boolean, default: false },
+  visibility:{ type: String, enum: ['private','public','both'], default: 'private' },
   coverPhoto:{ type: String, default: '' },
   photos:    { type: [String], default: [] }
 }, { timestamps: true });
