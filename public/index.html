@@ -430,7 +430,10 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div class="overlay" id="newTripOverlay">
   <div class="sheet">
     <div class="drag-bar"></div>
-    <div class="sheet-title" id="tripFormTitle">✈️ New Trip</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div class="sheet-title" id="tripFormTitle" style="margin-bottom:0">✈️ New Trip</div>
+      <button onclick="closeOverlay('newTripOverlay')" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);">✕</button>
+    </div>
     <div class="mf">
       <label>Trip Name</label>
       <input type="text" id="tripName" placeholder="e.g. Vietnam 2025, Paris Honeymoon…">
@@ -472,7 +475,10 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div class="overlay" id="shareOverlay">
   <div class="sheet">
     <div class="drag-bar"></div>
-    <div class="sheet-title">🔗 Share Trip</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div class="sheet-title" style="margin-bottom:0">🔗 Share Trip</div>
+      <button onclick="closeOverlay('shareOverlay')" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);">✕</button>
+    </div>
     <div class="import-preview" id="shareTripPreview"></div>
     <div class="export-opts">
       <button class="export-btn" onclick="generateShareLink()">🔗 Generate Share Link</button>
@@ -507,7 +513,10 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div class="overlay" id="quickOverlay">
   <div class="sheet">
     <div class="drag-bar"></div>
-    <div class="sheet-title">⚡ Quick Add</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div class="sheet-title" style="margin-bottom:0">⚡ Quick Add</div>
+      <button onclick="closeOverlay('quickOverlay')" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);">✕</button>
+    </div>
     <div class="gps-loading" id="gpsLoading"><div class="gps-ring">📍</div><div class="gps-txt">Getting your location…</div></div>
     <div id="quickOpts">
       <div class="qopt" onclick="quickGPS()"><div class="qopt-icon" style="background:rgba(74,158,255,.12)">📍</div><div class="qopt-text"><h4>Use My Location</h4><p>Save current GPS position instantly</p></div></div>
@@ -521,7 +530,10 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div class="overlay" id="addOverlay">
   <div class="sheet">
     <div class="drag-bar"></div>
-    <div class="sheet-title" id="addTitle">✍️ Add Place</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div class="sheet-title" id="addTitle" style="margin-bottom:0">✍️ Add Place</div>
+      <button onclick="closeOverlay('addOverlay')" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);flex-shrink:0;">✕</button>
+    </div>
     <div style="margin-bottom:16px">
       <div class="sec-lbl">📸 Scan from Screenshot</div>
       <div style="border:2px dashed var(--border);border-radius:16px;padding:16px;text-align:center;cursor:pointer;transition:var(--tr);background:var(--bg);" id="uploadZone" onclick="document.getElementById('imgUpload').click()">
