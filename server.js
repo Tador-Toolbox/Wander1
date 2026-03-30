@@ -91,7 +91,7 @@ Reply ONLY with JSON in this exact format:
 app.get('/api/explore', async (req, res) => {
   try {
     const Place = require('./models/Place');
-    const places = await Place.find({ isPublic: true })
+    const places = await Place.find({ $or: [{ isPublic: true }, { visibility: { $in: ['public','both'] } }] })
       .select('name location lat lng tags rating coverPhoto notes')
       .sort({ createdAt: -1 })
       .limit(500);
