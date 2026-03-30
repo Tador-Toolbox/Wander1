@@ -98,6 +98,8 @@ app.get('/api/explore', async (req, res) => {
     res.json(places);
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
+// Routes
+app.use('/api/auth',   require('./routes/auth'));
 app.use('/api/places', require('./routes/places'));
 app.use('/api/trips',  require('./routes/trips'));
 app.use('/api/share',  require('./routes/share'));
