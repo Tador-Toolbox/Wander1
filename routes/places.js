@@ -17,10 +17,10 @@ router.get('/', async (req, res) => {
 // POST /api/places
 router.post('/', async (req, res) => {
   try {
-    const { name, location, placeId, notes, link, tags, lat, lng, trip, rating, isPublic } = req.body;
+    const { name, location, placeId, notes, link, tags, lat, lng, trip, rating, isPublic, visibility } = req.body;
     if (!name || lat == null || lng == null)
       return res.status(400).json({ error: 'name, lat, lng are required' });
-    const place = await Place.create({ user: req.userId, trip: trip||null, name, location, placeId, notes, link, tags, lat, lng, rating: Number(rating)||0, isPublic: !!isPublic });
+    const place = await Place.create({ user: req.userId, trip: trip||null, name, location, placeId, notes, link, tags, lat, lng, rating: Number(rating)||0, isPublic: !!isPublic, visibility: visibility||'private' });
     res.status(201).json(place);
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
@@ -33,7 +33,8 @@ router.put('/:id', async (req, res) => {
     const fields = ['name','location','placeId','notes','link','tags','lat','lng','trip'];
     fields.forEach(f => { if (req.body[f] !== undefined) place[f] = req.body[f] === '' ? null : req.body[f]; });
     if (req.body.rating   !== undefined) place.rating   = Number(req.body.rating) || 0;
-    if (req.body.isPublic !== undefined) place.isPublic = !!req.body.isPublic;
+    if (req.body.isPublic   !== undefined) place.isPublic   = !!req.body.isPublic;
+    if (req.body.visibility !== undefined) place.visibility = req.body.visibility||'private';
     await place.save();
     res.json(place);
   } catch { res.status(500).json({ error: 'Server error' }); }
