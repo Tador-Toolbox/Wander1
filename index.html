@@ -604,7 +604,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div class="toast" id="toast"></div>
 
 <script>
-let token=localStorage.getItem('wandr_token'),places=[],trips=[],gmap=null,infoWin=null,autocomplete=null,editId=null,selTags=[],activeTag='All',pendingCoords=null,fabOpen=false,isReg=false,anthropicKey=null,activeTrip=null,editTripId=null,selEmoji='✈️',selColor='#4a9eff',shareTargetTrip=null,importToken=null;
+let token=localStorage.getItem('wandr_token'),places=[],trips=[],gmap=null,infoWin=null,autocomplete=null,editId=null,selTags=[],selRating=0,activeTag='All',pendingCoords=null,fabOpen=false,isReg=false,anthropicKey=null,activeTrip=null,editTripId=null,selEmoji='✈️',selColor='#4a9eff',shareTargetTrip=null,importToken=null;
 
 window.addEventListener('load',()=>{
   setTimeout(async ()=>{
@@ -667,26 +667,24 @@ function bootMap(){
     center:{lat:25,lng:15},zoom:2,disableDefaultUI:true,zoomControl:false,styles:MAP_STYLE
   });
 
-  // Blue dot for my location
-  if(navigator.geolocation){
-    navigator.geolocation.watchPosition(pos=>{
+  // Blue dot - poll location every 10 seconds for better iPhone support
+  function updateMyDot(){
+    if(!navigator.geolocation||!gmap)return;
+    navigator.geolocation.getCurrentPosition(pos=>{
       const{latitude:lat,longitude:lng}=pos.coords;
       if(!window._myDot){
         window._myDot=new google.maps.Marker({
           position:{lat,lng},map:gmap,
-          icon:{
-            path:google.maps.SymbolPath.CIRCLE,
-            scale:10,
-            fillColor:'#4a9eff',fillOpacity:1,
-            strokeColor:'#fff',strokeWeight:3
-          },
+          icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#4a9eff',fillOpacity:1,strokeColor:'#fff',strokeWeight:3},
           title:'My Location',zIndex:999
         });
       } else {
         window._myDot.setPosition({lat,lng});
       }
-    },()=>{},{enableHighAccuracy:true,maximumAge:10000});
+    },()=>{},{enableHighAccuracy:true,timeout:8000,maximumAge:5000});
   }
+  updateMyDot();
+  setInterval(updateMyDot,15000);
 
   // Pin drop — tap on map to add place
   gmap.addListener('click',(e)=>{
@@ -1193,7 +1191,6 @@ async function confirmImport(){
 }
 
 /* ── RATING ── */
-let selRating=0;
 function setRating(v){
   selRating=v;
   document.querySelectorAll('.star').forEach(s=>s.classList.toggle('on',+s.dataset.v<=v));
@@ -1275,9 +1272,19 @@ function locateMe(){
   navigator.geolocation.getCurrentPosition(pos=>{
     const{latitude:lat,longitude:lng}=pos.coords;
     if(gmap){gmap.panTo({lat,lng});gmap.setZoom(15);}
+    // Place/update blue dot
+    if(!window._myDot){
+      window._myDot=new google.maps.Marker({
+        position:{lat,lng},map:gmap,
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#4a9eff',fillOpacity:1,strokeColor:'#fff',strokeWeight:3},
+        title:'My Location',zIndex:999
+      });
+    } else {
+      window._myDot.setPosition({lat,lng});
+    }
     btn.textContent='📍';
     toast('📍 Found you!','ok');
-  },()=>{toast('Location access denied 🙅','err');btn.textContent='📍';},{enableHighAccuracy:true});
+  },()=>{toast('Location access denied 🙅','err');btn.textContent='📍';},{enableHighAccuracy:true,timeout:10000});
 }
 function updateCount(){document.getElementById('placeCount').textContent=places.length;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
