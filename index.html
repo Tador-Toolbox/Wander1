@@ -313,7 +313,12 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .import-places-preview{margin-top:10px;display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto;}
 .ipp{font-size:12px;font-weight:600;color:var(--txt2);padding:4px 0;border-bottom:1px solid var(--sky-mid);}
 .ipp:last-child{border-bottom:none;}
-/* ── TOGGLE SWITCH ── */
+/* ── VISIBILITY BUTTONS ── */
+.vis-btn{flex:1;padding:10px;border-radius:14px;border:2px solid var(--border);background:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--txt2);cursor:pointer;transition:var(--tr);}
+.vis-btn.on{border-color:var(--sky);color:var(--sky);background:var(--sky-light);}
+.vis-btn[data-v="public"].on{border-color:var(--mint);color:var(--mint);background:var(--mint-light);}
+
+/* ── PUBLIC TOGGLE (old, kept for compat) ── */
 #pPublic:checked+span{background:var(--sky)!important;}
 #pPublic:checked+span::before{transform:translateX(20px)!important;}
 /* ── EXPLORE ── */
@@ -394,11 +399,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <div id="mapContainer" style="position:fixed;top:60px;left:0;right:0;bottom:0;z-index:1;"><div id="gmap" style="width:100%;height:100%;"></div></div>
     <!-- Locate Me Button -->
     <button id="locateBtn" onclick="locateMe()" style="position:fixed;bottom:calc(40px + env(safe-area-inset-bottom));right:90px;z-index:9999;width:50px;height:50px;border-radius:50%;border:2px solid var(--border);background:#fff;font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;transition:var(--tr);">📍</button>
-    <!-- Custom Zoom Buttons -->
-    <div style="position:fixed;bottom:calc(40px + env(safe-area-inset-bottom));left:20px;z-index:9999;display:flex;flex-direction:column;gap:6px;" id="zoomBtns">
-      <button onclick="gmap.setZoom(gmap.getZoom()+1)" style="width:44px;height:44px;border-radius:50%;border:2px solid var(--border);background:#fff;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;">+</button>
-      <button onclick="gmap.setZoom(gmap.getZoom()-1)" style="width:44px;height:44px;border-radius:50%;border:2px solid var(--border);background:#fff;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;">−</button>
-    </div>
+    <div id="zoomBtns" style="display:none;"></div>
     <div id="listView">
       <div class="list-top">
         <div class="search-wrap"><span class="sico">🔍</span><input type="text" id="listSearch" placeholder="Search places, cities…" oninput="renderList()"></div>
@@ -606,15 +607,14 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div class="topt" data-t="Culture" onclick="toggleTag(this)">🏛 Culture</div>
       </div>
     </div>
-    <div class="mf" style="display:flex;align-items:center;justify-content:space-between;background:var(--sky-light);border:2px solid var(--sky-mid);border-radius:16px;padding:14px 16px;">
-      <div>
-        <div style="font-size:13px;font-weight:800;color:var(--txt);">🌍 Make Public</div>
-        <div style="font-size:11px;font-weight:600;color:var(--txt2);margin-top:2px;">Show on the public Explore map</div>
+    <div class="mf">
+      <label>Visibility</label>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="vis-btn on" data-v="private" onclick="setVisibility(this)">🔒 Private</button>
+        <button type="button" class="vis-btn" data-v="public" onclick="setVisibility(this)">🌍 Public</button>
       </div>
-      <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
-        <input type="checkbox" id="pPublic" style="opacity:0;width:0;height:0;">
-        <span onclick="togglePublic()" id="toggleSlider" style="position:absolute;cursor:pointer;inset:0;background:var(--border2);border-radius:24px;transition:.3s;"><span id="toggleDot" style="position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.3s;display:block;"></span></span>
-      </label>
+      <div style="font-size:11px;font-weight:600;color:var(--txt3);margin-top:6px;" id="visHint">Only visible to you</div>
+      <input type="hidden" id="pPublic" value="false">
     </div>
     <div class="act-row">
       <button class="btn-cancel" onclick="closeOverlay('addOverlay')">Cancel</button>
@@ -636,7 +636,7 @@ window.addEventListener('load',()=>{
       try{
         const r=await fetch('/api/places',{headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'}});
         if(r.status===401){localStorage.removeItem('wandr_token');showScreen('loginScreen');}
-        else{showScreen('mapScreen');initApp();}
+        else{showScreen('mapScreen');initApp().then(()=>{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{if(gmap){gmap.panTo({lat:pos.coords.latitude,lng:pos.coords.longitude});gmap.setZoom(13);}},()=>{},{timeout:5000});});}
       } catch {showScreen('mapScreen');initApp();}
     } else {
       showScreen('loginScreen');
@@ -858,7 +858,7 @@ function openFull(pre={}){
   document.getElementById('coverPhotoSection').style.display='none';
   document.getElementById('gallerySection').style.display='none';
   resetRating();
-  document.getElementById('pPublic').checked=false;
+  resetVisibility();
   document.querySelectorAll('.topt').forEach(t=>t.classList.toggle('sel',selTags.includes(t.dataset.t)));
   openOverlay('addOverlay');
 }
@@ -877,10 +877,7 @@ function editPlace(id){
   document.getElementById('btnDelete').style.display='block';
   // Rating
   selRating=Number(p.rating)||0;
-  document.getElementById('pPublic').checked=!!p.isPublic;
-  const _dot=document.getElementById('toggleDot');const _sl=document.getElementById('toggleSlider');
-  if(p.isPublic){_sl.style.background='var(--sky)';_dot.style.transform='translateX(20px)';}
-  else{_sl.style.background='var(--border2)';_dot.style.transform='translateX(0)';}
+  syncVisibility(!!p.isPublic);
   document.querySelectorAll('.star').forEach(s=>s.classList.toggle('on',Number(s.dataset.v)<=selRating));
   const labels=['','⭐ Poor','⭐⭐ OK','⭐⭐⭐ Good','⭐⭐⭐⭐ Great','⭐⭐⭐⭐⭐ Amazing'];
   document.getElementById('ratingLabel').textContent=labels[selRating]||'No rating';
@@ -900,7 +897,7 @@ async function savePlace(){
   if(pendingCoords){lat=pendingCoords.lat;lng=pendingCoords.lng;}
   else if(editId){const o=places.find(p=>p._id===editId);lat=o.lat;lng=o.lng;}
   else{toast('Please select a location from the suggestions 📍','err');return;}
-  const body={name,lat,lng,location:document.getElementById('pLocation').value.trim(),notes:document.getElementById('pNotes').value.trim(),link:document.getElementById('pLink').value.trim(),tags:[...selTags],trip:document.getElementById('pTrip').value||null,rating:selRating,isPublic:document.getElementById('pPublic').checked};
+  const body={name,lat,lng,location:document.getElementById('pLocation').value.trim(),notes:document.getElementById('pNotes').value.trim(),link:document.getElementById('pLink').value.trim(),tags:[...selTags],trip:document.getElementById('pTrip').value||null,rating:selRating,isPublic:document.getElementById('pPublic').value==='true'};
   const btn=document.getElementById('btnSave');btn.disabled=true;btn.textContent='Saving…';
   try{
     if(editId){
@@ -1259,19 +1256,30 @@ async function confirmImport(){
   } catch{toast('Error importing trip','err');}
 }
 
-/* ── PUBLIC TOGGLE ── */
-function togglePublic(){
-  const cb=document.getElementById('pPublic');
-  cb.checked=!cb.checked;
-  const dot=document.getElementById('toggleDot');
-  const slider=document.getElementById('toggleSlider');
-  if(cb.checked){
-    slider.style.background='var(--sky)';
-    dot.style.transform='translateX(20px)';
-  } else {
-    slider.style.background='var(--border2)';
-    dot.style.transform='translateX(0)';
-  }
+/* ── VISIBILITY ── */
+function setVisibility(el){
+  document.querySelectorAll('.vis-btn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  const v=el.dataset.v;
+  document.getElementById('pPublic').value = v==='public' ? 'true' : 'false';
+  const hints={private:'🔒 Only visible to you',public:'🌍 Visible to all Wandr users'};
+  document.getElementById('visHint').textContent=hints[v]||'';
+}
+function resetVisibility(){
+  document.querySelectorAll('.vis-btn').forEach(b=>b.classList.remove('on'));
+  const priv=document.querySelector('.vis-btn[data-v="private"]');
+  if(priv) priv.classList.add('on');
+  document.getElementById('pPublic').value='false';
+  document.getElementById('visHint').textContent='🔒 Only visible to you';
+}
+function syncVisibility(isPublic){
+  document.querySelectorAll('.vis-btn').forEach(b=>b.classList.remove('on'));
+  const v = isPublic ? 'public' : 'private';
+  const btn=document.querySelector(`.vis-btn[data-v="${v}"]`);
+  if(btn) btn.classList.add('on');
+  document.getElementById('pPublic').value = isPublic ? 'true' : 'false';
+  const hints={private:'🔒 Only visible to you',public:'🌍 Visible to all Wandr users'};
+  document.getElementById('visHint').textContent=hints[v]||'';
 }
 
 /* ── RATING ── */
