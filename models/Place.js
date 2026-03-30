@@ -2,9 +2,10 @@ const mongoose = require('mongoose');
 
 const PlaceSchema = new mongoose.Schema({
   user:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  trip:     { type: mongoose.Schema.Types.ObjectId, ref: 'Trip', default: null },
   name:     { type: String, required: true, trim: true },
   location: { type: String, trim: true, default: '' },
-  placeId:  { type: String, default: '' },   // Google Place ID for future use
+  placeId:  { type: String, default: '' },
   notes:    { type: String, default: '' },
   link:     { type: String, default: '' },
   tags:     { type: [String], enum: ['Food','Beach','Nightlife','Nature','Culture'], default: [] },
