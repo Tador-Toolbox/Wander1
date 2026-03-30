@@ -92,6 +92,7 @@ app.use('/api/auth',   require('./routes/auth'));
 app.use('/api/places', require('./routes/places'));
 app.use('/api/trips',  require('./routes/trips'));
 app.use('/api/share',  require('./routes/share'));
+app.use('/api/upload', require('./routes/upload'));
 
 // SPA fallback - serves index.html for all non-API routes
 app.get('*', (req, res) => {

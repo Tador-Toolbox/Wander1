@@ -244,7 +244,55 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .btn-del{padding:13px 15px;background:var(--coral-light);border:2px solid rgba(255,107,71,.3);border-radius:16px;color:var(--coral);font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:var(--tr);}
 .btn-del:hover{background:rgba(255,107,71,.15);}
 
-/* ── TRIP SELECTOR in form ── */
+/* ── RATING STARS ── */
+.stars-wrap{display:flex;gap:6px;align-items:center;}
+.star{font-size:28px;cursor:pointer;transition:transform .15s ease;line-height:1;color:#ddd;user-select:none;}
+.star.on{color:#f5a623;}
+.star:hover{transform:scale(1.2);}
+
+/* ── PHOTO UPLOAD ── */
+.photo-upload-zone{
+  border:2px dashed var(--border);border-radius:16px;
+  padding:18px;text-align:center;cursor:pointer;transition:var(--tr);
+  background:var(--bg);position:relative;overflow:hidden;
+}
+.photo-upload-zone:hover{border-color:var(--sky);background:var(--sky-light);}
+.photo-upload-zone .cover-preview{
+  width:100%;height:160px;object-fit:cover;
+  border-radius:12px;display:none;
+}
+.photo-upload-zone .upload-hint{font-size:13px;font-weight:700;color:var(--txt2);}
+.photo-upload-zone .upload-sub{font-size:11px;font-weight:600;color:var(--txt3);margin-top:3px;}
+.photo-upload-zone .change-cover{
+  position:absolute;bottom:10px;right:10px;
+  background:rgba(0,0,0,.55);color:#fff;
+  font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;
+  padding:4px 10px;border-radius:8px;border:none;cursor:pointer;
+  display:none;
+}
+
+/* Gallery */
+.gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;}
+.gallery-item{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:1;}
+.gallery-item img{width:100%;height:100%;object-fit:cover;}
+.gallery-item .del-photo{
+  position:absolute;top:4px;right:4px;
+  background:rgba(239,68,68,.85);color:#fff;
+  border:none;border-radius:50%;width:22px;height:22px;
+  font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.add-photo-btn{
+  aspect-ratio:1;border-radius:10px;border:2px dashed var(--border);
+  background:var(--bg);display:flex;align-items:center;justify-content:center;
+  font-size:24px;cursor:pointer;transition:var(--tr);
+}
+.add-photo-btn:hover{border-color:var(--sky);background:var(--sky-light);}
+
+/* Cover in popup */
+.mp-cover{width:100%;height:140px;object-fit:cover;border-radius:12px 12px 0 0;display:block;}
+.mp-stars{display:flex;gap:2px;margin-bottom:8px;}
+.mp-star{font-size:14px;color:#ddd;}
+.mp-star.on{color:#f5a623;}
 .trip-select{width:100%;padding:11px 14px;background:var(--bg);border:2px solid var(--border);border-radius:14px;color:var(--txt);font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;outline:none;transition:var(--tr);appearance:none;cursor:pointer;}
 .trip-select:focus{border-color:var(--sky);box-shadow:0 0 0 4px var(--sky-glow);}
 
@@ -497,6 +545,33 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <div class="mf"><label>Notes</label><textarea id="pNotes" rows="2" placeholder="Why you want to visit, what's special…"></textarea></div>
     <div class="mf"><label>Link</label><input type="url" id="pLink" placeholder="https://…"></div>
     <div class="mf">
+      <label>Rating</label>
+      <div class="stars-wrap" id="ratingStars">
+        <span class="star" data-v="1" onclick="setRating(1)">★</span>
+        <span class="star" data-v="2" onclick="setRating(2)">★</span>
+        <span class="star" data-v="3" onclick="setRating(3)">★</span>
+        <span class="star" data-v="4" onclick="setRating(4)">★</span>
+        <span class="star" data-v="5" onclick="setRating(5)">★</span>
+        <span style="font-size:12px;font-weight:600;color:var(--txt3);margin-left:6px;" id="ratingLabel">No rating</span>
+      </div>
+    </div>
+    <div class="mf" id="coverPhotoSection" style="display:none">
+      <label>Cover Photo</label>
+      <div class="photo-upload-zone" id="coverZone" onclick="document.getElementById('coverInput').click()">
+        <input type="file" id="coverInput" accept="image/*" style="display:none" onchange="uploadCover(this)">
+        <img id="coverPreview" class="cover-preview">
+        <div id="coverHint"><div style="font-size:28px;margin-bottom:6px">📷</div><div class="upload-hint">Add cover photo</div><div class="upload-sub">Tap to upload</div></div>
+        <button class="change-cover" id="changeCoverBtn" onclick="event.stopPropagation();document.getElementById('coverInput').click()">Change ✏️</button>
+      </div>
+    </div>
+    <div class="mf" id="gallerySection" style="display:none">
+      <label>Photos</label>
+      <div class="gallery-grid" id="galleryGrid">
+        <div class="add-photo-btn" onclick="document.getElementById('photoInput').click()">+</div>
+      </div>
+      <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="uploadPhoto(this)">
+    </div>
+    <div class="mf">
       <label>Tags</label>
       <div class="tag-opts">
         <div class="topt" data-t="Food" onclick="toggleTag(this)">🍜 Food</div>
@@ -600,7 +675,9 @@ function addMarker(place){if(!gmap)return;const m=new google.maps.Marker({positi
 function removeMarker(id){if(window._m[id]){window._m[id].setMap(null);delete window._m[id];}}
 function openIW(place,marker){
   const tags=(place.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('');
-  infoWin.setContent(`<div class="map-popup"><div class="mp-name">${esc(place.name)}</div><div class="mp-loc">📍 ${esc(place.location||'Unknown')}</div>${tags?`<div class="mp-tags">${tags}</div>`:''  }${place.notes?`<div class="mp-notes">${esc(place.notes)}</div>`:''  }${place.link?`<a href="${esc(place.link)}" target="_blank" rel="noopener" class="mp-link">🔗 Open Link</a>`:''}<div class="mp-actions"><button class="mp-btn edit" onclick="editPlace('${place._id}')">✏️ Edit</button><button class="mp-btn del" onclick="doDelete('${place._id}')">🗑 Delete</button></div></div>`);
+  const cover=place.coverPhoto?`<img src="${esc(place.coverPhoto)}" class="mp-cover" loading="lazy">`:'';
+  const stars=place.rating?`<div class="mp-stars">${starsHtml(place.rating)}</div>`:'';
+  infoWin.setContent(`<div class="map-popup">${cover}<div style="padding:14px 16px 12px">${stars}<div class="mp-name">${esc(place.name)}</div><div class="mp-loc">📍 ${esc(place.location||'Unknown')}</div>${tags?`<div class="mp-tags">${tags}</div>`:''  }${place.notes?`<div class="mp-notes">${esc(place.notes)}</div>`:''  }${place.link?`<a href="${esc(place.link)}" target="_blank" rel="noopener" class="mp-link">🔗 Open Link</a>`:''}<div class="mp-actions"><button class="mp-btn edit" onclick="editPlace('${place._id}')">✏️ Edit</button><button class="mp-btn del" onclick="doDelete('${place._id}')">🗑 Delete</button></div></div></div>`);
   infoWin.open(gmap,marker);
 }
 
@@ -650,6 +727,9 @@ function openFull(pre={}){
   document.getElementById('uploadContent').style.display='block';
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='none';
+  document.getElementById('coverPhotoSection').style.display='none';
+  document.getElementById('gallerySection').style.display='none';
+  resetRating();
   document.querySelectorAll('.topt').forEach(t=>t.classList.toggle('sel',selTags.includes(t.dataset.t)));
   openOverlay('addOverlay');
 }
@@ -666,6 +746,16 @@ function editPlace(id){
   document.getElementById('uploadContent').style.display='block';
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='block';
+  // Rating
+  selRating=p.rating||0;
+  document.querySelectorAll('.star').forEach(s=>s.classList.toggle('on',+s.dataset.v<=selRating));
+  const labels=['','⭐ Poor','⭐⭐ OK','⭐⭐⭐ Good','⭐⭐⭐⭐ Great','⭐⭐⭐⭐⭐ Amazing'];
+  document.getElementById('ratingLabel').textContent=labels[selRating]||'No rating';
+  // Photos — only show when editing existing place
+  document.getElementById('coverPhotoSection').style.display='block';
+  document.getElementById('gallerySection').style.display='block';
+  showCoverPreview(p.coverPhoto||'');
+  renderGallery(p.photos||[]);
   document.querySelectorAll('.topt').forEach(t=>t.classList.toggle('sel',selTags.includes(t.dataset.t)));
   if(gmap){infoWin.close();gmap.panTo({lat:p.lat,lng:p.lng});}
   showMap();openOverlay('addOverlay');
@@ -677,7 +767,7 @@ async function savePlace(){
   if(pendingCoords){lat=pendingCoords.lat;lng=pendingCoords.lng;}
   else if(editId){const o=places.find(p=>p._id===editId);lat=o.lat;lng=o.lng;}
   else{toast('Please select a location from the suggestions 📍','err');return;}
-  const body={name,lat,lng,location:document.getElementById('pLocation').value.trim(),notes:document.getElementById('pNotes').value.trim(),link:document.getElementById('pLink').value.trim(),tags:[...selTags],trip:document.getElementById('pTrip').value||null};
+  const body={name,lat,lng,location:document.getElementById('pLocation').value.trim(),notes:document.getElementById('pNotes').value.trim(),link:document.getElementById('pLink').value.trim(),tags:[...selTags],trip:document.getElementById('pTrip').value||null,rating:selRating};
   const btn=document.getElementById('btnSave');btn.disabled=true;btn.textContent='Saving…';
   try{
     if(editId){
@@ -779,7 +869,7 @@ function renderList(){
   const q=document.getElementById('listSearch').value.toLowerCase(),el=document.getElementById('placesList');
   const f=places.filter(p=>(!q||[p.name,p.location,p.notes].join(' ').toLowerCase().includes(q))&&(activeTag==='All'||(p.tags||[]).includes(activeTag)));
   if(!f.length){el.innerHTML=`<div class="empty-state"><div class="empty-ico">🗺️</div><p>No places found yet.<br>Start adding your dream destinations!</p></div>`;return;}
-  el.innerHTML=f.map(p=>`<div class="pcard" onclick="focusPlace('${p._id}')"><div class="pcard-top"><div><div class="pcard-name">${esc(p.name)}</div><div class="pcard-loc">📍 ${esc(p.location||'No location')}</div></div><button class="pcard-edit" onclick="event.stopPropagation();editPlace('${p._id}')">✏️</button></div>${(p.tags||[]).length?`<div class="pcard-tags">${(p.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('')}</div>`:''  }${p.notes?`<div class="pcard-notes">${esc(p.notes)}</div>`:''}<div class="pcard-hint">Tap to view on map →</div></div>`).join('');
+  el.innerHTML=f.map(p=>`<div class="pcard" onclick="focusPlace('${p._id}')">${p.coverPhoto?`<img src="${esc(p.coverPhoto)}" style="width:100%;height:120px;object-fit:cover;border-radius:16px;margin-bottom:10px;" loading="lazy">`:""}<div class="pcard-top"><div><div class="pcard-name">${esc(p.name)}</div><div class="pcard-loc">📍 ${esc(p.location||"No location")}</div></div><button class="pcard-edit" onclick="event.stopPropagation();editPlace('${p._id}')">✏️</button></div>${p.rating?`<div style="display:flex;gap:2px;margin-top:5px;">${starsHtml(p.rating)}</div>`:""}${(p.tags||[]).length?`<div class="pcard-tags">${(p.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join("")}</div>`:""}${p.notes?`<div class="pcard-notes">${esc(p.notes)}</div>`:""}<div class="pcard-hint">Tap to view on map →</div></div>`).join("");
 }
 function focusPlace(id){const p=places.find(x=>x._id===id);if(!p)return;showMap();if(gmap){gmap.panTo({lat:p.lat,lng:p.lng});gmap.setZoom(13);setTimeout(()=>{if(window._m[id])openIW(p,window._m[id]);},500);}}
 function setChip(el){document.querySelectorAll('.chips-row .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');activeTag=el.dataset.t;renderList();}
@@ -1007,6 +1097,83 @@ async function confirmImport(){
     showTrips();
   } catch{toast('Error importing trip','err');}
 }
+
+/* ── RATING ── */
+let selRating=0;
+function setRating(v){
+  selRating=v;
+  document.querySelectorAll('.star').forEach(s=>s.classList.toggle('on',+s.dataset.v<=v));
+  const labels=['','⭐ Poor','⭐⭐ OK','⭐⭐⭐ Good','⭐⭐⭐⭐ Great','⭐⭐⭐⭐⭐ Amazing'];
+  document.getElementById('ratingLabel').textContent=labels[v]||'No rating';
+}
+function resetRating(){
+  selRating=0;
+  document.querySelectorAll('.star').forEach(s=>s.classList.remove('on'));
+  document.getElementById('ratingLabel').textContent='No rating';
+}
+
+/* ── PHOTO UPLOAD ── */
+async function uploadCover(input){
+  const file=input.files[0]; if(!file||!editId)return;
+  const btn=document.getElementById('changeCoverBtn');
+  btn.textContent='Uploading…';
+  try{
+    const fd=new FormData(); fd.append('photo',file);
+    const res=await fetch(`/api/upload/cover/${editId}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
+    if(!res.ok)throw new Error();
+    const{url}=await res.json();
+    const p=places.find(x=>x._id===editId); if(p) p.coverPhoto=url;
+    showCoverPreview(url);
+    toast('📷 Cover photo updated!','ok');
+  }catch{toast('Upload failed 😢','err');}
+  btn.textContent='Change ✏️';
+  input.value='';
+}
+
+function showCoverPreview(url){
+  const img=document.getElementById('coverPreview');
+  const hint=document.getElementById('coverHint');
+  const btn=document.getElementById('changeCoverBtn');
+  if(url){img.src=url;img.style.display='block';hint.style.display='none';btn.style.display='block';}
+  else{img.style.display='none';hint.style.display='block';btn.style.display='none';}
+}
+
+async function uploadPhoto(input){
+  const file=input.files[0]; if(!file||!editId)return;
+  try{
+    const fd=new FormData(); fd.append('photo',file);
+    const res=await fetch(`/api/upload/photo/${editId}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
+    if(!res.ok)throw new Error();
+    const{photos}=await res.json();
+    const p=places.find(x=>x._id===editId); if(p) p.photos=photos;
+    renderGallery(photos);
+    toast('📷 Photo added!','ok');
+  }catch{toast('Upload failed 😢','err');}
+  input.value='';
+}
+
+async function deletePhoto(url){
+  if(!editId)return;
+  try{
+    const res=await apiFetch(`/api/upload/photo/${editId}`,{method:'DELETE',body:JSON.stringify({url})});
+    if(!res.ok)throw new Error();
+    const{photos}=await res.json();
+    const p=places.find(x=>x._id===editId); if(p) p.photos=photos;
+    renderGallery(photos);
+    toast('Photo removed','');
+  }catch{toast('Delete failed','err');}
+}
+
+function renderGallery(photos){
+  const grid=document.getElementById('galleryGrid');
+  const items=(photos||[]).map(url=>`<div class="gallery-item"><img src="${url}" loading="lazy"><button class="del-photo" onclick="deletePhoto('${url}')">✕</button></div>`).join('');
+  grid.innerHTML=items+`<div class="add-photo-btn" onclick="document.getElementById('photoInput').click()">+</div>`;
+}
+
+function starsHtml(rating){
+  return [1,2,3,4,5].map(i=>`<span class="mp-star${i<=rating?' on':''}">★</span>`).join('');
+}
+
 function locateMe(){
   if(!navigator.geolocation){toast('Geolocation not supported','err');return;}
   const btn=document.getElementById('locateBtn');
