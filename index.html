@@ -86,6 +86,38 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Nunito',
 .hbtn.on{border-color:var(--sky);color:var(--sky);background:var(--sky-light);}
 .badge{background:var(--sky);color:#fff;font-size:10px;font-weight:800;padding:1px 6px;border-radius:20px;}
 
+/* ── TRIPS VIEW ── */
+#tripsView{display:none;position:fixed;top:60px;left:0;right:0;bottom:0;background:var(--bg);flex-direction:column;overflow:hidden;z-index:2;}
+.trips-header{padding:16px 18px 0;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.trips-title{font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:var(--txt);}
+.btn-new-trip{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;border:2px solid var(--sky);background:var(--sky-light);color:var(--sky);font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:var(--tr);}
+.btn-new-trip:hover{background:var(--sky);color:#fff;}
+.trips-list{flex:1;overflow-y:auto;padding:14px 18px 24px;scrollbar-width:thin;}
+.trip-card{background:#fff;border:2px solid var(--border);border-radius:20px;padding:16px;margin-bottom:10px;cursor:pointer;transition:var(--tr);box-shadow:0 2px 12px rgba(0,0,0,.04);}
+.trip-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.1);}
+.trip-card-top{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+.trip-emoji-circle{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.trip-name{font-size:15px;font-weight:800;color:var(--txt);}
+.trip-count{font-size:11px;font-weight:600;color:var(--txt2);margin-top:2px;}
+.trip-actions{display:flex;gap:6px;margin-top:10px;}
+.trip-btn{flex:1;padding:7px;border-radius:10px;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;cursor:pointer;border:2px solid var(--border);background:#fff;color:var(--txt2);transition:var(--tr);text-align:center;}
+.trip-btn:hover{border-color:var(--sky);color:var(--sky);}
+.trip-btn.view{background:var(--sky-light);border-color:var(--sky);color:var(--sky);}
+.trip-btn.share{background:var(--mint-light);border-color:var(--mint);color:var(--mint);}
+.trip-btn.del{background:var(--coral-light);border-color:rgba(255,107,71,.3);color:var(--coral);}
+.no-trips{text-align:center;padding:60px 20px;color:var(--txt3);}
+.no-trips .ni{font-size:48px;margin-bottom:14px;}
+.no-trips p{font-size:14px;font-weight:600;line-height:1.7;}
+
+/* active trip banner */
+#activeTripBanner{
+  position:fixed;top:60px;left:0;right:0;z-index:150;
+  padding:8px 18px;display:none;align-items:center;justify-content:space-between;
+  background:var(--sky);color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;
+}
+#activeTripBanner span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#activeTripBanner button{background:rgba(255,255,255,.25);border:none;border-radius:8px;color:#fff;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;cursor:pointer;padding:4px 10px;flex-shrink:0;margin-left:10px;}
+
 /* ── APP CONTENT ── */
 .app-content{flex:1;position:relative;overflow:hidden;height:calc(100vh - 60px);}
 #gmap{width:100%;height:100%;min-height:calc(100vh - 60px);}
@@ -212,7 +244,27 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .btn-del{padding:13px 15px;background:var(--coral-light);border:2px solid rgba(255,107,71,.3);border-radius:16px;color:var(--coral);font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:var(--tr);}
 .btn-del:hover{background:rgba(255,107,71,.15);}
 
-/* ── TOAST ── */
+/* ── TRIP SELECTOR in form ── */
+.trip-select{width:100%;padding:11px 14px;background:var(--bg);border:2px solid var(--border);border-radius:14px;color:var(--txt);font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;outline:none;transition:var(--tr);appearance:none;cursor:pointer;}
+.trip-select:focus{border-color:var(--sky);box-shadow:0 0 0 4px var(--sky-glow);}
+
+/* ── SHARE SHEET ── */
+.share-url-box{display:flex;gap:8px;margin-top:10px;}
+.share-url-box input{flex:1;padding:10px 13px;background:var(--bg);border:2px solid var(--border);border-radius:12px;color:var(--txt2);font-family:'Nunito',sans-serif;font-size:12px;font-weight:600;outline:none;}
+.btn-copy{padding:10px 14px;background:var(--sky);border:none;border-radius:12px;color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:var(--tr);}
+.btn-copy:hover{opacity:.88;}
+.btn-copy.copied{background:var(--mint);}
+.export-opts{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.export-btn{padding:13px;border-radius:16px;border:2px solid var(--border);background:#fff;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:var(--tr);display:flex;align-items:center;gap:10px;color:var(--txt);}
+.export-btn:hover{border-color:var(--sky);background:var(--sky-light);color:var(--sky);}
+
+/* ── IMPORT PREVIEW ── */
+.import-preview{background:var(--sky-light);border:2px solid var(--sky-mid);border-radius:16px;padding:16px;margin-bottom:16px;}
+.import-preview h3{font-size:16px;font-weight:800;color:var(--txt);margin-bottom:4px;}
+.import-preview p{font-size:12px;font-weight:600;color:var(--txt2);}
+.import-places-preview{margin-top:10px;display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto;}
+.ipp{font-size:12px;font-weight:600;color:var(--txt2);padding:4px 0;border-bottom:1px solid var(--sky-mid);}
+.ipp:last-child{border-bottom:none;}
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(14px);background:#fff;border:2px solid var(--border);border-radius:18px;padding:11px 22px;font-size:13px;font-weight:700;color:var(--txt);z-index:2000;opacity:0;transition:all .28s ease;pointer-events:none;white-space:nowrap;box-shadow:0 8px 30px rgba(0,0,0,.1);}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .toast.ok{border-color:rgba(52,201,138,.4);background:var(--mint-light);color:var(--mint);}
@@ -271,10 +323,17 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <div class="h-logo">Wandr <span class="h-dot">·</span></div>
     <div class="h-actions">
       <button class="hbtn on" id="btnMap" onclick="showMap()">🗺 Map</button>
-      <button class="hbtn" id="btnList" onclick="showList()">☰ List <span class="badge" id="placeCount">0</span></button>
+      <button class="hbtn" id="btnList" onclick="showList()">☰ <span class="badge" id="placeCount">0</span></button>
+      <button class="hbtn" id="btnTrips" onclick="showTrips()">✈️</button>
       <button class="hbtn" style="padding:7px 10px" onclick="logout()" title="Sign out">⎋</button>
     </div>
   </div>
+  <!-- Active trip banner -->
+  <div id="activeTripBanner">
+    <span id="activeTripName"></span>
+    <button onclick="clearActiveTrip()">✕ Show All</button>
+  </div>
+
   <div class="app-content">
     <div id="mapContainer" style="position:fixed;top:60px;left:0;right:0;bottom:0;z-index:1;"><div id="gmap" style="width:100%;height:100%;"></div></div>
     <!-- Locate Me Button -->
@@ -304,6 +363,94 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div class="fab-row"><div class="fab-lbl">✍️ Add Full</div><button class="fab-btn" onclick="openFull()">✍️</button></div>
       </div>
       <button class="fab-main" id="fabMain" onclick="toggleFab()">+</button>
+    </div>
+  </div>
+</div>
+
+    <!-- TRIPS VIEW -->
+    <div id="tripsView" style="display:none;position:fixed;top:60px;left:0;right:0;bottom:0;background:var(--bg);flex-direction:column;overflow:hidden;z-index:2;">
+      <div class="trips-header">
+        <div class="trips-title">✈️ My Trips</div>
+        <button class="btn-new-trip" onclick="openNewTrip()">+ New Trip</button>
+      </div>
+      <div class="trips-list" id="tripsList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: NEW TRIP -->
+<div class="overlay" id="newTripOverlay">
+  <div class="sheet">
+    <div class="drag-bar"></div>
+    <div class="sheet-title" id="tripFormTitle">✈️ New Trip</div>
+    <div class="mf">
+      <label>Trip Name</label>
+      <input type="text" id="tripName" placeholder="e.g. Vietnam 2025, Paris Honeymoon…">
+    </div>
+    <div class="mf">
+      <label>Emoji</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="emojiPicker">
+        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="✈️">✈️</span>
+        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🏖">🏖</span>
+        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🗺">🗺</span>
+        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🏔">🏔</span>
+        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🌴">🌴</span>
+        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🍜">🍜</span>
+        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🎒">🎒</span>
+        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="💑">💑</span>
+        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="👨‍👩‍👧‍👦">👨‍👩‍👧‍👦</span>
+        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🎉">🎉</span>
+      </div>
+    </div>
+    <div class="mf">
+      <label>Color</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="colorPicker">
+        <span style="width:32px;height:32px;border-radius:50%;background:#4a9eff;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#4a9eff"></span>
+        <span style="width:32px;height:32px;border-radius:50%;background:#ff6b47;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#ff6b47"></span>
+        <span style="width:32px;height:32px;border-radius:50%;background:#34c98a;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#34c98a"></span>
+        <span style="width:32px;height:32px;border-radius:50%;background:#9b6dff;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#9b6dff"></span>
+        <span style="width:32px;height:32px;border-radius:50%;background:#f5a623;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#f5a623"></span>
+        <span style="width:32px;height:32px;border-radius:50%;background:#ec4899;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#ec4899"></span>
+      </div>
+    </div>
+    <div class="act-row">
+      <button class="btn-cancel" onclick="closeOverlay('newTripOverlay')">Cancel</button>
+      <button class="btn-save" onclick="saveTrip()">Save Trip ✈️</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: SHARE TRIP -->
+<div class="overlay" id="shareOverlay">
+  <div class="sheet">
+    <div class="drag-bar"></div>
+    <div class="sheet-title">🔗 Share Trip</div>
+    <div class="import-preview" id="shareTripPreview"></div>
+    <div class="export-opts">
+      <button class="export-btn" onclick="generateShareLink()">🔗 Generate Share Link</button>
+      <button class="export-btn" onclick="exportJSON()">📥 Download as JSON</button>
+    </div>
+    <div id="shareLinkBox" style="display:none;margin-top:14px;">
+      <div style="font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px;">Share Link</div>
+      <div class="share-url-box">
+        <input type="text" id="shareUrlInput" readonly>
+        <button class="btn-copy" id="copyBtn" onclick="copyShareLink()">Copy</button>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--txt3);margin-top:6px;">Anyone with this link can import your trip into their Wandr account.</div>
+    </div>
+    <button class="btn-cancel" onclick="closeOverlay('shareOverlay')" style="width:100%;margin-top:16px">Close</button>
+  </div>
+</div>
+
+<!-- OVERLAY: IMPORT TRIP (shared link) -->
+<div class="overlay" id="importOverlay">
+  <div class="sheet">
+    <div class="drag-bar"></div>
+    <div class="sheet-title">📥 Import Trip</div>
+    <div class="import-preview" id="importPreview"></div>
+    <div class="act-row">
+      <button class="btn-cancel" onclick="closeOverlay('importOverlay')">Cancel</button>
+      <button class="btn-save" id="importBtn" onclick="confirmImport()">Import Trip 📥</button>
     </div>
   </div>
 </div>
@@ -346,6 +493,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <div class="sheet-divider"></div>
     <div class="mf"><label>Place Name ✦</label><input type="text" id="pName" placeholder="e.g. Sunset Beach Bar"></div>
     <div class="mf"><label>Location (Google Places)</label><input type="text" id="pLocation" placeholder="Start typing a city or place…" autocomplete="off"></div>
+    <div class="mf"><label>Trip (optional)</label><select class="trip-select" id="pTrip"><option value="">— No trip —</option></select></div>
     <div class="mf"><label>Notes</label><textarea id="pNotes" rows="2" placeholder="Why you want to visit, what's special…"></textarea></div>
     <div class="mf"><label>Link</label><input type="url" id="pLink" placeholder="https://…"></div>
     <div class="mf">
@@ -369,10 +517,21 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div class="toast" id="toast"></div>
 
 <script>
-let token=localStorage.getItem('wandr_token'),places=[],gmap=null,infoWin=null,autocomplete=null,editId=null,selTags=[],activeTag='All',pendingCoords=null,fabOpen=false,isReg=false,anthropicKey=null;
+let token=localStorage.getItem('wandr_token'),places=[],trips=[],gmap=null,infoWin=null,autocomplete=null,editId=null,selTags=[],activeTag='All',pendingCoords=null,fabOpen=false,isReg=false,anthropicKey=null,activeTrip=null,editTripId=null,selEmoji='✈️',selColor='#4a9eff',shareTargetTrip=null,importToken=null;
 
 window.addEventListener('load',()=>{
-  setTimeout(()=>{ token?( showScreen('mapScreen'),initApp() ):showScreen('loginScreen'); },1800);
+  setTimeout(async ()=>{
+    if(token){
+      // Verify token is still valid
+      try{
+        const r=await fetch('/api/places',{headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'}});
+        if(r.status===401){localStorage.removeItem('wandr_token');showScreen('loginScreen');}
+        else{showScreen('mapScreen');initApp();}
+      } catch {showScreen('mapScreen');initApp();}
+    } else {
+      showScreen('loginScreen');
+    }
+  },1800);
 });
 
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
@@ -404,8 +563,13 @@ function logout(){token=null;places=[];gmap=null;autocomplete=null;localStorage.
 
 async function initApp(){
   await loadPlaces();
+  await loadTrips();
   await loadMapsKey();
   try{const r=await apiFetch('/api/config/anthropic-key');const d=await r.json();anthropicKey=d.key;}catch{}
+  // Check if URL has a share token
+  const path=window.location.pathname;
+  const match=path.match(/^\/trip\/([a-f0-9]+)$/);
+  if(match) checkSharedTrip(match[1]);
 }
 async function loadMapsKey(){try{const res=await apiFetch('/api/config/maps-key');const{key}=await res.json();injectMaps(key);}catch{}}
 function injectMaps(key){if(window.google){bootMap();return;}window.__mapsReady=bootMap;const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&callback=__mapsReady`;s.async=true;s.defer=true;document.head.appendChild(s);}
@@ -442,8 +606,30 @@ function openIW(place,marker){
 
 function setupAC(){const input=document.getElementById('pLocation');autocomplete=new google.maps.places.Autocomplete(input,{fields:['geometry','name','formatted_address','place_id']});autocomplete.addListener('place_changed',()=>{const pl=autocomplete.getPlace();if(!pl.geometry)return;pendingCoords={lat:pl.geometry.location.lat(),lng:pl.geometry.location.lng()};if(!document.getElementById('pName').value.trim())document.getElementById('pName').value=pl.name||'';});}
 
-function showMap(){document.getElementById('mapContainer').style.display='block';document.getElementById('listView').style.display='none';document.getElementById('fab').style.display='block';document.getElementById('locateBtn').style.display='flex';document.getElementById('zoomBtns').style.display='flex';document.getElementById('btnMap').classList.add('on');document.getElementById('btnList').classList.remove('on');if(gmap)google.maps.event.trigger(gmap,'resize');}
-function showList(){document.getElementById('mapContainer').style.display='none';document.getElementById('listView').style.display='flex';document.getElementById('fab').style.display='none';document.getElementById('locateBtn').style.display='none';document.getElementById('zoomBtns').style.display='none';document.getElementById('btnMap').classList.remove('on');document.getElementById('btnList').classList.add('on');renderList();}
+function showMap(){
+  document.getElementById('mapContainer').style.display='block';
+  document.getElementById('listView').style.display='none';
+  document.getElementById('tripsView').style.display='none';
+  document.getElementById('fab').style.display='block';
+  document.getElementById('locateBtn').style.display='flex';
+  document.getElementById('zoomBtns').style.display='flex';
+  document.getElementById('btnMap').classList.add('on');
+  document.getElementById('btnList').classList.remove('on');
+  document.getElementById('btnTrips').classList.remove('on');
+  if(gmap)google.maps.event.trigger(gmap,'resize');
+}
+function showList(){
+  document.getElementById('mapContainer').style.display='none';
+  document.getElementById('listView').style.display='flex';
+  document.getElementById('tripsView').style.display='none';
+  document.getElementById('fab').style.display='none';
+  document.getElementById('locateBtn').style.display='none';
+  document.getElementById('zoomBtns').style.display='none';
+  document.getElementById('btnMap').classList.remove('on');
+  document.getElementById('btnList').classList.add('on');
+  document.getElementById('btnTrips').classList.remove('on');
+  renderList();
+}
 
 function toggleFab(){fabOpen=!fabOpen;document.getElementById('fabMenu').classList.toggle('open',fabOpen);document.getElementById('fabMain').classList.toggle('open',fabOpen);}
 function closeFab(){fabOpen=false;document.getElementById('fabMenu').classList.remove('open');document.getElementById('fabMain').classList.remove('open');}
@@ -459,6 +645,7 @@ function openFull(pre={}){
   document.getElementById('pLocation').value=pre.location||'';
   document.getElementById('pNotes').value=pre.notes||'';
   document.getElementById('pLink').value=pre.link||'';
+  document.getElementById('pTrip').value=activeTrip?activeTrip._id:'';
   document.getElementById('igResult').style.display='none';
   document.getElementById('uploadContent').style.display='block';
   document.getElementById('scanLoading').style.display='none';
@@ -474,6 +661,7 @@ function editPlace(id){
   document.getElementById('pLocation').value=p.location||'';
   document.getElementById('pNotes').value=p.notes||'';
   document.getElementById('pLink').value=p.link||'';
+  document.getElementById('pTrip').value=p.trip||'';
   document.getElementById('igResult').style.display='none';
   document.getElementById('uploadContent').style.display='block';
   document.getElementById('scanLoading').style.display='none';
@@ -489,7 +677,7 @@ async function savePlace(){
   if(pendingCoords){lat=pendingCoords.lat;lng=pendingCoords.lng;}
   else if(editId){const o=places.find(p=>p._id===editId);lat=o.lat;lng=o.lng;}
   else{toast('Please select a location from the suggestions 📍','err');return;}
-  const body={name,lat,lng,location:document.getElementById('pLocation').value.trim(),notes:document.getElementById('pNotes').value.trim(),link:document.getElementById('pLink').value.trim(),tags:[...selTags]};
+  const body={name,lat,lng,location:document.getElementById('pLocation').value.trim(),notes:document.getElementById('pNotes').value.trim(),link:document.getElementById('pLink').value.trim(),tags:[...selTags],trip:document.getElementById('pTrip').value||null};
   const btn=document.getElementById('btnSave');btn.disabled=true;btn.textContent='Saving…';
   try{
     if(editId){
@@ -595,7 +783,230 @@ function renderList(){
 }
 function focusPlace(id){const p=places.find(x=>x._id===id);if(!p)return;showMap();if(gmap){gmap.panTo({lat:p.lat,lng:p.lng});gmap.setZoom(13);setTimeout(()=>{if(window._m[id])openIW(p,window._m[id]);},500);}}
 function setChip(el){document.querySelectorAll('.chips-row .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');activeTag=el.dataset.t;renderList();}
-function locateMe(){
+async function loadTrips(){
+  try{const r=await apiFetch('/api/trips');trips=await r.json();populateTripSelect();}
+  catch(e){if(e.message!=='Unauthorized')console.error('trips load failed');}
+}
+
+function populateTripSelect(){
+  const sel=document.getElementById('pTrip');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— No trip —</option>';
+  trips.forEach(t=>{
+    const o=document.createElement('option');
+    o.value=t._id; o.textContent=t.emoji+' '+t.name;
+    sel.appendChild(o);
+  });
+  if(cur) sel.value=cur;
+  if(activeTrip) sel.value=activeTrip._id;
+}
+
+function showTrips(){
+  document.getElementById('mapContainer').style.display='none';
+  document.getElementById('listView').style.display='none';
+  document.getElementById('tripsView').style.display='flex';
+  document.getElementById('fab').style.display='none';
+  document.getElementById('locateBtn').style.display='none';
+  document.getElementById('zoomBtns').style.display='none';
+  document.getElementById('btnMap').classList.remove('on');
+  document.getElementById('btnList').classList.remove('on');
+  document.getElementById('btnTrips').classList.add('on');
+  renderTrips();
+}
+
+function renderTrips(){
+  const el=document.getElementById('tripsList');
+  if(!trips.length){
+    el.innerHTML=`<div class="no-trips"><div class="ni">✈️</div><p>No trips yet.<br>Create your first trip to organize your places!</p></div>`;
+    return;
+  }
+  el.innerHTML=trips.map(t=>{
+    const count=places.filter(p=>p.trip===t._id).length;
+    return `<div class="trip-card" style="border-color:${t.color}22">
+      <div class="trip-card-top">
+        <div class="trip-emoji-circle" style="background:${t.color}18">${t.emoji}</div>
+        <div style="flex:1">
+          <div class="trip-name">${esc(t.name)}</div>
+          <div class="trip-count">📍 ${count} place${count!==1?'s':''}</div>
+        </div>
+      </div>
+      <div class="trip-actions">
+        <button class="trip-btn view" style="border-color:${t.color};color:${t.color};background:${t.color}15" onclick="viewTrip('${t._id}')">🗺 View</button>
+        <button class="trip-btn share" onclick="openShare('${t._id}')">🔗 Share</button>
+        <button class="trip-btn" onclick="openEditTrip('${t._id}')">✏️</button>
+        <button class="trip-btn del" onclick="deleteTrip('${t._id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openNewTrip(){
+  editTripId=null; selEmoji='✈️'; selColor='#4a9eff';
+  document.getElementById('tripFormTitle').textContent='✈️ New Trip';
+  document.getElementById('tripName').value='';
+  document.querySelectorAll('#emojiPicker span').forEach(s=>s.style.borderColor='transparent');
+  document.querySelector('#emojiPicker span[data-e="✈️"]').style.borderColor='var(--sky)';
+  document.querySelectorAll('#colorPicker span').forEach(s=>s.style.borderColor='transparent');
+  document.querySelector('#colorPicker span[data-c="#4a9eff"]').style.borderColor='#333';
+  openOverlay('newTripOverlay');
+}
+
+function openEditTrip(id){
+  const t=trips.find(x=>x._id===id); if(!t)return;
+  editTripId=id; selEmoji=t.emoji; selColor=t.color;
+  document.getElementById('tripFormTitle').textContent='✏️ Edit Trip';
+  document.getElementById('tripName').value=t.name;
+  document.querySelectorAll('#emojiPicker span').forEach(s=>s.style.borderColor='transparent');
+  const ep=document.querySelector(`#emojiPicker span[data-e="${t.emoji}"]`);
+  if(ep) ep.style.borderColor='var(--sky)';
+  document.querySelectorAll('#colorPicker span').forEach(s=>s.style.borderColor='transparent');
+  const cp=document.querySelector(`#colorPicker span[data-c="${t.color}"]`);
+  if(cp) cp.style.borderColor='#333';
+  openOverlay('newTripOverlay');
+}
+
+function pickEmoji(el){
+  document.querySelectorAll('#emojiPicker span').forEach(s=>s.style.borderColor='transparent');
+  el.style.borderColor='var(--sky)';
+  selEmoji=el.dataset.e;
+}
+
+function pickColor(el){
+  document.querySelectorAll('#colorPicker span').forEach(s=>s.style.borderColor='transparent');
+  el.style.borderColor='#333';
+  selColor=el.dataset.c;
+}
+
+async function saveTrip(){
+  const name=document.getElementById('tripName').value.trim();
+  if(!name){toast('Please enter a trip name','err');return;}
+  try{
+    if(editTripId){
+      const r=await apiFetch(`/api/trips/${editTripId}`,{method:'PUT',body:JSON.stringify({name,emoji:selEmoji,color:selColor})});
+      const updated=await r.json();
+      trips=trips.map(t=>t._id===editTripId?updated:t);
+      toast('✅ Trip updated!','ok');
+    } else {
+      const r=await apiFetch('/api/trips',{method:'POST',body:JSON.stringify({name,emoji:selEmoji,color:selColor})});
+      const created=await r.json();
+      trips.unshift(created);
+      toast('✈️ Trip created!','ok');
+    }
+    populateTripSelect();
+    closeOverlay('newTripOverlay');
+    renderTrips();
+  } catch{toast('Error saving trip','err');}
+}
+
+async function deleteTrip(id){
+  if(!confirm('Delete this trip? Places will not be deleted.'))return;
+  try{
+    await apiFetch(`/api/trips/${id}`,{method:'DELETE'});
+    trips=trips.filter(t=>t._id!==id);
+    if(activeTrip&&activeTrip._id===id) clearActiveTrip();
+    populateTripSelect(); renderTrips();
+    toast('🗑 Trip deleted','');
+  } catch{toast('Error deleting trip','err');}
+}
+
+function viewTrip(id){
+  const t=trips.find(x=>x._id===id); if(!t)return;
+  activeTrip=t;
+  document.getElementById('activeTripBanner').style.display='flex';
+  document.getElementById('activeTripName').textContent=t.emoji+' '+t.name;
+  showMap();
+  refreshMarkers();
+}
+
+function clearActiveTrip(){
+  activeTrip=null;
+  document.getElementById('activeTripBanner').style.display='none';
+  refreshMarkers();
+}
+
+function refreshMarkers(){
+  Object.values(window._m||{}).forEach(m=>m.setMap(null));
+  window._m={};
+  const filtered=activeTrip?places.filter(p=>p.trip===activeTrip._id):places;
+  filtered.forEach(p=>addMarker(p));
+}
+
+// ── SHARE ──
+async function openShare(id){
+  shareTargetTrip=trips.find(t=>t._id===id); if(!shareTargetTrip)return;
+  const count=places.filter(p=>p.trip===id).length;
+  document.getElementById('shareTripPreview').innerHTML=`
+    <h3>${shareTargetTrip.emoji} ${esc(shareTargetTrip.name)}</h3>
+    <p>📍 ${count} places</p>`;
+  document.getElementById('shareLinkBox').style.display='none';
+  openOverlay('shareOverlay');
+}
+
+async function generateShareLink(){
+  if(!shareTargetTrip)return;
+  try{
+    const r=await apiFetch(`/api/trips/${shareTargetTrip._id}/share`,{method:'POST'});
+    const{token:shareToken}=await r.json();
+    const url=`${window.location.origin}/trip/${shareToken}`;
+    document.getElementById('shareUrlInput').value=url;
+    document.getElementById('shareLinkBox').style.display='block';
+  } catch{toast('Error generating link','err');}
+}
+
+function copyShareLink(){
+  const inp=document.getElementById('shareUrlInput');
+  navigator.clipboard.writeText(inp.value).then(()=>{
+    const btn=document.getElementById('copyBtn');
+    btn.textContent='Copied!'; btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);
+  });
+}
+
+function exportJSON(){
+  if(!shareTargetTrip)return;
+  const tripPlaces=places.filter(p=>p.trip===shareTargetTrip._id);
+  const data={trip:{name:shareTargetTrip.name,emoji:shareTargetTrip.emoji,color:shareTargetTrip.color},places:tripPlaces};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`${shareTargetTrip.name.replace(/\s+/g,'-')}-wandr.json`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('📥 JSON downloaded!','ok');
+}
+
+// ── IMPORT ──
+async function checkSharedTrip(token){
+  importToken=token;
+  try{
+    const r=await fetch(`/api/share/${token}`);
+    if(!r.ok) throw new Error();
+    const data=await r.json();
+    const placesHtml=data.places.slice(0,5).map(p=>`<div class="ipp">📍 ${esc(p.name)}${p.location?' – '+esc(p.location):''}</div>`).join('');
+    document.getElementById('importPreview').innerHTML=`
+      <h3>${data.trip.emoji} ${esc(data.trip.name)}</h3>
+      <p>${data.places.length} places to import</p>
+      <div class="import-places-preview">${placesHtml}${data.places.length>5?`<div class="ipp" style="color:var(--txt3)">...and ${data.places.length-5} more</div>`:''}</div>`;
+    openOverlay('importOverlay');
+  } catch{toast('Invalid or expired share link','err');}
+}
+
+async function confirmImport(){
+  if(!importToken)return;
+  try{
+    const r=await apiFetch(`/api/share/${importToken}/import`,{method:'POST'});
+    if(!r.ok) throw new Error();
+    const data=await r.json();
+    trips.unshift(data.trip);
+    places=[...data.places,...places];
+    populateTripSelect(); updateCount();
+    closeOverlay('importOverlay');
+    // Clean URL
+    window.history.replaceState(null,'','/');
+    toast(`✅ "${data.trip.name}" imported!`,'ok');
+    showTrips();
+  } catch{toast('Error importing trip','err');}
+}
   if(!navigator.geolocation){toast('Geolocation not supported','err');return;}
   const btn=document.getElementById('locateBtn');
   btn.textContent='⏳';
