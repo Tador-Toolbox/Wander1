@@ -386,7 +386,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 #tripsView{top:60px!important;bottom:calc(62px + env(safe-area-inset-bottom))!important;}
 #exploreView{top:60px!important;bottom:calc(62px + env(safe-area-inset-bottom))!important;}
 .fab{bottom:calc(72px + env(safe-area-inset-bottom) + 10px)!important;}
-#locateBtn{bottom:calc(72px + env(safe-area-inset-bottom) + 80px)!important;}
+#locateBtn{bottom:calc(72px + env(safe-area-inset-bottom) + 78px)!important;right:20px!important;}
 </style>
 </head>
 <body>
@@ -459,7 +459,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
   <div class="app-content">
     <div id="mapContainer" style="position:fixed;top:60px;left:0;right:0;bottom:0;z-index:1;"><div id="gmap" style="width:100%;height:100%;"></div></div>
     <!-- Locate Me Button -->
-    <button id="locateBtn" onclick="locateMe()" style="position:fixed;bottom:calc(40px + env(safe-area-inset-bottom));right:90px;z-index:9999;width:50px;height:50px;border-radius:50%;border:2px solid var(--border);background:#fff;font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;transition:var(--tr);">📍</button>
+    <button id="locateBtn" onclick="locateMe()" style="position:fixed;bottom:calc(40px + env(safe-area-inset-bottom));right:20px;z-index:9999;width:50px;height:50px;border-radius:50%;border:2px solid var(--border);background:#fff;font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;transition:var(--tr);">📍</button>
     <div id="zoomBtns" style="display:none;"></div>
     <div id="listView">
       <div class="list-top">
