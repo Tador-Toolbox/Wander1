@@ -90,8 +90,10 @@ Reply ONLY with JSON in this exact format:
 // Routes
 app.use('/api/auth',   require('./routes/auth'));
 app.use('/api/places', require('./routes/places'));
+app.use('/api/trips',  require('./routes/trips'));
+app.use('/api/share',  require('./routes/share'));
 
-// SPA fallback
+// SPA fallback - serves index.html for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
