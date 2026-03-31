@@ -339,6 +339,31 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 #exploreView{display:none;position:fixed;top:60px;left:0;right:0;bottom:0;z-index:2;}
 #exploreMap{width:100%;height:100%;}
 .explore-banner{position:fixed;top:68px;left:50%;transform:translateX(-50%);background:var(--sky);color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;padding:7px 16px;border-radius:20px;box-shadow:var(--sh);z-index:300;pointer-events:none;animation:riseUp .4s ease;white-space:nowrap;}
+/* ── SOCIAL FEED ── */
+#socialFeed{padding:12px 16px 20px;overflow-y:auto;flex:1;}
+.post-card{background:#fff;border:2px solid var(--border);border-radius:24px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.04);animation:riseUp .3s ease;}
+.post-header{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;}
+.post-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--sky),var(--sky-dark));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;overflow:hidden;flex-shrink:0;}
+.post-avatar img{width:100%;height:100%;object-fit:cover;}
+.post-author{flex:1;}
+.post-author-name{font-size:13px;font-weight:800;color:var(--txt);}
+.post-author-handle{font-size:11px;font-weight:600;color:var(--txt3);}
+.post-time{font-size:10px;font-weight:600;color:var(--txt3);}
+.post-cover{width:100%;max-height:220px;object-fit:cover;display:block;}
+.post-body{padding:12px 16px 14px;}
+.post-place-name{font-size:16px;font-weight:800;color:var(--txt);margin-bottom:2px;}
+.post-location{font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:8px;}
+.post-notes{font-size:13px;font-weight:600;color:var(--txt2);line-height:1.5;margin-bottom:10px;}
+.post-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;}
+.post-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.post-status-badge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;}
+.post-status-badge.been{background:var(--mint-light);color:var(--mint);}
+.post-status-badge.tobe{background:var(--sky-light);color:var(--sky);}
+.post-del-btn{background:none;border:none;color:var(--txt3);font-size:13px;cursor:pointer;padding:4px 8px;border-radius:8px;}
+.post-del-btn:hover{color:var(--coral);}
+.no-posts{text-align:center;padding:60px 20px;color:var(--txt3);}
+.no-posts .ni{font-size:48px;margin-bottom:14px;}
+
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(14px);background:#fff;border:2px solid var(--border);border-radius:18px;padding:11px 22px;font-size:13px;font-weight:700;color:var(--txt);z-index:2000;opacity:0;transition:all .28s ease;pointer-events:none;white-space:nowrap;box-shadow:0 8px 30px rgba(0,0,0,.1);}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .toast.ok{border-color:rgba(52,201,138,.4);background:var(--mint-light);color:var(--mint);}
@@ -480,19 +505,12 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <!-- Locate Me Button -->
     <button id="locateBtn" onclick="locateMe()" style="position:fixed;bottom:calc(40px + env(safe-area-inset-bottom));left:20px;z-index:9999;width:50px;height:50px;border-radius:50%;border:2px solid var(--border);background:#fff;font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;transition:var(--tr);">📍</button>
     <div id="zoomBtns" style="display:none;"></div>
-    <div id="listView">
-      <div class="list-top">
-        <div class="search-wrap"><span class="sico">🔍</span><input type="text" id="listSearch" placeholder="Search places, cities…" oninput="renderList()"></div>
-        <div class="chips-row">
-          <div class="chip on" data-t="All" onclick="setChip(this)">All</div>
-          <div class="chip" data-t="Food" onclick="setChip(this)">🍜 Food</div>
-          <div class="chip" data-t="Beach" onclick="setChip(this)">🏖 Beach</div>
-          <div class="chip" data-t="Nightlife" onclick="setChip(this)">🌙 Nightlife</div>
-          <div class="chip" data-t="Nature" onclick="setChip(this)">🌿 Nature</div>
-          <div class="chip" data-t="Culture" onclick="setChip(this)">🏛 Culture</div>
-        </div>
+    <div id="listView" style="flex-direction:column;">
+      <div style="padding:16px 18px 8px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:var(--txt);">🌐 Social Feed</div>
+        <div style="font-size:11px;font-weight:700;color:var(--txt3);" id="feedCount"></div>
       </div>
-      <div class="places-list" id="placesList"></div>
+      <div id="socialFeed"></div>
     </div>
     <div class="fab" id="fab" style="position:fixed;bottom:40px;right:20px;z-index:9999;">
       <div class="fab-menu" id="fabMenu">
@@ -742,8 +760,9 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <div class="act-row">
       <button class="btn-cancel" onclick="closeOverlay('addOverlay')">Cancel</button>
       <button id="btnDelete" class="btn-del" onclick="deletePlace()" style="display:none">🗑</button>
-      <button class="btn-save" id="btnSave" onclick="savePlace()">Save Place 📍</button>
+      <button class="btn-save" id="btnSave" onclick="savePlace()">Save 📍</button>
     </div>
+    <button id="btnSocialIt" onclick="socialIt()" style="display:none;width:100%;margin-top:10px;padding:14px;border-radius:16px;border:2px solid var(--purple);background:rgba(155,109,255,.1);color:var(--purple);font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:var(--tr);">🌐 Social It!</button>
   </div>
 </div>
 
@@ -945,6 +964,7 @@ function openFullFromDrop(lat,lng){
   document.getElementById('uploadContent').style.display='block';
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='none';
+  document.getElementById('btnSocialIt').style.display='none';
   document.getElementById('coverPhotoSection').style.display='none';
   document.getElementById('gallerySection').style.display='none';
   resetRating();
@@ -998,7 +1018,93 @@ function showList(){
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   ['btnMap','btnList','btnTrips','btnExplore','btnLogout'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
   document.getElementById('btnList').classList.add('on');
-  renderList();
+  loadSocialFeed();
+}
+
+let socialPosts=[];
+async function loadSocialFeed(){
+  const feed=document.getElementById('socialFeed');
+  feed.innerHTML='<div style="text-align:center;padding:40px;color:var(--txt3);font-weight:600;">Loading feed…</div>';
+  try{
+    const res=await apiFetch('/api/posts');
+    socialPosts=await res.json();
+    renderFeed();
+  }catch{feed.innerHTML='<div class="no-posts"><div class="ni">⚠️</div><p>Could not load feed</p></div>';}
+}
+
+function renderFeed(){
+  const feed=document.getElementById('socialFeed');
+  const count=document.getElementById('feedCount');
+  if(!socialPosts.length){
+    feed.innerHTML=`<div class="no-posts"><div class="ni">🌐</div><p>No posts yet.<br>Add a place and press <strong>Social It!</strong> to be the first.</p></div>`;
+    if(count) count.textContent='';
+    return;
+  }
+  if(count) count.textContent=`${socialPosts.length} post${socialPosts.length!==1?'s':''}`;
+  const userId=currentUser?currentUser._id:'';
+  feed.innerHTML=socialPosts.map(p=>{
+    const stars=p.rating?[1,2,3,4,5].map(i=>`<span style="color:${i<=p.rating?'#f5a623':'#ddd'}">★</span>`).join(''):'';
+    const tags=(p.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('');
+    const statusBadge=p.status==='been'?'<span class="post-status-badge been">✅ Been There</span>':p.status==='tobe'?'<span class="post-status-badge tobe">🗺️ To Be There</span>':'';
+    const avatarContent=p.authorAvatar?`<img src="${esc(p.authorAvatar)}" style="width:100%;height:100%;object-fit:cover;">`:(p.authorName?p.authorName[0].toUpperCase():'?');
+    const ismine=p.user===userId||p.user===(currentUser&&currentUser._id);
+    const timeAgo=formatTimeAgo(p.createdAt);
+    return `<div class="post-card">
+      <div class="post-header">
+        <div class="post-avatar">${avatarContent}</div>
+        <div class="post-author">
+          <div class="post-author-name">${esc(p.authorName||'Wandr User')}</div>
+          ${p.authorHandle?`<div class="post-author-handle">@${esc(p.authorHandle)}</div>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="post-time">${timeAgo}</div>
+          ${ismine?`<button class="post-del-btn" onclick="deletePost('${p._id}')">✕</button>`:''}
+        </div>
+      </div>
+      ${p.coverPhoto?`<img src="${esc(p.coverPhoto)}" class="post-cover" loading="lazy">`:''}
+      <div class="post-body">
+        <div class="post-place-name">${esc(p.placeName)}</div>
+        ${p.location?`<div class="post-location">📍 ${esc(p.location)}</div>`:''}
+        ${p.notes?`<div class="post-notes">${esc(p.notes)}</div>`:''}
+        <div class="post-footer">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            ${statusBadge}
+            ${stars?`<div>${stars}</div>`:''}
+            ${tags?`<div class="post-tags">${tags}</div>`:''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function formatTimeAgo(dateStr){
+  const d=new Date(dateStr), now=new Date();
+  const diff=Math.floor((now-d)/1000);
+  if(diff<60) return 'just now';
+  if(diff<3600) return Math.floor(diff/60)+'m ago';
+  if(diff<86400) return Math.floor(diff/3600)+'h ago';
+  return Math.floor(diff/86400)+'d ago';
+}
+
+async function socialIt(){
+  if(!editId){toast('Save the place first, then Social It!','err');return;}
+  try{
+    const res=await apiFetch('/api/posts',{method:'POST',body:JSON.stringify({placeId:editId})});
+    if(!res.ok)throw new Error();
+    toast('🌐 Posted to Social Feed!','ok');
+    closeOverlay('addOverlay');
+  }catch{toast('Could not post 😢','err');}
+}
+
+async function deletePost(id){
+  if(!confirm('Remove this post from the feed?'))return;
+  try{
+    await apiFetch(`/api/posts/${id}`,{method:'DELETE'});
+    socialPosts=socialPosts.filter(p=>p._id!==id);
+    renderFeed();
+    toast('Post removed','');
+  }catch{toast('Error removing post','err');}
 }
 
 function toggleFab(){fabOpen=!fabOpen;document.getElementById('fabMenu').classList.toggle('open',fabOpen);document.getElementById('fabMain').classList.toggle('open',fabOpen);}
@@ -1086,6 +1192,7 @@ function openFull(pre={}){
   document.getElementById('uploadContent').style.display='block';
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='none';
+  document.getElementById('btnSocialIt').style.display='none';
   document.getElementById('coverPhotoSection').style.display='none';
   document.getElementById('gallerySection').style.display='none';
   resetRating();
@@ -1107,6 +1214,7 @@ function editPlace(id){
   document.getElementById('uploadContent').style.display='block';
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='block';
+  document.getElementById('btnSocialIt').style.display='block';
   // Rating
   selRating=Number(p.rating)||0;
   syncVisibility(!!p.isPublic);
