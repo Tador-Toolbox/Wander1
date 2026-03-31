@@ -17,6 +17,7 @@ const PostSchema = new mongoose.Schema({
   authorName:  { type: String, default: '' },
   authorHandle:{ type: String, default: '' },
   authorAvatar:{ type: String, default: '' },
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Post', PostSchema);
