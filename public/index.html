@@ -1043,6 +1043,7 @@ function renderFeed(){
   if(count) count.textContent=`${socialPosts.length} post${socialPosts.length!==1?'s':''}`;
   const userId=currentUser?currentUser._id:'';
   feed.innerHTML=socialPosts.map(p=>{
+    const myLike=currentUser&&p.likes&&p.likes.includes(currentUser._id||'');
     const stars=p.rating?[1,2,3,4,5].map(i=>`<span style="color:${i<=p.rating?'#f5a623':'#ddd'}">★</span>`).join(''):'';
     const tags=(p.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('');
     const statusBadge=p.status==='been'?'<span class="post-status-badge been">✅ Been There</span>':p.status==='tobe'?'<span class="post-status-badge tobe">🗺️ To Be There</span>':'';
@@ -1061,7 +1062,7 @@ function renderFeed(){
           ${ismine?`<button class="post-del-btn" onclick="deletePost('${p._id}')">✕</button>`:''}
         </div>
       </div>
-      ${p.coverPhoto?`<img src="${esc(p.coverPhoto)}" class="post-cover" loading="lazy">`:''}
+      ${p.coverPhoto?`<img src="${esc(p.coverPhoto)}" class="post-cover" loading="lazy" onerror="this.style.display='none'">`:''}
       <div class="post-body">
         <div class="post-place-name">${esc(p.placeName)}</div>
         ${p.location?`<div class="post-location">📍 ${esc(p.location)}</div>`:''}
@@ -1072,6 +1073,10 @@ function renderFeed(){
             ${stars?`<div>${stars}</div>`:''}
             ${tags?`<div class="post-tags">${tags}</div>`:''}
           </div>
+          <button onclick="toggleLike('${p._id}',this)" style="display:flex;align-items:center;gap:5px;background:none;border:2px solid ${myLike?'var(--coral)':'var(--border)'};border-radius:20px;padding:5px 12px;cursor:pointer;transition:var(--tr);font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:${myLike?'var(--coral)':'var(--txt2)'};">
+            <span>${myLike?'❤️':'🤍'}</span>
+            <span id="likes-${p._id}">${p.likes?p.likes.length:0}</span>
+          </button>
         </div>
       </div>
     </div>`;
@@ -1089,9 +1094,14 @@ function formatTimeAgo(dateStr){
 
 async function socialIt(){
   if(!editId){toast('Save the place first, then Social It!','err');return;}
+  // Save current edits first, then post
   try{
-    const res=await apiFetch('/api/posts',{method:'POST',body:JSON.stringify({placeId:editId})});
-    if(!res.ok)throw new Error();
+    const postRes=await apiFetch('/api/posts',{method:'POST',body:JSON.stringify({placeId:editId})});
+    if(!postRes.ok)throw new Error();
+    const newPost=await postRes.json();
+    // Update or prepend in local feed
+    const idx=socialPosts.findIndex(p=>p._id===newPost._id);
+    if(idx>=0) socialPosts[idx]=newPost; else socialPosts.unshift(newPost);
     toast('🌐 Posted to Social Feed!','ok');
     closeOverlay('addOverlay');
   }catch{toast('Could not post 😢','err');}
@@ -1105,6 +1115,26 @@ async function deletePost(id){
     renderFeed();
     toast('Post removed','');
   }catch{toast('Error removing post','err');}
+}
+
+async function toggleLike(postId, btn){
+  try{
+    const res=await apiFetch(`/api/posts/${postId}/like`,{method:'POST'});
+    if(!res.ok)throw new Error();
+    const{likes,liked}=await res.json();
+    // Update UI
+    btn.style.borderColor=liked?'var(--coral)':'var(--border)';
+    btn.style.color=liked?'var(--coral)':'var(--txt2)';
+    btn.querySelector('span').textContent=liked?'❤️':'🤍';
+    document.getElementById('likes-'+postId).textContent=likes;
+    // Update local data
+    const p=socialPosts.find(x=>x._id===postId);
+    if(p){
+      if(!p.likes) p.likes=[];
+      if(liked) p.likes.push(currentUser._id||'');
+      else p.likes=p.likes.filter(l=>l!==(currentUser._id||''));
+    }
+  }catch{toast('Could not like post','err');}
 }
 
 function toggleFab(){fabOpen=!fabOpen;document.getElementById('fabMenu').classList.toggle('open',fabOpen);document.getElementById('fabMain').classList.toggle('open',fabOpen);}
