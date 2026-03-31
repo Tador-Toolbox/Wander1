@@ -496,7 +496,8 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     </div>
     <div class="fab" id="fab" style="position:fixed;bottom:40px;right:20px;z-index:9999;">
       <div class="fab-menu" id="fabMenu">
-        <div class="fab-row"><div class="fab-lbl">⚡ Quick Add</div><button class="fab-btn" onclick="openQuick()">⚡</button></div>
+        <div class="fab-row"><div class="fab-lbl">📍 Add by My Location</div><button class="fab-btn" onclick="quickGPSDirect()">📍</button></div>
+        <div class="fab-row"><div class="fab-lbl">🔍 Add by Address</div><button class="fab-btn" onclick="openAddresSearch()">🔍</button></div>
         <div class="fab-row"><div class="fab-lbl">✍️ Add Full</div><button class="fab-btn" onclick="openFull()">✍️</button></div>
       </div>
       <button class="fab-main" id="fabMain" onclick="toggleFab()">+</button>
@@ -600,6 +601,23 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <button class="btn-cancel" onclick="closeOverlay('importOverlay')">Cancel</button>
       <button class="btn-save" id="importBtn" onclick="confirmImport()">Import Trip 📥</button>
     </div>
+  </div>
+</div>
+
+<!-- OVERLAY: ADD BY ADDRESS -->
+<div class="overlay" id="addressSearchOverlay">
+  <div class="sheet">
+    <div class="drag-bar"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div class="sheet-title" style="margin-bottom:0">🔍 Add by Address</div>
+      <button onclick="closeOverlay('addressSearchOverlay')" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);">✕</button>
+    </div>
+    <div style="position:relative;margin-bottom:10px;">
+      <input type="text" id="addressSearchInput" placeholder="Type an address or place name…" autocomplete="off"
+        style="width:100%;padding:14px 16px 14px 44px;background:var(--bg);border:2px solid var(--sky);border-radius:16px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:var(--txt);outline:none;">
+      <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:20px;pointer-events:none;">🔍</span>
+    </div>
+    <div style="font-size:12px;font-weight:600;color:var(--txt3);text-align:center;padding:8px 0;">Start typing — select a suggestion to drop a pin</div>
   </div>
 </div>
 
@@ -989,28 +1007,45 @@ function closeFab(){fabOpen=false;document.getElementById('fabMenu').classList.r
 function openOverlay(id){document.getElementById(id).style.display='flex';closeFab();}
 function closeOverlay(id){document.getElementById(id).style.display='none';}
 
-function openQuick(){document.getElementById('gpsLoading').style.display='none';document.getElementById('quickOpts').style.display='block';document.getElementById('quickSearchPanel').style.display='none';openOverlay('quickOverlay');}
+// Direct GPS save from FAB — no menu needed
+function quickGPSDirect(){
+  closeFab();
+  if(!navigator.geolocation){toast('Geolocation not supported 😢','err');return;}
+  toast('📍 Getting your location…','');
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const{latitude:lat,longitude:lng}=pos.coords;
+    try{
+      const res=await apiFetch('/api/places',{method:'POST',body:JSON.stringify({name:'My Location',location:`${lat.toFixed(5)}, ${lng.toFixed(5)}`,notes:'Added via GPS 📍',link:'',tags:[],lat,lng,status:'none'})});
+      if(!res.ok)throw new Error();
+      const p=await res.json();
+      places.unshift(p);addMarker(p);updateCount();
+      if(gmap){gmap.panTo({lat,lng});gmap.setZoom(14);}
+      toast('📍 Location saved!','ok');
+    }catch{toast('Error saving location 😢','err');}
+  },()=>{toast('Location access denied 🙅','err');},{enableHighAccuracy:true,timeout:8000});
+}
 
-function openQuickSearch(){
-  document.getElementById('quickOpts').style.display='none';
-  document.getElementById('quickSearchPanel').style.display='block';
-  const input=document.getElementById('quickSearchInput');
+// Open address search overlay
+function openAddresSearch(){
+  closeFab();
+  openOverlay('addressSearchOverlay');
+  const input=document.getElementById('addressSearchInput');
   input.value='';
-  input.focus();
-  // Setup autocomplete on this input if not done
-  if(!window._quickAC){
-    window._quickAC=new google.maps.places.Autocomplete(input,{fields:['geometry','name','formatted_address']});
-    window._quickAC.addListener('place_changed',()=>{
-      const place=window._quickAC.getPlace();
+  setTimeout(()=>input.focus(),100);
+  // Setup autocomplete once
+  if(!window._addrAC){
+    window._addrAC=new google.maps.places.Autocomplete(input,{fields:['geometry','name','formatted_address']});
+    window._addrAC.addListener('place_changed',()=>{
+      const place=window._addrAC.getPlace();
       if(!place.geometry){toast('Could not find that location','err');return;}
       const lat=place.geometry.location.lat();
       const lng=place.geometry.location.lng();
       const name=place.name||'';
       const address=place.formatted_address||'';
-      closeOverlay('quickOverlay');
-      // Pan map to location and open full add form
+      closeOverlay('addressSearchOverlay');
+      // Pan map
       if(gmap){gmap.panTo({lat,lng});gmap.setZoom(15);}
-      // Drop a temporary pin
+      // Drop green pin
       if(window._dropPin) window._dropPin.setMap(null);
       window._dropPin=new google.maps.Marker({
         position:{lat,lng},map:gmap,
@@ -1038,11 +1073,6 @@ function openQuickSearch(){
       openOverlay('addOverlay');
     });
   }
-}
-
-function backToQuickOpts(){
-  document.getElementById('quickOpts').style.display='block';
-  document.getElementById('quickSearchPanel').style.display='none';
 }
 function openFull(pre={}){
   editId=null;selTags=pre.tags?[...pre.tags]:[];pendingCoords=null;
