@@ -614,7 +614,18 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <div class="gps-loading" id="gpsLoading"><div class="gps-ring">📍</div><div class="gps-txt">Getting your location…</div></div>
     <div id="quickOpts">
       <div class="qopt" onclick="quickGPS()"><div class="qopt-icon" style="background:rgba(74,158,255,.12)">📍</div><div class="qopt-text"><h4>Use My Location</h4><p>Save current GPS position instantly</p></div></div>
-      <div class="qopt" onclick="closeOverlay('quickOverlay');openFull()"><div class="qopt-icon" style="background:rgba(255,107,71,.1)">🔎</div><div class="qopt-text"><h4>Search a Place</h4><p>Find any location worldwide</p></div></div>
+      <div class="qopt" onclick="openQuickSearch()"><div class="qopt-icon" style="background:rgba(52,201,138,.12)">🔍</div><div class="qopt-text"><h4>Search Address</h4><p>Type an address and drop a pin</p></div></div>
+      <div class="qopt" onclick="closeOverlay('quickOverlay');openFull()"><div class="qopt-icon" style="background:rgba(255,107,71,.1)">✍️</div><div class="qopt-text"><h4>Add Full Details</h4><p>Add notes, tags, photos and more</p></div></div>
+    </div>
+    <!-- Search panel (hidden by default) -->
+    <div id="quickSearchPanel" style="display:none;margin-top:4px;">
+      <div style="position:relative;margin-bottom:10px;">
+        <input type="text" id="quickSearchInput" placeholder="Type an address or place…" autocomplete="off"
+          style="width:100%;padding:13px 16px 13px 42px;background:var(--bg);border:2px solid var(--border);border-radius:16px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:var(--txt);outline:none;transition:var(--tr);">
+        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none;">🔍</span>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--txt3);text-align:center;margin-bottom:8px;">Start typing — Google will suggest locations</div>
+      <button class="btn-cancel" onclick="backToQuickOpts()" style="width:100%;">← Back</button>
     </div>
     <button class="btn-cancel" onclick="closeOverlay('quickOverlay')" style="width:100%;margin-top:12px">Cancel</button>
   </div>
@@ -978,7 +989,61 @@ function closeFab(){fabOpen=false;document.getElementById('fabMenu').classList.r
 function openOverlay(id){document.getElementById(id).style.display='flex';closeFab();}
 function closeOverlay(id){document.getElementById(id).style.display='none';}
 
-function openQuick(){document.getElementById('gpsLoading').style.display='none';document.getElementById('quickOpts').style.display='block';openOverlay('quickOverlay');}
+function openQuick(){document.getElementById('gpsLoading').style.display='none';document.getElementById('quickOpts').style.display='block';document.getElementById('quickSearchPanel').style.display='none';openOverlay('quickOverlay');}
+
+function openQuickSearch(){
+  document.getElementById('quickOpts').style.display='none';
+  document.getElementById('quickSearchPanel').style.display='block';
+  const input=document.getElementById('quickSearchInput');
+  input.value='';
+  input.focus();
+  // Setup autocomplete on this input if not done
+  if(!window._quickAC){
+    window._quickAC=new google.maps.places.Autocomplete(input,{fields:['geometry','name','formatted_address']});
+    window._quickAC.addListener('place_changed',()=>{
+      const place=window._quickAC.getPlace();
+      if(!place.geometry){toast('Could not find that location','err');return;}
+      const lat=place.geometry.location.lat();
+      const lng=place.geometry.location.lng();
+      const name=place.name||'';
+      const address=place.formatted_address||'';
+      closeOverlay('quickOverlay');
+      // Pan map to location and open full add form
+      if(gmap){gmap.panTo({lat,lng});gmap.setZoom(15);}
+      // Drop a temporary pin
+      if(window._dropPin) window._dropPin.setMap(null);
+      window._dropPin=new google.maps.Marker({
+        position:{lat,lng},map:gmap,
+        icon:{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44"><path d="M18 0C8.1 0 0 8.1 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.1 27.9 0 18 0z" fill="#34c98a" opacity=".9"/><circle cx="18" cy="18" r="8" fill="white"/></svg>`),
+          scaledSize:new google.maps.Size(36,44),anchor:new google.maps.Point(18,44)},
+        animation:google.maps.Animation.DROP
+      });
+      // Open full form pre-filled
+      pendingCoords={lat,lng};
+      editId=null; selTags=[]; selRating=0;
+      document.getElementById('addTitle').textContent='✍️ Add Place';
+      document.getElementById('pName').value=name;
+      document.getElementById('pLocation').value=address;
+      document.getElementById('pNotes').value='';
+      document.getElementById('pLink').value='';
+      document.getElementById('pTrip').value=activeTrip?activeTrip._id:'';
+      document.getElementById('igResult').style.display='none';
+      document.getElementById('uploadContent').style.display='block';
+      document.getElementById('scanLoading').style.display='none';
+      document.getElementById('btnDelete').style.display='none';
+      document.getElementById('coverPhotoSection').style.display='none';
+      document.getElementById('gallerySection').style.display='none';
+      resetRating(); resetStatus(); resetVisibility();
+      document.querySelectorAll('.topt').forEach(t=>t.classList.remove('sel'));
+      openOverlay('addOverlay');
+    });
+  }
+}
+
+function backToQuickOpts(){
+  document.getElementById('quickOpts').style.display='block';
+  document.getElementById('quickSearchPanel').style.display='none';
+}
 function openFull(pre={}){
   editId=null;selTags=pre.tags?[...pre.tags]:[];pendingCoords=null;
   document.getElementById('addTitle').textContent='✍️ Add Place';
