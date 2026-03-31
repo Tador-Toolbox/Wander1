@@ -101,3 +101,27 @@ function extractPublicId(url) {
 }
 
 module.exports = router;
+
+// POST /api/upload/avatar — upload profile picture
+router.post('/avatar', upload.single('photo'), async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    // Delete old avatar
+    if (user.avatar) {
+      const publicId = extractPublicId(user.avatar);
+      if (publicId) await cloudinary.uploader.destroy(publicId).catch(() => {});
+    }
+
+    const result = await uploadBuffer(req.file.buffer, `wandr/avatars`);
+    user.avatar = result.secure_url;
+    await user.save();
+    res.json({ url: result.secure_url });
+  } catch (err) {
+    console.error('Avatar upload error:', err);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
