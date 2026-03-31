@@ -244,6 +244,20 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .btn-del{padding:13px 15px;background:var(--coral-light);border:2px solid rgba(255,107,71,.3);border-radius:16px;color:var(--coral);font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:var(--tr);}
 .btn-del:hover{background:rgba(255,107,71,.15);}
 
+
+/* ── BEEN THERE / TO BE THERE ── */
+.status-toggle{display:flex;gap:8px;margin-bottom:4px;}
+.status-btn{
+  flex:1;padding:13px 10px;border-radius:16px;border:2px solid var(--border);
+  background:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;
+  cursor:pointer;transition:var(--tr);display:flex;flex-direction:column;
+  align-items:center;gap:4px;color:var(--txt2);
+}
+.status-btn .sb-icon{font-size:24px;line-height:1;}
+.status-btn .sb-label{font-size:11px;font-weight:700;letter-spacing:.3px;}
+.status-btn.been{border-color:var(--mint);background:var(--mint-light);color:var(--mint);}
+.status-btn.tobe{border-color:var(--sky);background:var(--sky-light);color:var(--sky);}
+.rating-locked{opacity:.4;pointer-events:none;}
 /* ── RATING STARS ── */
 .stars-wrap{display:flex;gap:6px;align-items:center;}
 .star{font-size:28px;cursor:pointer;transition:transform .15s ease;line-height:1;color:#ddd;user-select:none;}
@@ -637,6 +651,19 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <div class="mf"><label>Notes</label><textarea id="pNotes" rows="2" placeholder="Why you want to visit, what's special…"></textarea></div>
     <div class="mf"><label>Link</label><input type="url" id="pLink" placeholder="https://…"></div>
     <div class="mf">
+      <label>Status</label>
+      <div class="status-toggle">
+        <button type="button" class="status-btn" id="btnTobe" onclick="setStatus('tobe')">
+          <span class="sb-icon">🗺️</span>
+          <span class="sb-label">TO BE THERE</span>
+        </button>
+        <button type="button" class="status-btn" id="btnBeen" onclick="setStatus('been')">
+          <span class="sb-icon">✅</span>
+          <span class="sb-label">BEEN THERE</span>
+        </button>
+      </div>
+    </div>
+    <div class="mf" id="ratingSection">
       <label>Rating</label>
       <div class="stars-wrap" id="ratingStars">
         <span class="star" data-v="1" onclick="setRating(1)">★</span>
@@ -646,6 +673,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <span class="star" data-v="5" onclick="setRating(5)">★</span>
         <span style="font-size:12px;font-weight:600;color:var(--txt3);margin-left:6px;" id="ratingLabel">No rating</span>
       </div>
+    </div>
     </div>
     <div class="mf" id="coverPhotoSection" style="display:none">
       <label>Cover Photo</label>
@@ -919,7 +947,7 @@ function addMarker(place){if(!gmap)return;const m=new google.maps.Marker({positi
 function removeMarker(id){if(window._m[id]){window._m[id].setMap(null);delete window._m[id];}}
 function openIW(place,marker){
   const tags=(place.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('');
-  const cover=place.coverPhoto?`<img src="${esc(place.coverPhoto)}" class="mp-cover" loading="lazy">`:'';
+  const cover=place.coverPhoto?`<img src="${esc(place.coverPhoto)}" class="mp-cover" loading="lazy">`:'';  const statusBadge=place.status==='been'?'<span style="display:inline-block;background:var(--mint-light);color:var(--mint);font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;margin-bottom:6px;">✅ BEEN THERE</span>':place.status==='tobe'?'<span style="display:inline-block;background:var(--sky-light);color:var(--sky);font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;margin-bottom:6px;">🗺️ TO BE THERE</span>':'';
   const stars=place.rating?`<div class="mp-stars">${starsHtml(place.rating)}</div>`:'';
   const linkUrl=place.link?(place.link.startsWith('http')?place.link:'https://'+place.link):'';
   infoWin.setContent(`<div class="map-popup">${cover}<div style="padding:14px 16px 12px">${stars}<div class="mp-name">${esc(place.name)}</div><div class="mp-loc">📍 ${esc(place.location||'Unknown')}</div>${tags?`<div class="mp-tags">${tags}</div>`:''  }${place.notes?`<div class="mp-notes">${esc(place.notes)}</div>`:''  }${linkUrl?`<a href="${esc(linkUrl)}" target="_blank" rel="noopener" class="mp-link">🔗 Open Link</a>`:''}<div class="mp-actions"><button class="mp-btn edit" onclick="editPlace('${place._id}')">✏️ Edit</button><button class="mp-btn del" onclick="doDelete('${place._id}')">🗑 Delete</button></div></div></div>`);
@@ -967,6 +995,7 @@ function openFull(pre={}){
   document.getElementById('coverPhotoSection').style.display='none';
   document.getElementById('gallerySection').style.display='none';
   resetRating();
+  resetStatus();
   resetVisibility();
   document.querySelectorAll('.topt').forEach(t=>t.classList.toggle('sel',selTags.includes(t.dataset.t)));
   openOverlay('addOverlay');
@@ -987,6 +1016,7 @@ function editPlace(id){
   // Rating
   selRating=Number(p.rating)||0;
   syncVisibility(!!p.isPublic);
+  syncStatus(p.status||'none');
   document.querySelectorAll('.star').forEach(s=>s.classList.toggle('on',Number(s.dataset.v)<=selRating));
   const labels=['','⭐ Poor','⭐⭐ OK','⭐⭐⭐ Good','⭐⭐⭐⭐ Great','⭐⭐⭐⭐⭐ Amazing'];
   document.getElementById('ratingLabel').textContent=labels[selRating]||'No rating';
@@ -1006,7 +1036,7 @@ async function savePlace(){
   if(pendingCoords){lat=pendingCoords.lat;lng=pendingCoords.lng;}
   else if(editId){const o=places.find(p=>p._id===editId);lat=o.lat;lng=o.lng;}
   else{toast('Please select a location from the suggestions 📍','err');return;}
-  const body={name,lat,lng,location:document.getElementById('pLocation').value.trim(),notes:document.getElementById('pNotes').value.trim(),link:document.getElementById('pLink').value.trim(),tags:[...selTags],trip:document.getElementById('pTrip').value||null,rating:selRating,isPublic:document.getElementById('pPublic').value==='true',visibility:document.getElementById('pPublic').dataset.v||'private'};
+  const body={name,lat,lng,location:document.getElementById('pLocation').value.trim(),notes:document.getElementById('pNotes').value.trim(),link:document.getElementById('pLink').value.trim(),tags:[...selTags],trip:document.getElementById('pTrip').value||null,rating:selRating,isPublic:document.getElementById('pPublic').value==='true',visibility:document.getElementById('pPublic').dataset.v||'private',status:selStatus};
   const btn=document.getElementById('btnSave');btn.disabled=true;btn.textContent='Saving…';
   try{
     if(editId){
@@ -1454,6 +1484,32 @@ function syncVisibility(isPublic){
   document.getElementById('pPublic').value = isPublic ? 'true' : 'false';
   const hints={private:'🔒 Only visible to you',public:'🌍 Visible on public map only',both:'✨ Visible to you & on public map'};
   document.getElementById('visHint').textContent=hints[v]||'';
+}
+
+/* ── STATUS (Been There / To Be There) ── */
+let selStatus='none';
+function setStatus(v){
+  selStatus=v;
+  document.getElementById('btnBeen').classList.toggle('been', v==='been');
+  document.getElementById('btnTobe').classList.toggle('tobe', v==='tobe');
+  // Only allow rating if been there
+  const ratingSection=document.getElementById('ratingSection');
+  if(ratingSection) ratingSection.classList.toggle('rating-locked', v!=='been');
+  if(v!=='been'){resetRating();}
+}
+function resetStatus(){
+  selStatus='none';
+  document.getElementById('btnBeen').classList.remove('been');
+  document.getElementById('btnTobe').classList.remove('tobe');
+  const rs=document.getElementById('ratingSection');
+  if(rs) rs.classList.add('rating-locked');
+}
+function syncStatus(status){
+  selStatus=status||'none';
+  document.getElementById('btnBeen').classList.toggle('been', status==='been');
+  document.getElementById('btnTobe').classList.toggle('tobe', status==='tobe');
+  const rs=document.getElementById('ratingSection');
+  if(rs) rs.classList.toggle('rating-locked', status!=='been');
 }
 
 /* ── RATING ── */
