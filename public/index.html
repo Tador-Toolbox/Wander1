@@ -195,9 +195,9 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .tp-Culture{background:rgba(245,166,35,.12);color:var(--tag-culture);}
 
 /* ── OVERLAYS ── */
-.overlay{position:fixed;inset:0;z-index:1000;background:rgba(26,26,46,.35);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s ease;}
+.overlay{position:fixed;inset:0;z-index:1000;background:rgba(26,26,46,.35);backdrop-filter:blur(8px);display:none;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s ease;}.overlay.open{display:flex;opacity:1;pointer-events:all;}
 .overlay.open{opacity:1;pointer-events:all;}
-.sheet{background:#fff;border-radius:32px 32px 0 0;padding:20px 22px 40px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;scrollbar-width:none;transform:translateY(28px);transition:transform .3s cubic-bezier(.34,1.56,.64,1);box-shadow:0 -8px 40px rgba(0,0,0,.1);}
+.sheet{background:#fff;border-radius:32px 32px 0 0;padding:20px 22px calc(30px + env(safe-area-inset-bottom));width:100%;max-width:520px;max-height:85vh;overflow-y:auto;scrollbar-width:none;transform:translateY(28px);transition:transform .3s cubic-bezier(.34,1.56,.64,1);box-shadow:0 -8px 40px rgba(0,0,0,.1);}
 .overlay.open .sheet{transform:translateY(0);}
 .drag-bar{width:40px;height:5px;background:var(--border);border-radius:3px;margin:0 auto 22px;}
 .sheet-title{font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--txt);margin-bottom:20px;}
@@ -976,8 +976,8 @@ function showList(){
 function toggleFab(){fabOpen=!fabOpen;document.getElementById('fabMenu').classList.toggle('open',fabOpen);document.getElementById('fabMain').classList.toggle('open',fabOpen);}
 function closeFab(){fabOpen=false;document.getElementById('fabMenu').classList.remove('open');document.getElementById('fabMain').classList.remove('open');}
 
-function openOverlay(id){document.getElementById(id).classList.add('open');closeFab();}
-function closeOverlay(id){document.getElementById(id).classList.remove('open');}
+function openOverlay(id){const el=document.getElementById(id);el.style.display='flex';requestAnimationFrame(()=>el.classList.add('open'));closeFab();}
+function closeOverlay(id){const el=document.getElementById(id);el.classList.remove('open');setTimeout(()=>{if(!el.classList.contains('open'))el.style.display='none';},300);}
 
 function openQuick(){document.getElementById('gpsLoading').style.display='none';document.getElementById('quickOpts').style.display='block';openOverlay('quickOverlay');}
 function openFull(pre={}){
