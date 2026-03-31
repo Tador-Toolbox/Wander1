@@ -11,6 +11,7 @@ const PlaceSchema = new mongoose.Schema({
   tags:      { type: [String], enum: ['Food','Beach','Nightlife','Nature','Culture'], default: [] },
   lat:       { type: Number, required: true },
   lng:       { type: Number, required: true },
+  status:    { type: String, enum: ['none','tobe','been'], default: 'none' },
   rating:    { type: Number, min: 0, max: 5, default: 0 },
   isPublic:  { type: Boolean, default: false },
   visibility:{ type: String, enum: ['private','public','both'], default: 'private' },
