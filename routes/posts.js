@@ -73,4 +73,21 @@ router.delete('/:id', auth, async (req, res) => {
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
 
+// POST /api/posts/:id/like — toggle like
+router.post('/:id/like', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Not found' });
+    const uid = req.userId.toString();
+    const liked = post.likes.map(l => l.toString()).includes(uid);
+    if (liked) {
+      post.likes = post.likes.filter(l => l.toString() !== uid);
+    } else {
+      post.likes.push(req.userId);
+    }
+    await post.save();
+    res.json({ likes: post.likes.length, liked: !liked });
+  } catch { res.status(500).json({ error: 'Server error' }); }
+});
+
 module.exports = router;
