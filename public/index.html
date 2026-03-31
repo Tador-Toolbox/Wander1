@@ -411,6 +411,11 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <span class="logo-name">Wandr</span>
       <div class="logo-tag" id="loginTag">sign in to your travel map ✈️</div>
     </div>
+    <div id="nameFields" style="display:none">
+      <div class="fg"><label>First Name</label><input type="text" id="authFirst" placeholder="John" autocomplete="given-name"></div>
+      <div class="fg"><label>Last Name</label><input type="text" id="authLast" placeholder="Doe" autocomplete="family-name"></div>
+      <div class="fg"><label>Handle</label><div style="position:relative"><span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--txt3);font-weight:700;">@</span><input type="text" id="authHandle" placeholder="johndoe" autocomplete="username" style="padding-left:28px;"></div></div>
+    </div>
     <div class="fg"><label>Email</label><input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email"></div>
     <div class="fg"><label>Password</label><input type="password" id="authPass" placeholder="••••••••" autocomplete="current-password"></div>
     <div class="auth-error" id="authErr"></div>
@@ -423,6 +428,9 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div id="mapScreen" class="screen">
   <div class="app-header">
     <div class="h-logo">Wandr <span class="h-dot">·</span></div>
+    <button id="profileBtn" onclick="openProfile()" style="background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:8px;">
+      <div id="headerAvatar" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--sky),var(--sky-dark));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;overflow:hidden;border:2px solid var(--border);flex-shrink:0;">?</div>
+    </button>
   </div>
   <!-- Bottom Nav -->
   <nav class="bottom-nav">
@@ -683,10 +691,46 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
   </div>
 </div>
 
+<!-- OVERLAY: PROFILE -->
+<div class="overlay" id="profileOverlay">
+  <div class="sheet">
+    <div class="drag-bar"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div class="sheet-title" style="margin-bottom:0">👤 My Profile</div>
+      <button onclick="closeOverlay('profileOverlay')" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);">✕</button>
+    </div>
+    <!-- Avatar -->
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="position:relative;display:inline-block;">
+        <div id="profileAvatarWrap" onclick="document.getElementById('avatarInput').click()" style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--sky),var(--sky-dark));display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:#fff;overflow:hidden;cursor:pointer;border:3px solid var(--border);margin:0 auto;">
+          <span id="profileAvatarInitial">?</span>
+          <img id="profileAvatarImg" style="display:none;width:100%;height:100%;object-fit:cover;" src="">
+        </div>
+        <div onclick="document.getElementById('avatarInput').click()" style="position:absolute;bottom:0;right:0;width:26px;height:26px;background:var(--sky);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;border:2px solid #fff;">📷</div>
+      </div>
+      <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+      <div id="profileEmail" style="font-size:12px;font-weight:600;color:var(--txt3);margin-top:8px;"></div>
+    </div>
+    <div class="mf"><label>First Name</label><input type="text" id="profFirst" placeholder="John"></div>
+    <div class="mf"><label>Last Name</label><input type="text" id="profLast" placeholder="Doe"></div>
+    <div class="mf">
+      <label>Handle</label>
+      <div style="position:relative;">
+        <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--txt3);font-weight:700;">@</span>
+        <input type="text" id="profHandle" placeholder="johndoe" style="padding-left:28px;">
+      </div>
+    </div>
+    <div class="act-row">
+      <button class="btn-cancel" onclick="closeOverlay('profileOverlay')">Cancel</button>
+      <button class="btn-save" onclick="saveProfile()">Save Profile ✓</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-let token=localStorage.getItem('wandr_token'),places=[],trips=[],gmap=null,infoWin=null,autocomplete=null,editId=null,selTags=[],selRating=0,activeTag='All',pendingCoords=null,fabOpen=false,isReg=false,anthropicKey=null,activeTrip=null,editTripId=null,selEmoji='✈️',selColor='#4a9eff',shareTargetTrip=null,importToken=null;
+let token=localStorage.getItem('wandr_token'),currentUser=JSON.parse(localStorage.getItem('wandr_user')||'null'),places=[],trips=[],gmap=null,infoWin=null,autocomplete=null,editId=null,selTags=[],selRating=0,activeTag='All',pendingCoords=null,fabOpen=false,isReg=false,anthropicKey=null,activeTrip=null,editTripId=null,selEmoji='✈️',selColor='#4a9eff',shareTargetTrip=null,importToken=null;
 
 window.addEventListener('load',()=>{
   setTimeout(async ()=>{
@@ -710,6 +754,7 @@ function toggleMode(){
   document.getElementById('authBtn').textContent=isReg?'Create Account 🌍':'Sign In 🚀';
   document.getElementById('loginTag').textContent=isReg?'create your travel map ✈️':'sign in to your travel map ✈️';
   document.getElementById('switchMode').innerHTML=isReg?'Already have an account? <span onclick="toggleMode()">Sign in →</span>':'Don\'t have an account? <span onclick="toggleMode()">Create one →</span>';
+  document.getElementById('nameFields').style.display=isReg?'block':'none';
   document.getElementById('authErr').style.display='none';
 }
 
@@ -719,10 +764,12 @@ async function doAuth(){
   if(!email||!pass){showAuthErr('Please fill in all fields');return;}
   btn.disabled=true;btn.textContent='…';
   try{
-    const res=await fetch(isReg?'/api/auth/register':'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const body={email,password:pass};
+    if(isReg){body.firstName=document.getElementById('authFirst').value.trim();body.lastName=document.getElementById('authLast').value.trim();body.handle=document.getElementById('authHandle').value.trim();}
+    const res=await fetch(isReg?'/api/auth/register':'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
     if(!res.ok){showAuthErr(data.error||'Something went wrong');return;}
-    token=data.token;localStorage.setItem('wandr_token',token);
+    token=data.token;localStorage.setItem('wandr_token',token);if(data.user){localStorage.setItem('wandr_user',JSON.stringify(data.user));currentUser=data.user;}
     showScreen('mapScreen');await initApp();
   }catch{showAuthErr('Network error – is the server running?');}
   finally{btn.disabled=false;btn.textContent=isReg?'Create Account 🌍':'Sign In 🚀';}
@@ -730,8 +777,8 @@ async function doAuth(){
 function showAuthErr(m){const e=document.getElementById('authErr');e.textContent=m;e.style.display='block';}
 function logout(){
   if(!confirm('Sign out of Wandr?'))return;
-  token=null;places=[];gmap=null;autocomplete=null;
-  localStorage.removeItem('wandr_token');
+  token=null;places=[];gmap=null;autocomplete=null;currentUser=null;
+  localStorage.removeItem('wandr_token');localStorage.removeItem('wandr_user');
   showScreen('loginScreen');
   document.getElementById('authEmail').value='';
   document.getElementById('authPass').value='';
@@ -741,6 +788,9 @@ async function initApp(){
   await loadPlaces();
   await loadTrips();
   await loadMapsKey();
+  // Load fresh profile from server
+  try{const r=await apiFetch('/api/auth/me');if(r.ok){currentUser=await r.json();localStorage.setItem('wandr_user',JSON.stringify(currentUser));}}catch{}
+  updateHeaderAvatar();
   try{const r=await apiFetch('/api/config/anthropic-key');const d=await r.json();anthropicKey=d.key;}catch{}
   // Check if URL has a share token
   const path=window.location.pathname;
@@ -1118,7 +1168,7 @@ async function showExplore(){
         iw.open(exploreMap,m);
       });
     });
-    toast(`🌍 ${pub.length} public places loaded`,'ok');
+    
   }catch{toast('Could not load explore','err');}
 }
 
@@ -1315,6 +1365,70 @@ async function confirmImport(){
   } catch{toast('Error importing trip','err');}
 }
 
+/* ── PROFILE ── */
+function updateHeaderAvatar(){
+  if(!currentUser)return;
+  const el=document.getElementById('headerAvatar');
+  if(!el)return;
+  if(currentUser.avatar){
+    el.innerHTML=`<img src="${currentUser.avatar}" style="width:100%;height:100%;object-fit:cover;">`;
+  } else {
+    const init=(currentUser.firstName?currentUser.firstName[0]:currentUser.email?currentUser.email[0]:'?').toUpperCase();
+    el.textContent=init;
+  }
+}
+
+function openProfile(){
+  if(!currentUser)return;
+  document.getElementById('profFirst').value=currentUser.firstName||'';
+  document.getElementById('profLast').value=currentUser.lastName||'';
+  document.getElementById('profHandle').value=currentUser.handle||'';
+  document.getElementById('profileEmail').textContent=currentUser.email||'';
+  const initEl=document.getElementById('profileAvatarInitial');
+  const imgEl=document.getElementById('profileAvatarImg');
+  if(currentUser.avatar){
+    imgEl.src=currentUser.avatar; imgEl.style.display='block'; initEl.style.display='none';
+  } else {
+    const init=(currentUser.firstName?currentUser.firstName[0]:currentUser.email?currentUser.email[0]:'?').toUpperCase();
+    initEl.textContent=init; initEl.style.display='block'; imgEl.style.display='none';
+  }
+  openOverlay('profileOverlay');
+}
+
+async function saveProfile(){
+  try{
+    const res=await apiFetch('/api/auth/profile',{method:'PUT',body:JSON.stringify({
+      firstName:document.getElementById('profFirst').value.trim(),
+      lastName:document.getElementById('profLast').value.trim(),
+      handle:document.getElementById('profHandle').value.trim()
+    })});
+    if(!res.ok)throw new Error();
+    currentUser=await res.json();
+    localStorage.setItem('wandr_user',JSON.stringify(currentUser));
+    updateHeaderAvatar();
+    closeOverlay('profileOverlay');
+    toast('✅ Profile saved!','ok');
+  }catch{toast('Error saving profile','err');}
+}
+
+async function uploadAvatar(input){
+  const file=input.files[0]; if(!file)return;
+  try{
+    const fd=new FormData(); fd.append('photo',file);
+    const res=await fetch('/api/upload/avatar',{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
+    if(!res.ok)throw new Error();
+    const{url}=await res.json();
+    currentUser.avatar=url;
+    localStorage.setItem('wandr_user',JSON.stringify(currentUser));
+    const imgEl=document.getElementById('profileAvatarImg');
+    const initEl=document.getElementById('profileAvatarInitial');
+    imgEl.src=url; imgEl.style.display='block'; initEl.style.display='none';
+    updateHeaderAvatar();
+    toast('📷 Photo updated!','ok');
+  }catch{toast('Upload failed','err');}
+  input.value='';
+}
+
 /* ── VISIBILITY ── */
 function setVisibility(el){
   document.querySelectorAll('.vis-btn').forEach(b=>b.classList.remove('on'));
@@ -1438,7 +1552,7 @@ function locateMe(){
     toast('📍 Found you!','ok');
   },()=>{toast('Location access denied 🙅','err');btn.textContent='📍';},{enableHighAccuracy:true,timeout:10000});
 }
-function updateCount(){document.getElementById('placeCount').textContent=places.length;}
+function updateCount(){const el=document.getElementById('placeCount');if(el)el.textContent=places.length;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type}`;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
 
