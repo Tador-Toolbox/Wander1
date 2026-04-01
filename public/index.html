@@ -676,17 +676,27 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <button onclick="closeOverlay('addOverlay')" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);flex-shrink:0;">✕</button>
     </div>
     <div style="margin-bottom:16px">
-      <div class="sec-lbl">📸 Scan from Screenshot</div>
-      <div style="border:2px dashed var(--border);border-radius:16px;padding:16px;text-align:center;cursor:pointer;transition:var(--tr);background:var(--bg);" id="uploadZone" onclick="document.getElementById('imgUpload').click()">
-        <input type="file" id="imgUpload" accept="image/*" style="display:none" onchange="scanImage(this)">
-        <div id="uploadContent">
-          <div style="font-size:32px;margin-bottom:6px;">📷</div>
-          <div style="font-size:13px;font-weight:700;color:var(--txt2);">Upload screenshot from Instagram</div>
-          <div style="font-size:11px;font-weight:600;color:var(--txt3);margin-top:3px;">AI will read the location from the image</div>
+      <div class="sec-lbl">📸 Add from Photo</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <!-- Option 1: GPS from photo -->
+        <div onclick="document.getElementById('gpsPhotoInput').click()" style="flex:1;border:2px dashed var(--border);border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer;background:var(--bg);transition:var(--tr);">
+          <input type="file" id="gpsPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="extractPhotoGPS(this)">
+          <div style="font-size:26px;margin-bottom:4px;">📍</div>
+          <div style="font-size:12px;font-weight:800;color:var(--txt2);">Use Photo Location</div>
+          <div style="font-size:10px;font-weight:600;color:var(--txt3);margin-top:2px;">Reads GPS from your photo</div>
         </div>
-        <div id="scanLoading" style="display:none">
-          <div style="font-size:28px;margin-bottom:8px;animation:bounce 1s infinite">🔍</div>
-          <div style="font-size:13px;font-weight:700;color:var(--sky)">Scanning image…</div>
+        <!-- Option 2: AI scan screenshot -->
+        <div id="uploadZone" onclick="document.getElementById('imgUpload').click()" style="flex:1;border:2px dashed var(--border);border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer;background:var(--bg);transition:var(--tr);">
+          <input type="file" id="imgUpload" accept="image/*" style="display:none" onchange="scanImage(this)">
+          <div id="uploadContent">
+            <div style="font-size:26px;margin-bottom:4px;">🤖</div>
+            <div style="font-size:12px;font-weight:800;color:var(--txt2);">AI Scan Screenshot</div>
+            <div style="font-size:10px;font-weight:600;color:var(--txt3);margin-top:2px;">Reads text from image</div>
+          </div>
+          <div id="scanLoading" style="display:none">
+            <div style="font-size:24px;margin-bottom:4px;animation:bounce 1s infinite">🔍</div>
+            <div style="font-size:12px;font-weight:700;color:var(--sky)">Scanning…</div>
+          </div>
         </div>
       </div>
       <div class="ig-result" id="igResult"></div>
@@ -872,7 +882,7 @@ async function initApp(){
   const match=path.match(/^\/trip\/([a-f0-9]+)$/);
   if(match) checkSharedTrip(match[1]);
 }
-async function loadMapsKey(){try{const res=await apiFetch('/api/config/maps-key');const{key}=await res.json();injectMaps(key);}catch{}}
+async function loadMapsKey(){try{const res=await apiFetch('/api/config/maps-key');const{key}=await res.json();window._mapsKey=key;injectMaps(key);}catch{}}
 function injectMaps(key){if(window.google){bootMap();return;}window.__mapsReady=bootMap;const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&callback=__mapsReady`;s.async=true;s.defer=true;document.head.appendChild(s);}
 
 function bootMap(){
@@ -1744,7 +1754,126 @@ function syncStatus(status){
   if(rs) rs.classList.toggle('rating-locked', status!=='been');
 }
 
-/* ── RATING ── */
+/* ── PHOTO GPS EXTRACTION ── */
+async function extractPhotoGPS(input){
+  const file=input.files[0]; if(!file)return;
+  const result=document.getElementById('igResult');
+  result.style.display='none';
+
+  // Show loading
+  result.style.background='var(--sky-light)';
+  result.style.borderColor='var(--sky-mid)';
+  result.style.color='var(--sky)';
+  result.innerHTML='🔍 Reading photo location…';
+  result.style.display='block';
+
+  try{
+    const gps=await readExifGPS(file);
+    if(!gps){
+      result.style.background='var(--amber-light)';
+      result.style.borderColor='rgba(245,166,35,.4)';
+      result.style.color='#b37c00';
+      result.innerHTML='⚠️ <strong>No GPS data in this photo.</strong><br><small style="font-weight:600;opacity:.75">Try a photo taken on your phone with location enabled.</small>';
+      input.value=''; return;
+    }
+    // Reverse geocode
+    const geoRes=await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${gps.lat},${gps.lng}&key=${window._mapsKey}`);
+    const geoData=await geoRes.json();
+    const address=geoData.results?.[0]?.formatted_address||`${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`;
+
+    // Fill form
+    document.getElementById('pLocation').value=address;
+    pendingCoords={lat:gps.lat,lng:gps.lng};
+    if(gmap){gmap.panTo({lat:gps.lat,lng:gps.lng});gmap.setZoom(15);}
+
+    result.style.background='var(--mint-light)';
+    result.style.borderColor='var(--mint)';
+    result.style.color='var(--mint)';
+    result.innerHTML=`📍 <strong>Location found!</strong><br><small style="font-weight:600;opacity:.8">${address}</small>`;
+    toast('📍 GPS location extracted!','ok');
+  }catch(e){
+    result.style.background='var(--coral-light)';
+    result.style.borderColor='rgba(255,107,71,.3)';
+    result.style.color='var(--coral)';
+    result.innerHTML='❌ <strong>Could not read GPS.</strong> Fill in manually.';
+  }
+  input.value='';
+}
+
+function readExifGPS(file){
+  return new Promise((resolve)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const buf=e.target.result;
+        const view=new DataView(buf);
+        // Check JPEG SOI marker
+        if(view.getUint16(0)!==0xFFD8){resolve(null);return;}
+        let offset=2;
+        while(offset<buf.byteLength-2){
+          const marker=view.getUint16(offset);
+          offset+=2;
+          if(marker===0xFFE1){// APP1 = EXIF
+            const len=view.getUint16(offset);
+            const exifData=buf.slice(offset+2,offset+len);
+            const gps=parseExifGPS(exifData);
+            resolve(gps); return;
+          }
+          if(marker===0xFFDA) break;// SOS - no more metadata
+          offset+=view.getUint16(offset);
+        }
+        resolve(null);
+      }catch{resolve(null);}
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function parseExifGPS(buf){
+  try{
+    const view=new DataView(buf);
+    const header=String.fromCharCode(...new Uint8Array(buf,0,4));
+    if(header!=='Exif') return null;
+    const littleEndian=view.getUint16(6)===0x4949;
+    const ifdOffset=view.getUint32(10,littleEndian)+6;
+    const numEntries=view.getUint16(ifdOffset,littleEndian);
+    let gpsIFDOffset=null;
+    for(let i=0;i<numEntries;i++){
+      const entryOffset=ifdOffset+2+i*12;
+      const tag=view.getUint16(entryOffset,littleEndian);
+      if(tag===0x8825){// GPS IFD pointer
+        gpsIFDOffset=view.getUint32(entryOffset+8,littleEndian)+6;
+        break;
+      }
+    }
+    if(!gpsIFDOffset) return null;
+    const gpsEntries=view.getUint16(gpsIFDOffset,littleEndian);
+    let latRef='N',lngRef='E',latVal=null,lngVal=null;
+    for(let i=0;i<gpsEntries;i++){
+      const e=gpsIFDOffset+2+i*12;
+      const tag=view.getUint16(e,littleEndian);
+      const type=view.getUint16(e+2,littleEndian);
+      const count=view.getUint32(e+4,littleEndian);
+      const valOffset=view.getUint32(e+8,littleEndian)+6;
+      if(tag===1) latRef=String.fromCharCode(view.getUint8(e+8));
+      else if(tag===3) lngRef=String.fromCharCode(view.getUint8(e+8));
+      else if(tag===2&&type===5){
+        const d=view.getUint32(valOffset,littleEndian)/view.getUint32(valOffset+4,littleEndian);
+        const m=view.getUint32(valOffset+8,littleEndian)/view.getUint32(valOffset+12,littleEndian);
+        const s=view.getUint32(valOffset+16,littleEndian)/view.getUint32(valOffset+20,littleEndian);
+        latVal=d+m/60+s/3600;
+      }
+      else if(tag===4&&type===5){
+        const d=view.getUint32(valOffset,littleEndian)/view.getUint32(valOffset+4,littleEndian);
+        const m=view.getUint32(valOffset+8,littleEndian)/view.getUint32(valOffset+12,littleEndian);
+        const s=view.getUint32(valOffset+16,littleEndian)/view.getUint32(valOffset+20,littleEndian);
+        lngVal=d+m/60+s/3600;
+      }
+    }
+    if(latVal===null||lngVal===null) return null;
+    return{lat:latRef==='S'?-latVal:latVal, lng:lngRef==='W'?-lngVal:lngVal};
+  }catch{return null;}
+}
 function setRating(v){
   selRating=v;
   document.querySelectorAll('.star').forEach(s=>s.classList.toggle('on',+s.dataset.v<=v));
