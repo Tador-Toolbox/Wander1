@@ -1220,7 +1220,7 @@ function openAddresSearch(){
     });
   }
 }
-function openFull(pre={}){
+function openFull(pre={}){window._pendingCoverFile=null;
   editId=null;selTags=pre.tags?[...pre.tags]:[];pendingCoords=null;
   document.getElementById('addTitle').textContent='✍️ Add Place';
   document.getElementById('pName').value=pre.name||'';
@@ -1286,9 +1286,33 @@ async function savePlace(){
       const updated=await res.json();places=places.map(p=>p._id===editId?updated:p);removeMarker(editId);addMarker(updated);toast('✅ Place updated!','ok');
     }else{
       const res=await apiFetch('/api/places',{method:'POST',body:JSON.stringify(body)});if(!res.ok)throw new Error();
-      const created=await res.json();places.unshift(created);addMarker(created);if(gmap)gmap.panTo({lat:created.lat,lng:created.lng});toast('📍 Place saved!','ok');
+      const created=await res.json();places.unshift(created);addMarker(created);if(gmap)gmap.panTo({lat:created.lat,lng:created.lng});toast('📍 Place saved! Now you can Social It 🌐','ok');
+      // Show Social It for the newly created place
+      editId=created._id;
+      document.getElementById('btnDelete').style.display='block';
+      document.getElementById('btnSocialIt').style.display='block';
+      document.getElementById('addTitle').textContent='✏️ Edit Place';
+      document.getElementById('coverPhotoSection').style.display='block';
+      document.getElementById('gallerySection').style.display='block';
     }
-    updateCount();closeOverlay('addOverlay');
+    updateCount();
+    // Upload pending cover photo from GPS extraction
+    if(window._pendingCoverFile){
+      const savedId=editId;
+      if(savedId){
+        const fd=new FormData(); fd.append('photo',window._pendingCoverFile);
+        try{
+          const cr=await fetch(`/api/upload/cover/${savedId}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
+          if(cr.ok){const{url}=await cr.json();const p=places.find(x=>x._id===savedId);if(p){p.coverPhoto=url;showCoverPreview(url);}toast('📷 Cover photo saved!','ok');}
+        }catch{}
+        window._pendingCoverFile=null;
+      }
+    }
+    if(editId&&document.getElementById('btnSocialIt').style.display==='block'){
+      // Stay open so user can Social It or add photos
+    } else {
+      closeOverlay('addOverlay');
+    }
   }catch{toast('Error saving 😢','err');}
   finally{btn.disabled=false;btn.textContent='Save Place 📍';}
 }
@@ -1789,7 +1813,8 @@ async function extractPhotoGPS(input){
     result.style.background='var(--mint-light)';
     result.style.borderColor='var(--mint)';
     result.style.color='var(--mint)';
-    result.innerHTML=`📍 <strong>Location found!</strong><br><small style="font-weight:600;opacity:.8">${address}</small>`;
+    result.innerHTML=`📍 <strong>Location found!</strong><br><small style="font-weight:600;opacity:.8">${address}</small><br><small style="font-weight:600;opacity:.65;font-size:10px;">📷 Photo will be saved as cover when you save the place</small>`;
+    window._pendingCoverFile=file;
     toast('📍 GPS location extracted!','ok');
   }catch(e){
     result.style.background='var(--coral-light)';
