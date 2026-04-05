@@ -1298,17 +1298,20 @@ async function savePlace(){
       document.getElementById('gallerySection').style.display='block';
     }
     updateCount();
-    // Upload pending cover photo from GPS extraction
-    if(window._pendingCoverFile){
-      const savedId=editId;
-      if(savedId){
-        const fd=new FormData(); fd.append('photo',window._pendingCoverFile);
-        try{
-          const cr=await fetch(`/api/upload/cover/${savedId}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
-          if(cr.ok){const{url}=await cr.json();const p=places.find(x=>x._id===savedId);if(p){p.coverPhoto=url;showCoverPreview(url);}toast('📷 Cover photo saved!','ok');}
-        }catch{}
-        window._pendingCoverFile=null;
-      }
+    // Upload pending cover photo (from AI scan or GPS photo)
+    if(window._pendingCoverFile && editId){
+      const fd=new FormData(); fd.append('photo',window._pendingCoverFile);
+      try{
+        const cr=await fetch(`/api/upload/cover/${editId}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
+        if(cr.ok){
+          const{url}=await cr.json();
+          const p=places.find(x=>x._id===editId);
+          if(p){p.coverPhoto=url;}
+          showCoverPreview(url);
+          toast('📷 Cover photo saved!','ok');
+        }
+      }catch(e){console.error('cover upload failed',e);}
+      window._pendingCoverFile=null;
     }
     if(editId&&document.getElementById('btnSocialIt').style.display==='block'){
       // Stay open so user can Social It or add photos
@@ -1339,6 +1342,7 @@ async function quickGPS(){
 async function scanImage(input){
   const file=input.files[0];
   if(!file)return;
+  window._pendingCoverFile=file; // save for cover photo upload
   const content=document.getElementById('uploadContent');
   const loading=document.getElementById('scanLoading');
   const result=document.getElementById('igResult');
