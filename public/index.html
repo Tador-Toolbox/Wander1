@@ -1222,7 +1222,7 @@ function openAddresSearch(){
     });
   }
 }
-function openFull(pre={}){window._pendingCoverFile=null;
+function openFull(pre={}){window._pendingCoverFile=null; // cleared when form opens fresh
   editId=null;selTags=pre.tags?[...pre.tags]:[];pendingCoords=null;
   document.getElementById('addTitle').textContent='✍️ Add Place';
   document.getElementById('pName').value=pre.name||'';
@@ -1342,7 +1342,8 @@ async function quickGPS(){
 async function scanImage(input){
   const file=input.files[0];
   if(!file)return;
-  window._pendingCoverFile=file; // save for cover photo upload
+  // Store a copy of the file blob so it survives input.value='' reset
+  window._pendingCoverFile=new File([file],file.name,{type:file.type});
   const content=document.getElementById('uploadContent');
   const loading=document.getElementById('scanLoading');
   const result=document.getElementById('igResult');
@@ -1438,7 +1439,7 @@ async function scanImage(input){
       result.style.background='var(--sky-light)';
       result.style.borderColor='var(--sky-mid)';
       result.style.color='var(--sky)';
-      result.innerHTML=`✅ <strong>${parsed.name||''}</strong>${document.getElementById('pLocation').value?'<br><small style="font-weight:600;opacity:.8">📍 '+document.getElementById('pLocation').value+'</small>':''}<br><small style="font-weight:600;opacity:.65;font-size:10px;">${methodLabel} · ${foundCoords?'📍 Pinned on map!':'⚠️ Could not pin — try typing location manually'}</small>`;
+      result.innerHTML=`✅ <strong>${parsed.name||''}</strong>${document.getElementById('pLocation').value?'<br><small style="font-weight:600;opacity:.8">📍 '+document.getElementById('pLocation').value+'</small>':''}<br><small style="font-weight:600;opacity:.65;font-size:10px;">${methodLabel} · ${foundCoords?'📍 Pinned on map!':'⚠️ Could not pin — try typing location manually'} · 📷 Will be saved as cover</small>`;
     } else {
       result.style.background='var(--amber-light)';
       result.style.borderColor='rgba(245,166,35,.4)';
