@@ -1379,44 +1379,66 @@ async function scanImage(input){
       if(parsed.name) document.getElementById('pName').value=parsed.name;
       const loc = parsed.formattedAddress || parsed.address || parsed.location;
       if(loc) document.getElementById('pLocation').value=loc;
+
+      // Try to find exact coordinates using Places or Geocoding API
+      const searchQuery = parsed.name && loc ? `${parsed.name} ${loc}` : loc || parsed.name;
+      let foundCoords = null;
+
+      // First try: use parsed lat/lng from server
       if(parsed.lat && parsed.lng){
-        pendingCoords={lat:parsed.lat, lng:parsed.lng};
-        // Pan map and drop pin
+        foundCoords = {lat:parsed.lat, lng:parsed.lng};
+        document.getElementById('pLocation').value = parsed.formattedAddress || loc;
+      }
+
+      // Second try: Places text search via client
+      if(!foundCoords && searchQuery && gmap){
+        try{
+          const service = new google.maps.places.PlacesService(gmap);
+          foundCoords = await new Promise((resolve)=>{
+            service.findPlaceFromQuery({
+              query: searchQuery,
+              fields: ['geometry','formatted_address','name']
+            },(results, status)=>{
+              if(status===google.maps.places.PlacesServiceStatus.OK && results[0]){
+                document.getElementById('pLocation').value=results[0].formatted_address||loc;
+                resolve({lat:results[0].geometry.location.lat(), lng:results[0].geometry.location.lng()});
+              } else resolve(null);
+            });
+          });
+        }catch{}
+      }
+
+      // Third try: geocoding fallback
+      if(!foundCoords && searchQuery && window._mapsKey){
+        try{
+          const gr=await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${window._mapsKey}`);
+          const gd=await gr.json();
+          if(gd.results&&gd.results[0]){
+            document.getElementById('pLocation').value=gd.results[0].formatted_address||loc;
+            foundCoords={lat:gd.results[0].geometry.location.lat,lng:gd.results[0].geometry.location.lng};
+          }
+        }catch{}
+      }
+
+      if(foundCoords){
+        pendingCoords=foundCoords;
         if(gmap){
-          gmap.panTo({lat:parsed.lat,lng:parsed.lng});
-          gmap.setZoom(15);
+          gmap.panTo(foundCoords); gmap.setZoom(16);
           if(window._dropPin) window._dropPin.setMap(null);
           window._dropPin=new google.maps.Marker({
-            position:{lat:parsed.lat,lng:parsed.lng},map:gmap,
+            position:foundCoords, map:gmap,
             icon:{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44"><path d="M18 0C8.1 0 0 8.1 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.1 27.9 0 18 0z" fill="#4a9eff" opacity=".9"/><circle cx="18" cy="18" r="8" fill="white"/></svg>`),
               scaledSize:new google.maps.Size(36,44),anchor:new google.maps.Point(18,44)},
             animation:google.maps.Animation.DROP
           });
         }
-      } else if(loc && gmap && window._mapsKey){
-        // Geocode client-side as fallback
-        try{
-          const gr=await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(loc)}&key=${window._mapsKey}`);
-          const gd=await gr.json();
-          if(gd.results&&gd.results[0]){
-            const{lat,lng}=gd.results[0].geometry.location;
-            pendingCoords={lat,lng};
-            gmap.panTo({lat,lng}); gmap.setZoom(15);
-            if(window._dropPin) window._dropPin.setMap(null);
-            window._dropPin=new google.maps.Marker({
-              position:{lat,lng},map:gmap,
-              icon:{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44"><path d="M18 0C8.1 0 0 8.1 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.1 27.9 0 18 0z" fill="#4a9eff" opacity=".9"/><circle cx="18" cy="18" r="8" fill="white"/></svg>`),
-                scaledSize:new google.maps.Size(36,44),anchor:new google.maps.Point(18,44)},
-              animation:google.maps.Animation.DROP
-            });
-          }
-        }catch{}
       }
-      const methodLabel = parsed.method==='text' ? '📝 Detected from text in image' : parsed.method==='visual' ? '👁 Detected by visual recognition' : parsed.method==='both' ? '📝👁 Detected from text + visual' : '✅ Detected';
+
+      const methodLabel = parsed.method==='text' ? '📝 Detected from text' : parsed.method==='visual' ? '👁 Visual recognition' : parsed.method==='both' ? '📝👁 Text + visual' : '✅ Detected';
       result.style.background='var(--sky-light)';
       result.style.borderColor='var(--sky-mid)';
       result.style.color='var(--sky)';
-      result.innerHTML=`✅ <strong>${parsed.name||''}</strong>${loc?'<br><small style="font-weight:600;opacity:.8">📍 '+loc+'</small>':''}<br><small style="font-weight:600;opacity:.65;font-size:10px;">${methodLabel}${pendingCoords?' · 📍 Pinned on map!':' · Enter location manually'}</small>`;
+      result.innerHTML=`✅ <strong>${parsed.name||''}</strong>${document.getElementById('pLocation').value?'<br><small style="font-weight:600;opacity:.8">📍 '+document.getElementById('pLocation').value+'</small>':''}<br><small style="font-weight:600;opacity:.65;font-size:10px;">${methodLabel} · ${foundCoords?'📍 Pinned on map!':'⚠️ Could not pin — try typing location manually'}</small>`;
     } else {
       result.style.background='var(--amber-light)';
       result.style.borderColor='rgba(245,166,35,.4)';
