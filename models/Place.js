@@ -8,7 +8,7 @@ const PlaceSchema = new mongoose.Schema({
   placeId:   { type: String, default: '' },
   notes:     { type: String, default: '' },
   link:      { type: String, default: '' },
-  tags:      { type: [String], enum: ['Food','Beach','Nightlife','Nature','Culture'], default: [] },
+  tags:      { type: [String], enum: ['Food','Beach','Nightlife','Nature','Culture','Coffee'], default: [] },
   lat:       { type: Number, required: true },
   lng:       { type: Number, required: true },
   status:    { type: String, enum: ['none','tobe','been'], default: 'none' },
