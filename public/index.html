@@ -852,10 +852,23 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Photos</div>
         <div id="piPhotosGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;"></div>
       </div>
+      <!-- Rank section -->
+      <div id="piRankSection" style="background:var(--bg);border-radius:16px;padding:14px;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Your Rating</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+          <span class="pi-star" data-v="1" onclick="setInfoRating(1)" style="font-size:30px;cursor:pointer;transition:transform .15s;color:#ddd;">★</span>
+          <span class="pi-star" data-v="2" onclick="setInfoRating(2)" style="font-size:30px;cursor:pointer;transition:transform .15s;color:#ddd;">★</span>
+          <span class="pi-star" data-v="3" onclick="setInfoRating(3)" style="font-size:30px;cursor:pointer;transition:transform .15s;color:#ddd;">★</span>
+          <span class="pi-star" data-v="4" onclick="setInfoRating(4)" style="font-size:30px;cursor:pointer;transition:transform .15s;color:#ddd;">★</span>
+          <span class="pi-star" data-v="5" onclick="setInfoRating(5)" style="font-size:30px;cursor:pointer;transition:transform .15s;color:#ddd;">★</span>
+          <span id="piRatingLabel" style="font-size:12px;font-weight:700;color:var(--txt3);margin-left:6px;"></span>
+        </div>
+        <div id="piRatingCount" style="font-size:11px;font-weight:600;color:var(--txt3);"></div>
+      </div>
       <!-- Action buttons -->
       <div style="display:flex;gap:8px;margin-top:4px;">
-        <button onclick="closeOverlay('placeInfoOverlay');setTimeout(()=>editPlace(window._piPlaceId),100)" style="flex:1;padding:13px;border-radius:16px;border:2px solid var(--border);background:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;color:var(--txt2);">✏️ Edit Place</button>
-        <button onclick="socialItFromInfo()" style="flex:1;padding:13px;border-radius:16px;border:2px solid var(--purple);background:rgba(155,109,255,.1);font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;color:var(--purple);">🌐 Social It!</button>
+        <button onclick="openAddNote()" style="flex:1;padding:13px;border-radius:16px;border:2px solid var(--sky);background:var(--sky-light);font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;color:var(--sky);">📝 Add Note</button>
+        <button onclick="closeOverlay('placeInfoOverlay');setTimeout(()=>editPlace(window._piPlaceId),100)" style="flex:1;padding:13px;border-radius:16px;border:2px solid var(--border);background:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;color:var(--txt2);">✏️ Edit</button>
       </div>
     </div>
   </div>
@@ -865,6 +878,25 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div id="lightbox" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.92);align-items:center;justify-content:center;" onclick="closeLightbox()">
   <img id="lightboxImg" style="max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px;">
   <button onclick="closeLightbox()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:20px;width:40px;height:40px;border-radius:50%;cursor:pointer;">✕</button>
+</div>
+
+<!-- OVERLAY: ADD NOTE -->
+<div class="overlay" id="addNoteOverlay">
+  <div class="sheet">
+    <div class="drag-bar"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div class="sheet-title" style="margin-bottom:0">📝 Add Note</div>
+      <button onclick="closeOverlay('addNoteOverlay')" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);">✕</button>
+    </div>
+    <div id="piCurrentNote" style="font-size:13px;font-weight:600;color:var(--txt2);background:var(--bg);border-radius:12px;padding:12px;margin-bottom:14px;display:none;"></div>
+    <div class="mf">
+      <textarea id="noteInput" rows="4" placeholder="Add your thoughts about this place…" style="width:100%;padding:12px;background:var(--bg);border:2px solid var(--border);border-radius:14px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:var(--txt);outline:none;resize:none;"></textarea>
+    </div>
+    <div class="act-row">
+      <button class="btn-cancel" onclick="closeOverlay('addNoteOverlay')">Cancel</button>
+      <button class="btn-save" onclick="saveNote()">Save Note 📝</button>
+    </div>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -1059,10 +1091,10 @@ window._m={};
 function addMarker(place){if(!gmap)return;const m=new google.maps.Marker({position:{lat:place.lat,lng:place.lng},map:gmap,icon:mkIcon(place.tags),title:place.name});m.addListener('click',()=>openIW(place,m));window._m[place._id]=m;}
 function removeMarker(id){if(window._m[id]){window._m[id].setMap(null);delete window._m[id];}}
 function openIW(place,marker){
-  const cover=place.coverPhoto?`<img src="${esc(place.coverPhoto)}" class="mp-cover" loading="lazy" onerror="this.style.display='none'">`: '';
+  const cover=place.coverPhoto?`<img src="${esc(place.coverPhoto)}" style="width:100%;height:140px;object-fit:cover;display:block;border-radius:16px 16px 0 0;" loading="lazy" onerror="this.style.display='none'">`: '';
   const stars=place.rating?starsHtml(place.rating):'';
-  const statusBadge=place.status==='been'?'✅':place.status==='tobe'?'🗺️':'';
-  infoWin.setContent(`<div class="map-popup" style="cursor:pointer" onclick="openPlaceInfo('${place._id}')">${cover}<div style="padding:12px 14px 10px"><div class="mp-name">${statusBadge} ${esc(place.name)}</div><div class="mp-loc">📍 ${esc(place.location||'')}</div>${stars?`<div class="mp-stars" style="margin-top:4px">${stars}</div>`:''}<div style="text-align:center;margin-top:8px;font-size:11px;font-weight:700;color:var(--sky)">Tap to see details →</div></div></div>`);
+  const statusBadge=place.status==='been'?'<span style="background:var(--mint-light);color:var(--mint);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">✅ Been There</span>':place.status==='tobe'?'<span style="background:var(--sky-light);color:var(--sky);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">🗺️ To Be There</span>':'';
+  infoWin.setContent(`<div class="map-popup" onclick="openPlaceInfo('${place._id}')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(74,158,255,.15);">${cover}<div style="padding:12px 14px 12px">${statusBadge?statusBadge+'<br style=margin:3px>':''}<div class="mp-name">${esc(place.name)}</div>${place.location?`<div class="mp-loc">📍 ${esc(place.location)}</div>`:''  }${place.notes?`<div class="mp-notes" style="margin-top:6px">${esc(place.notes.substring(0,80)+(place.notes.length>80?'…':''))}</div>`:''  }${stars?`<div class="mp-stars" style="margin-top:6px">${stars}</div>`:''}<div style="margin-top:10px;padding:8px;background:var(--sky-light);border-radius:10px;text-align:center;font-size:12px;font-weight:800;color:var(--sky);">👆 Tap for full details</div></div></div>`);
   infoWin.open(gmap,marker);
 }
 
@@ -1921,6 +1953,69 @@ function syncStatus(status){
 /* ── PLACE INFO SHEET ── */
 window._piPlaceId=null;
 
+let _piRating=0;
+
+function setInfoRating(v){
+  _piRating=v;
+  const labels=['','⭐ Poor','⭐⭐ OK','⭐⭐⭐ Good','⭐⭐⭐⭐ Great','⭐⭐⭐⭐⭐ Amazing'];
+  document.querySelectorAll('.pi-star').forEach(s=>{
+    const on=+s.dataset.v<=v;
+    s.style.color=on?'#f5a623':'#ddd';
+    s.style.transform=on?'scale(1.1)':'scale(1)';
+  });
+  document.getElementById('piRatingLabel').textContent=labels[v]||'';
+  // Auto-save rating
+  saveInfoRating(v);
+}
+
+async function saveInfoRating(v){
+  if(!window._piPlaceId)return;
+  try{
+    const res=await apiFetch(`/api/places/${window._piPlaceId}`,{method:'PUT',body:JSON.stringify({rating:v})});
+    if(res.ok){
+      const updated=await res.json();
+      const p=places.find(x=>x._id===window._piPlaceId);
+      if(p){p.rating=updated.rating;p.ratingCount=(p.ratingCount||0)+1;}
+      updateRatingCount();
+      toast('⭐ Rating saved!','ok');
+    }
+  }catch{}
+}
+
+function updateRatingCount(){
+  const p=places.find(x=>x._id===window._piPlaceId); if(!p)return;
+  const el=document.getElementById('piRatingCount');
+  if(el&&p.rating){el.textContent=`Average: ${p.rating} ★`;}
+}
+
+function openAddNote(){
+  const p=places.find(x=>x._id===window._piPlaceId); if(!p)return;
+  const current=document.getElementById('piCurrentNote');
+  if(p.notes){current.textContent='Current: '+p.notes;current.style.display='block';}
+  else{current.style.display='none';}
+  document.getElementById('noteInput').value=p.notes||'';
+  openOverlay('addNoteOverlay');
+}
+
+async function saveNote(){
+  const note=document.getElementById('noteInput').value.trim();
+  if(!window._piPlaceId)return;
+  try{
+    const res=await apiFetch(`/api/places/${window._piPlaceId}`,{method:'PUT',body:JSON.stringify({notes:note})});
+    if(res.ok){
+      const updated=await res.json();
+      const p=places.find(x=>x._id===window._piPlaceId);
+      if(p) p.notes=updated.notes;
+      // Update notes in info sheet
+      const notesEl=document.getElementById('piNotes');
+      notesEl.textContent=updated.notes||'';
+      notesEl.style.display=updated.notes?'block':'none';
+      closeOverlay('addNoteOverlay');
+      toast('📝 Note saved!','ok');
+    }
+  }catch{toast('Error saving note','err');}
+}
+
 function openPlaceInfo(id){
   const p=places.find(x=>x._id===id); if(!p)return;
   window._piPlaceId=id;
@@ -1940,8 +2035,19 @@ function openPlaceInfo(id){
   const statusEl=document.getElementById('piStatus');
   statusEl.innerHTML=p.status==='been'?'<span style="background:var(--mint-light);color:var(--mint);font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;">✅ Been There</span>':p.status==='tobe'?'<span style="background:var(--sky-light);color:var(--sky);font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;">🗺️ To Be There</span>':'';
 
-  // Stars
+  // Stars display
   document.getElementById('piStars').innerHTML=p.rating?starsHtml(p.rating):'';
+
+  // Rating section - set current rating
+  _piRating=p.rating||0;
+  document.querySelectorAll('.pi-star').forEach(s=>{
+    const on=+s.dataset.v<=_piRating;
+    s.style.color=on?'#f5a623':'#ddd';
+    s.style.transform='scale(1)';
+  });
+  const rLabels=['','⭐ Poor','⭐⭐ OK','⭐⭐⭐ Good','⭐⭐⭐⭐ Great','⭐⭐⭐⭐⭐ Amazing'];
+  document.getElementById('piRatingLabel').textContent=rLabels[_piRating]||'Tap to rate';
+  document.getElementById('piRatingCount').textContent=p.rating?`Your rating: ${p.rating} ★`:'No rating yet';
 
   // Tags
   document.getElementById('piTags').innerHTML=(p.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('');
