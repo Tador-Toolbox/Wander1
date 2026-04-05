@@ -14,43 +14,39 @@ cloudinary.config({
 // Multer – store in memory
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+  limits: { fileSize: 15 * 1024 * 1024 } // 15MB
 });
 
 router.use(auth);
 
 // POST /api/upload/cover/:placeId
-// Upload or replace cover photo
 router.post('/cover/:placeId', upload.single('photo'), async (req, res) => {
   try {
     const place = await Place.findOne({ _id: req.params.placeId, user: req.userId });
     if (!place) return res.status(404).json({ error: 'Place not found' });
-    if (!req.file)  return res.status(400).json({ error: 'No file uploaded' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    // Delete old cover from Cloudinary if exists
     if (place.coverPhoto) {
       const publicId = extractPublicId(place.coverPhoto);
       if (publicId) await cloudinary.uploader.destroy(publicId).catch(() => {});
     }
 
-    // Upload new cover
     const result = await uploadBuffer(req.file.buffer, `wandr/covers/${req.userId}`);
     place.coverPhoto = result.secure_url;
     await place.save();
     res.json({ url: result.secure_url });
   } catch (err) {
-    console.error('Upload error:', err);
-    res.status(500).json({ error: 'Upload failed' });
+    console.error('Cover upload error:', err);
+    res.status(500).json({ error: 'Upload failed: ' + err.message });
   }
 });
 
 // POST /api/upload/photo/:placeId
-// Add a photo to the gallery
 router.post('/photo/:placeId', upload.single('photo'), async (req, res) => {
   try {
     const place = await Place.findOne({ _id: req.params.placeId, user: req.userId });
     if (!place) return res.status(404).json({ error: 'Place not found' });
-    if (!req.file)  return res.status(400).json({ error: 'No file uploaded' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     if (place.photos.length >= 10) return res.status(400).json({ error: 'Max 10 photos per place' });
 
     const result = await uploadBuffer(req.file.buffer, `wandr/photos/${req.userId}`);
@@ -58,13 +54,12 @@ router.post('/photo/:placeId', upload.single('photo'), async (req, res) => {
     await place.save();
     res.json({ url: result.secure_url, photos: place.photos });
   } catch (err) {
-    console.error('Upload error:', err);
-    res.status(500).json({ error: 'Upload failed' });
+    console.error('Photo upload error:', err);
+    res.status(500).json({ error: 'Upload failed: ' + err.message });
   }
 });
 
 // DELETE /api/upload/photo/:placeId
-// Remove a specific photo from gallery
 router.delete('/photo/:placeId', async (req, res) => {
   try {
     const { url } = req.body;
@@ -77,8 +72,31 @@ router.delete('/photo/:placeId', async (req, res) => {
     place.photos = place.photos.filter(p => p !== url);
     await place.save();
     res.json({ photos: place.photos });
-  } catch {
-    res.status(500).json({ error: 'Delete failed' });
+  } catch (err) {
+    res.status(500).json({ error: 'Delete failed: ' + err.message });
+  }
+});
+
+// POST /api/upload/avatar
+router.post('/avatar', upload.single('photo'), async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    if (user.avatar) {
+      const publicId = extractPublicId(user.avatar);
+      if (publicId) await cloudinary.uploader.destroy(publicId).catch(() => {});
+    }
+
+    const result = await uploadBuffer(req.file.buffer, `wandr/avatars`);
+    user.avatar = result.secure_url;
+    await user.save();
+    res.json({ url: result.secure_url });
+  } catch (err) {
+    console.error('Avatar upload error:', err);
+    res.status(500).json({ error: 'Upload failed: ' + err.message });
   }
 });
 
@@ -95,33 +113,8 @@ function uploadBuffer(buffer, folder) {
 
 function extractPublicId(url) {
   if (!url) return null;
-  // e.g. https://res.cloudinary.com/cloud/image/upload/v123/wandr/covers/abc.jpg
   const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
   return match ? match[1] : null;
 }
 
 module.exports = router;
-
-// POST /api/upload/avatar — upload profile picture
-router.post('/avatar', upload.single('photo'), async (req, res) => {
-  try {
-    const User = require('../models/User');
-    const user = await User.findById(req.userId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
-    // Delete old avatar
-    if (user.avatar) {
-      const publicId = extractPublicId(user.avatar);
-      if (publicId) await cloudinary.uploader.destroy(publicId).catch(() => {});
-    }
-
-    const result = await uploadBuffer(req.file.buffer, `wandr/avatars`);
-    user.avatar = result.secure_url;
-    await user.save();
-    res.json({ url: result.secure_url });
-  } catch (err) {
-    console.error('Avatar upload error:', err);
-    res.status(500).json({ error: 'Upload failed' });
-  }
-});
