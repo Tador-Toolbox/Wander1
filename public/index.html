@@ -814,6 +814,58 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
   </div>
 </div>
 
+
+<!-- OVERLAY: PLACE INFO -->
+<div class="overlay" id="placeInfoOverlay">
+  <div class="sheet" style="padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:90vh;">
+    <!-- Cover photo header -->
+    <div id="piCoverWrap" style="position:relative;min-height:60px;flex-shrink:0;">
+      <img id="piCover" style="width:100%;height:220px;object-fit:cover;display:none;" loading="lazy">
+      <div id="piNoCover" style="height:60px;background:linear-gradient(135deg,var(--sky-light),var(--mint-light));"></div>
+      <button onclick="closeOverlay('placeInfoOverlay')" style="position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.9);border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.15);">✕</button>
+    </div>
+    <!-- Scrollable content -->
+    <div style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 20px 30px;flex:1;">
+      <!-- Header -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+        <div style="flex:1;">
+          <div id="piName" style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:var(--txt);line-height:1.2;"></div>
+          <div id="piLocation" style="font-size:13px;font-weight:600;color:var(--txt2);margin-top:4px;"></div>
+        </div>
+        <button id="piEditBtn" onclick="editFromInfo()" style="flex-shrink:0;margin-left:12px;background:var(--bg);border:2px solid var(--border);border-radius:12px;padding:7px 12px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;color:var(--txt2);">✏️ Edit</button>
+      </div>
+      <!-- Status + Rating -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+        <div id="piStatus"></div>
+        <div id="piStars"></div>
+      </div>
+      <!-- Tags -->
+      <div id="piTags" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;"></div>
+      <!-- Notes -->
+      <div id="piNotes" style="font-size:14px;font-weight:600;color:var(--txt2);line-height:1.6;margin-bottom:18px;white-space:pre-wrap;"></div>
+      <!-- Link -->
+      <div id="piLinkWrap" style="display:none;margin-bottom:18px;">
+        <a id="piLink" href="#" target="_blank" rel="noopener" style="color:var(--sky);font-size:13px;font-weight:700;text-decoration:none;">🔗 Open Link</a>
+      </div>
+      <!-- Photos section -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Photos</div>
+        <div id="piPhotosGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;"></div>
+      </div>
+      <!-- Action buttons -->
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button onclick="closeOverlay('placeInfoOverlay');setTimeout(()=>editPlace(window._piPlaceId),100)" style="flex:1;padding:13px;border-radius:16px;border:2px solid var(--border);background:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;color:var(--txt2);">✏️ Edit Place</button>
+        <button onclick="socialItFromInfo()" style="flex:1;padding:13px;border-radius:16px;border:2px solid var(--purple);background:rgba(155,109,255,.1);font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;color:var(--purple);">🌐 Social It!</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX for photos -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.92);align-items:center;justify-content:center;" onclick="closeLightbox()">
+  <img id="lightboxImg" style="max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px;">
+  <button onclick="closeLightbox()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:20px;width:40px;height:40px;border-radius:50%;cursor:pointer;">✕</button>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1007,11 +1059,10 @@ window._m={};
 function addMarker(place){if(!gmap)return;const m=new google.maps.Marker({position:{lat:place.lat,lng:place.lng},map:gmap,icon:mkIcon(place.tags),title:place.name});m.addListener('click',()=>openIW(place,m));window._m[place._id]=m;}
 function removeMarker(id){if(window._m[id]){window._m[id].setMap(null);delete window._m[id];}}
 function openIW(place,marker){
-  const tags=(place.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('');
-  const cover=place.coverPhoto?`<img src="${esc(place.coverPhoto)}" class="mp-cover" loading="lazy">`:'';  const statusBadge=place.status==='been'?'<span style="display:inline-block;background:var(--mint-light);color:var(--mint);font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;margin-bottom:6px;">✅ BEEN THERE</span>':place.status==='tobe'?'<span style="display:inline-block;background:var(--sky-light);color:var(--sky);font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;margin-bottom:6px;">🗺️ TO BE THERE</span>':'';
-  const stars=place.rating?`<div class="mp-stars">${starsHtml(place.rating)}</div>`:'';
-  const linkUrl=place.link?(place.link.startsWith('http')?place.link:'https://'+place.link):'';
-  infoWin.setContent(`<div class="map-popup">${cover}<div style="padding:14px 16px 12px">${stars}<div class="mp-name">${esc(place.name)}</div><div class="mp-loc">📍 ${esc(place.location||'Unknown')}</div>${tags?`<div class="mp-tags">${tags}</div>`:''  }${place.notes?`<div class="mp-notes">${esc(place.notes)}</div>`:''  }${linkUrl?`<a href="${esc(linkUrl)}" target="_blank" rel="noopener" class="mp-link">🔗 Open Link</a>`:''}<div class="mp-actions"><button class="mp-btn edit" onclick="editPlace('${place._id}')">✏️ Edit</button><button class="mp-btn del" onclick="doDelete('${place._id}')">🗑 Delete</button></div></div></div>`);
+  const cover=place.coverPhoto?`<img src="${esc(place.coverPhoto)}" class="mp-cover" loading="lazy" onerror="this.style.display='none'">`: '';
+  const stars=place.rating?starsHtml(place.rating):'';
+  const statusBadge=place.status==='been'?'✅':place.status==='tobe'?'🗺️':'';
+  infoWin.setContent(`<div class="map-popup" style="cursor:pointer" onclick="openPlaceInfo('${place._id}')">${cover}<div style="padding:12px 14px 10px"><div class="mp-name">${statusBadge} ${esc(place.name)}</div><div class="mp-loc">📍 ${esc(place.location||'')}</div>${stars?`<div class="mp-stars" style="margin-top:4px">${stars}</div>`:''}<div style="text-align:center;margin-top:8px;font-size:11px;font-weight:700;color:var(--sky)">Tap to see details →</div></div></div>`);
   infoWin.open(gmap,marker);
 }
 
@@ -1865,6 +1916,104 @@ function syncStatus(status){
   document.getElementById('btnTobe').classList.toggle('tobe', status==='tobe');
   const rs=document.getElementById('ratingSection');
   if(rs) rs.classList.toggle('rating-locked', status!=='been');
+}
+
+/* ── PLACE INFO SHEET ── */
+window._piPlaceId=null;
+
+function openPlaceInfo(id){
+  const p=places.find(x=>x._id===id); if(!p)return;
+  window._piPlaceId=id;
+  infoWin.close();
+
+  // Cover photo
+  const cover=document.getElementById('piCover');
+  const noCover=document.getElementById('piNoCover');
+  if(p.coverPhoto){cover.src=p.coverPhoto;cover.style.display='block';noCover.style.display='none';}
+  else{cover.style.display='none';noCover.style.display='block';}
+
+  // Name & location
+  document.getElementById('piName').textContent=p.name;
+  document.getElementById('piLocation').textContent=p.location?'📍 '+p.location:'';
+
+  // Status badge
+  const statusEl=document.getElementById('piStatus');
+  statusEl.innerHTML=p.status==='been'?'<span style="background:var(--mint-light);color:var(--mint);font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;">✅ Been There</span>':p.status==='tobe'?'<span style="background:var(--sky-light);color:var(--sky);font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;">🗺️ To Be There</span>':'';
+
+  // Stars
+  document.getElementById('piStars').innerHTML=p.rating?starsHtml(p.rating):'';
+
+  // Tags
+  document.getElementById('piTags').innerHTML=(p.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('');
+
+  // Notes
+  const notesEl=document.getElementById('piNotes');
+  notesEl.textContent=p.notes||'';
+  notesEl.style.display=p.notes?'block':'none';
+
+  // Link
+  const linkWrap=document.getElementById('piLinkWrap');
+  const linkEl=document.getElementById('piLink');
+  if(p.link){
+    const url=p.link.startsWith('http')?p.link:'https://'+p.link;
+    linkEl.href=url; linkWrap.style.display='block';
+  } else { linkWrap.style.display='none'; }
+
+  // Photos grid
+  renderInfoPhotos(p);
+
+  openOverlay('placeInfoOverlay');
+}
+
+function renderInfoPhotos(p){
+  const grid=document.getElementById('piPhotosGrid');
+  const photos=p.photos||[];
+  const addBtn=`<div onclick="document.getElementById('piPhotoInput').click()" style="aspect-ratio:1;border-radius:10px;border:2px dashed var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;">+</div>`;
+  const photoItems=photos.map(url=>`<div style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;cursor:pointer;" onclick="openLightbox('${url}')"><img src="${url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"></div>`).join('');
+  grid.innerHTML=photoItems+addBtn;
+  // Hidden file input
+  let inp=document.getElementById('piPhotoInput');
+  if(!inp){
+    inp=document.createElement('input');
+    inp.type='file'; inp.id='piPhotoInput'; inp.accept='image/*'; inp.style.display='none';
+    inp.onchange=async function(){
+      const file=this.files[0]; if(!file||!window._piPlaceId)return;
+      try{
+        const resized=await resizeImageFile(file,1200,0.82);
+        const fd=new FormData(); fd.append('photo',resized);
+        const res=await fetch(`/api/upload/photo/${window._piPlaceId}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
+        if(!res.ok)throw new Error();
+        const{photos}=await res.json();
+        const pl=places.find(x=>x._id===window._piPlaceId); if(pl) pl.photos=photos;
+        renderInfoPhotos(pl);
+        toast('📷 Photo added!','ok');
+      }catch{toast('Upload failed 😢','err');}
+      this.value='';
+    };
+    document.body.appendChild(inp);
+  }
+}
+
+function openLightbox(url){
+  document.getElementById('lightboxImg').src=url;
+  document.getElementById('lightbox').style.display='flex';
+}
+function closeLightbox(){
+  document.getElementById('lightbox').style.display='none';
+}
+
+function editFromInfo(){
+  closeOverlay('placeInfoOverlay');
+  setTimeout(()=>editPlace(window._piPlaceId),150);
+}
+
+async function socialItFromInfo(){
+  if(!window._piPlaceId){return;}
+  try{
+    const res=await apiFetch('/api/posts',{method:'POST',body:JSON.stringify({placeId:window._piPlaceId})});
+    if(!res.ok)throw new Error();
+    toast('🌐 Posted to Social Feed!','ok');
+  }catch{toast('Could not post 😢','err');}
 }
 
 /* ── PHOTO GPS EXTRACTION ── */
