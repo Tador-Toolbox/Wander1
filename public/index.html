@@ -755,6 +755,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div class="topt" data-t="Nightlife" onclick="toggleTag(this)">🌙 Nightlife</div>
         <div class="topt" data-t="Nature" onclick="toggleTag(this)">🌿 Nature</div>
         <div class="topt" data-t="Culture" onclick="toggleTag(this)">🏛 Culture</div>
+        <div class="topt" data-t="Coffee" onclick="toggleTag(this)">☕ Coffee</div>
       </div>
     </div>
     <div class="mf">
@@ -994,8 +995,8 @@ async function apiFetch(path,opts={}){
 }
 async function loadPlaces(){try{const res=await apiFetch('/api/places');places=await res.json();updateCount();}catch(e){if(e.message!=='Unauthorized')toast('Failed to load places','err');}}
 
-const PCOL={Food:'#ff6b47',Beach:'#4a9eff',Nightlife:'#9b6dff',Nature:'#34c98a',Culture:'#f5a623'};
-const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛'};
+const PCOL={Food:'#ff6b47',Beach:'#4a9eff',Nightlife:'#9b6dff',Nature:'#34c98a',Culture:'#f5a623',Coffee:'#a0522d'};
+const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕'};
 function pc(t){return(t&&t[0])?PCOL[t[0]]||'#4a9eff':'#4a9eff';}
 function pi(t){return(t&&t[0])?PICO[t[0]]||'📍':'📍';}
 function mkIcon(tags){const c=pc(tags),e=pi(tags);return{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="44" height="54" viewBox="0 0 44 54"><filter id="sh"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,.18)"/></filter><path d="M22 0C9.85 0 0 9.85 0 22c0 16.5 22 32 22 32S44 38.5 44 22C44 9.85 34.15 0 22 0z" fill="${c}" filter="url(#sh)"/><circle cx="22" cy="22" r="13" fill="rgba(255,255,255,.3)"/><text x="22" y="28" text-anchor="middle" font-size="16">${e}</text></svg>`),scaledSize:new google.maps.Size(44,54),anchor:new google.maps.Point(22,54)};}
