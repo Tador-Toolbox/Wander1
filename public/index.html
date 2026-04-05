@@ -1570,6 +1570,18 @@ function viewTrip(id){
   document.getElementById('activeTripName').textContent=t.emoji+' '+t.name;
   showMap();
   refreshMarkers();
+  // Zoom to fit all places in this trip
+  const tripPlaces=places.filter(p=>p.trip===id);
+  if(tripPlaces.length>0&&gmap){
+    if(tripPlaces.length===1){
+      gmap.panTo({lat:tripPlaces[0].lat,lng:tripPlaces[0].lng});
+      gmap.setZoom(13);
+    } else {
+      const bounds=new google.maps.LatLngBounds();
+      tripPlaces.forEach(p=>bounds.extend({lat:p.lat,lng:p.lng}));
+      gmap.fitBounds(bounds,{top:80,bottom:80,left:40,right:40});
+    }
+  }
 }
 
 function clearActiveTrip(){
