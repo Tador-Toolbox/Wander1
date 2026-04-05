@@ -977,8 +977,9 @@ function openFullFromDrop(lat,lng){
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='none';
   document.getElementById('btnSocialIt').style.display='none';
-  document.getElementById('coverPhotoSection').style.display='none';
+  document.getElementById('coverPhotoSection').style.display='block';
   document.getElementById('gallerySection').style.display='none';
+  showCoverPreview('');
   resetRating();
   document.querySelectorAll('.topt').forEach(t=>t.classList.remove('sel'));
   openOverlay('addOverlay');
@@ -1235,8 +1236,9 @@ function openFull(pre={}){window._pendingCoverFile=null; // cleared when form op
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='none';
   document.getElementById('btnSocialIt').style.display='none';
-  document.getElementById('coverPhotoSection').style.display='none';
+  document.getElementById('coverPhotoSection').style.display='block';
   document.getElementById('gallerySection').style.display='none';
+  showCoverPreview('');
   resetRating();
   resetStatus();
   resetVisibility();
@@ -1294,7 +1296,6 @@ async function savePlace(){
       document.getElementById('btnDelete').style.display='block';
       document.getElementById('btnSocialIt').style.display='block';
       document.getElementById('addTitle').textContent='✏️ Edit Place';
-      document.getElementById('coverPhotoSection').style.display='block';
       document.getElementById('gallerySection').style.display='block';
     }
     updateCount();
@@ -2000,7 +2001,15 @@ function resetRating(){
 
 /* ── PHOTO UPLOAD ── */
 async function uploadCover(input){
-  const file=input.files[0]; if(!file||!editId)return;
+  const file=input.files[0]; if(!file)return;
+  if(!editId){
+    // New place not saved yet — store as pending and show preview
+    window._pendingCoverFile=new File([file],file.name,{type:file.type});
+    const url=URL.createObjectURL(file);
+    showCoverPreview(url);
+    toast('📷 Cover ready — will save when you save the place','ok');
+    input.value=''; return;
+  }
   const btn=document.getElementById('changeCoverBtn');
   btn.textContent='Uploading…';
   try{
