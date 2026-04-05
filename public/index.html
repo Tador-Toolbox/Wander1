@@ -1300,17 +1300,31 @@ async function savePlace(){
     updateCount();
     // Upload pending cover photo (from AI scan or GPS photo)
     if(window._pendingCoverFile && editId){
-      const fd=new FormData(); fd.append('photo',window._pendingCoverFile);
+      toast('📷 Uploading cover photo…','');
+      const fd=new FormData();
+      fd.append('photo', window._pendingCoverFile, 'cover.jpg');
       try{
-        const cr=await fetch(`/api/upload/cover/${editId}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
+        const cr=await fetch(`/api/upload/cover/${editId}`,{
+          method:'POST',
+          headers:{'Authorization':`Bearer ${token}`},
+          body:fd
+        });
         if(cr.ok){
           const{url}=await cr.json();
           const p=places.find(x=>x._id===editId);
-          if(p){p.coverPhoto=url;}
+          if(p) p.coverPhoto=url;
+          document.getElementById('coverPhotoSection').style.display='block';
           showCoverPreview(url);
           toast('📷 Cover photo saved!','ok');
+        } else {
+          const err=await cr.json().catch(()=>({}));
+          console.error('Cover upload failed:',cr.status,err);
+          toast('📷 Cover upload failed: '+( err.error||cr.status),'err');
         }
-      }catch(e){console.error('cover upload failed',e);}
+      }catch(e){
+        console.error('Cover upload error:',e);
+        toast('📷 Cover upload error','err');
+      }
       window._pendingCoverFile=null;
     }
     if(editId&&document.getElementById('btnSocialIt').style.display==='block'){
