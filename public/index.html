@@ -340,6 +340,33 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 #exploreView{display:none;position:fixed;top:60px;left:0;right:0;bottom:0;z-index:2;}
 #exploreMap{width:100%;height:100%;}
 .explore-banner{position:fixed;top:68px;left:50%;transform:translateX(-50%);background:var(--sky);color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;padding:7px 16px;border-radius:20px;box-shadow:var(--sh);z-index:300;pointer-events:none;animation:riseUp .4s ease;white-space:nowrap;}
+
+/* ── USER PROFILE PAGE ── */
+#userProfileView{display:none;position:fixed;top:60px;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));background:var(--bg);flex-direction:column;overflow:hidden;z-index:2;}
+.up-header{background:#fff;border-bottom:1.5px solid var(--border);flex-shrink:0;}
+.up-top{display:flex;align-items:flex-start;gap:16px;padding:20px 18px 14px;}
+.up-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--sky),var(--sky-dark));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;overflow:hidden;flex-shrink:0;border:3px solid var(--border);}
+.up-avatar img{width:100%;height:100%;object-fit:cover;}
+.up-info{flex:1;}
+.up-name{font-size:18px;font-weight:800;color:var(--txt);}
+.up-handle{font-size:13px;font-weight:600;color:var(--txt3);margin-bottom:10px;}
+.up-stats{display:flex;gap:18px;}
+.up-stat{text-align:center;}
+.up-stat-n{font-size:18px;font-weight:800;color:var(--txt);display:block;}
+.up-stat-l{font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.4px;}
+.up-actions{padding:0 18px 14px;display:flex;gap:8px;}
+.up-follow-btn{flex:1;padding:10px;border-radius:12px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;border:2px solid var(--sky);background:var(--sky);color:#fff;transition:var(--tr);}
+.up-follow-btn.following{background:#fff;color:var(--sky);}
+.up-edit-btn{padding:10px 16px;border-radius:12px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;border:2px solid var(--border);background:#fff;color:var(--txt2);transition:var(--tr);}
+.up-tabs{display:flex;border-top:1.5px solid var(--border);}
+.up-tab{flex:1;padding:12px;text-align:center;font-size:12px;font-weight:800;color:var(--txt3);cursor:pointer;border-bottom:2px solid transparent;transition:var(--tr);}
+.up-tab.on{color:var(--sky);border-bottom-color:var(--sky);}
+.up-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;overflow-y:auto;flex:1;}
+.up-grid-item{aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--border);position:relative;}
+.up-grid-item img{width:100%;height:100%;object-fit:cover;display:block;}
+.up-grid-placeholder{width:100%;height:100%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:24px;}
+.up-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.up-back{background:none;border:none;font-size:20px;cursor:pointer;padding:0 4px;color:var(--txt2);}
 /* ── SOCIAL FEED ── */
 #socialFeed{padding:12px 16px 20px;overflow-y:auto;flex:1;}
 .post-card{background:#fff;border:2px solid var(--border);border-radius:24px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.04);animation:riseUp .3s ease;}
@@ -468,9 +495,14 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div id="mapScreen" class="screen">
   <div class="app-header">
     <div class="h-logo" onclick="showMap()" style="cursor:pointer;">Wandr <span class="h-dot">·</span></div>
-    <button id="profileBtn" onclick="openProfile()" style="background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:8px;">
-      <div id="headerAvatar" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--sky),var(--sky-dark));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;overflow:hidden;border:2px solid var(--border);flex-shrink:0;">?</div>
-    </button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button onclick="showMyProfile()" title="My Profile" style="background:none;border:none;cursor:pointer;padding:0;position:relative;">
+        <div id="headerMyProfile" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--mint),var(--sky));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;overflow:hidden;border:2px solid var(--mint);flex-shrink:0;">🗺️</div>
+      </button>
+      <button id="profileBtn" onclick="openProfile()" title="Edit Profile" style="background:none;border:none;cursor:pointer;padding:0;">
+        <div id="headerAvatar" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--sky),var(--sky-dark));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;overflow:hidden;border:2px solid var(--border);flex-shrink:0;">?</div>
+      </button>
+    </div>
   </div>
   <!-- Bottom Nav -->
   <nav class="bottom-nav">
@@ -533,6 +565,35 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <div class="trips-list" id="tripsList"></div>
     </div>
 
+
+    <!-- USER PROFILE VIEW -->
+    <div id="userProfileView">
+      <div class="up-header">
+        <div style="display:flex;align-items:center;gap:8px;padding:12px 18px 0;">
+          <button class="up-back" id="upBackBtn" onclick="closeUserProfile()">←</button>
+          <div id="upHeaderName" style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:var(--txt);"></div>
+        </div>
+        <div class="up-top">
+          <div class="up-avatar" id="upAvatar"></div>
+          <div class="up-info">
+            <div class="up-name" id="upName"></div>
+            <div class="up-handle" id="upHandle"></div>
+            <div class="up-stats">
+              <div class="up-stat"><span class="up-stat-n" id="upPlaces">0</span><span class="up-stat-l">Places</span></div>
+              <div class="up-stat"><span class="up-stat-n" id="upFollowers">0</span><span class="up-stat-l">Followers</span></div>
+              <div class="up-stat"><span class="up-stat-n" id="upFollowing">0</span><span class="up-stat-l">Following</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="up-actions" id="upActions"></div>
+        <div class="up-tabs">
+          <div class="up-tab on" id="upTabPhotos" onclick="switchProfileTab('photos')">🖼️ Photos</div>
+          <div class="up-tab" id="upTabPlaces" onclick="switchProfileTab('places')">📍 Places</div>
+          <div class="up-tab" id="upTabPosts" onclick="switchProfileTab('posts')">🌐 Posts</div>
+        </div>
+      </div>
+      <div class="up-scroll" id="upContent"></div>
+    </div>
     <!-- EXPLORE VIEW -->
     <div id="exploreView">
       <div id="exploreMap"></div>
@@ -1148,7 +1209,7 @@ function renderFeed(){
     const timeAgo=formatTimeAgo(p.createdAt);
     return `<div class="post-card">
       <div class="post-header">
-        <div class="post-avatar">${avatarContent}</div>
+        <div class="post-avatar" onclick="openUserProfile('${p.user}')" style="cursor:pointer;">${avatarContent}</div>
         <div class="post-author">
           <div class="post-author-name">${esc(p.authorName||'Wandr User')}</div>
           ${p.authorHandle?`<div class="post-author-handle">@${esc(p.authorHandle)}</div>`:''}
@@ -1950,6 +2011,166 @@ function syncStatus(status){
   if(rs) rs.classList.toggle('rating-locked', status!=='been');
 }
 
+/* ── USER PROFILE ── */
+let _upData=null, _upTab='photos', _upUserId=null;
+
+function showAllViews(show, hide=[]){
+  ['mapContainer','listView','tripsView','exploreView','userProfileView'].forEach(id=>{
+    const e=document.getElementById(id); if(!e)return;
+    e.style.display=hide.includes(id)?'none':(show===id?'flex':'none');
+  });
+}
+
+async function showMyProfile(){
+  if(!currentUser)return;
+  // Get my user ID from server
+  try{
+    const res=await apiFetch('/api/auth/me');
+    if(res.ok){
+      currentUser=await res.json();
+      localStorage.setItem('wandr_user',JSON.stringify(currentUser));
+    }
+  }catch{}
+  // Find my user ID — stored in token
+  const payload=JSON.parse(atob(token.split('.')[1]));
+  await openUserProfile(payload.id);
+}
+
+async function openUserProfile(userId){
+  _upUserId=userId;
+  _upTab='photos';
+  // Show view
+  ['mapContainer','listView','tripsView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  document.getElementById('userProfileView').style.display='flex';
+  ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  ['btnMap','btnList','btnTrips','btnExplore','btnLogout'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
+  document.getElementById('upContent').innerHTML='<div style="text-align:center;padding:40px;color:var(--txt3);font-weight:600;">Loading…</div>';
+
+  try{
+    const res=await apiFetch(`/api/users/${userId}`);
+    _upData=await res.json();
+    renderProfileHeader();
+    switchProfileTab('photos');
+  }catch{document.getElementById('upContent').innerHTML='<div style="text-align:center;padding:40px;color:var(--coral);">Could not load profile</div>';}
+}
+
+function renderProfileHeader(){
+  if(!_upData)return;
+  const{user,isMe,isFollowing}=_upData;
+  const name=[user.firstName,user.lastName].filter(Boolean).join(' ')||user.email||'Wandr User';
+  document.getElementById('upHeaderName').textContent=name;
+  document.getElementById('upName').textContent=name;
+  document.getElementById('upHandle').textContent=user.handle?'@'+user.handle:'';
+  document.getElementById('upPlaces').textContent=user.placesCount||0;
+  document.getElementById('upFollowers').textContent=user.followersCount||0;
+  document.getElementById('upFollowing').textContent=user.followingCount||0;
+
+  const av=document.getElementById('upAvatar');
+  if(user.avatar){av.innerHTML=`<img src="${esc(user.avatar)}">`;}
+  else{av.textContent=(name[0]||'?').toUpperCase();}
+
+  const actions=document.getElementById('upActions');
+  if(isMe){
+    actions.innerHTML=`<button class="up-edit-btn" style="flex:1" onclick="openProfile()">✏️ Edit Profile</button>`;
+  } else {
+    actions.innerHTML=`<button class="up-follow-btn ${isFollowing?'following':''}" id="upFollowBtn" onclick="toggleFollowUser('${user._id}')">${isFollowing?'✓ Following':'+ Follow'}</button>`;
+  }
+}
+
+async function toggleFollowUser(userId){
+  try{
+    const res=await apiFetch(`/api/users/${userId}/follow`,{method:'POST'});
+    if(!res.ok)throw new Error();
+    const{following}=await res.json();
+    _upData.isFollowing=following;
+    const btn=document.getElementById('upFollowBtn');
+    btn.textContent=following?'✓ Following':'+ Follow';
+    btn.className='up-follow-btn'+(following?' following':'');
+    const fc=document.getElementById('upFollowers');
+    const cur=parseInt(fc.textContent)||0;
+    fc.textContent=following?cur+1:Math.max(0,cur-1);
+    toast(following?'✓ Following!':'Unfollowed','ok');
+  }catch{toast('Error','err');}
+}
+
+function switchProfileTab(tab){
+  _upTab=tab;
+  ['photos','places','posts'].forEach(t=>{
+    const el=document.getElementById('upTab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(el) el.className='up-tab'+(t===tab?' on':'');
+  });
+  renderProfileContent();
+}
+
+function renderProfileContent(){
+  if(!_upData)return;
+  const el=document.getElementById('upContent');
+  const{places,posts}=_upData;
+
+  if(_upTab==='photos'){
+    // Collect all photos from all places
+    const allPhotos=[];
+    places.forEach(p=>{
+      if(p.coverPhoto) allPhotos.push({url:p.coverPhoto,place:p});
+      (p.photos||[]).forEach(url=>allPhotos.push({url,place:p}));
+    });
+    if(!allPhotos.length){
+      el.innerHTML='<div class="no-posts"><div class="ni">📷</div><p>No photos yet</p></div>';
+      return;
+    }
+    el.innerHTML='<div class="up-grid">'+allPhotos.map(({url,place})=>{
+      const likes=(place.photoLikes||[]).filter(l=>l.url===url).length;
+      const myLike=currentUser&&(place.photoLikes||[]).some(l=>l.url===url&&(l.user===currentUser._id||l.user===(currentUser&&currentUser._id)));
+      return `<div class="up-grid-item" onclick="openPhotoLightbox('${esc(url)}','${place._id}')">
+        <img src="${esc(url)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=up-grid-placeholder>📷</div>'">
+        ${likes>0?`<div style="position:absolute;bottom:4px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;">❤️ ${likes}</div>`:''}
+      </div>`;}).join('')+'</div>';
+  }
+
+  else if(_upTab==='places'){
+    if(!places.length){
+      el.innerHTML='<div class="no-posts"><div class="ni">📍</div><p>No places yet</p></div>';return;
+    }
+    el.innerHTML='<div style="padding:12px 16px;">'+places.map(p=>`
+      <div style="background:#fff;border:2px solid var(--border);border-radius:18px;margin-bottom:10px;overflow:hidden;cursor:pointer;" onclick="openLightbox('${p.coverPhoto||''}')">
+        ${p.coverPhoto?`<img src="${esc(p.coverPhoto)}" style="width:100%;height:120px;object-fit:cover;" loading="lazy">`:''}
+        <div style="padding:12px 14px;">
+          <div style="font-size:14px;font-weight:800;color:var(--txt);">${esc(p.name)}</div>
+          ${p.location?`<div style="font-size:12px;font-weight:600;color:var(--txt2);">📍 ${esc(p.location)}</div>`:''}
+          ${p.rating?`<div style="margin-top:4px;">${starsHtml(p.rating)}</div>`:''}
+          ${(p.tags||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">${(p.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('')}</div>`:''}
+        </div>
+      </div>`).join('')+'</div>';
+  }
+
+  else if(_upTab==='posts'){
+    if(!posts.length){
+      el.innerHTML='<div class="no-posts"><div class="ni">🌐</div><p>No posts yet</p></div>';return;
+    }
+    el.innerHTML='<div style="padding:12px 16px;">'+posts.map(p=>`
+      <div class="post-card">
+        ${p.coverPhoto?`<img src="${esc(p.coverPhoto)}" class="post-cover" loading="lazy">`:''}
+        <div class="post-body">
+          <div class="post-place-name">${esc(p.placeName)}</div>
+          ${p.location?`<div class="post-location">📍 ${esc(p.location)}</div>`:''}
+          ${p.notes?`<div class="post-notes">${esc(p.notes)}</div>`:''}
+          <div class="post-footer">
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              ${p.status==='been'?'<span class="post-status-badge been">✅ Been There</span>':p.status==='tobe'?'<span class="post-status-badge tobe">🗺️ To Be There</span>':''}
+              ${p.rating?`<div>${starsHtml(p.rating)}</div>`:''}
+            </div>
+            <span style="font-size:11px;font-weight:600;color:var(--txt3);">${formatTimeAgo(p.createdAt)}</span>
+          </div>
+        </div>
+      </div>`).join('')+'</div>';
+  }
+}
+
+function closeUserProfile(){
+  document.getElementById('userProfileView').style.display='none';
+  showMap();
+}
+
 /* ── PLACE INFO SHEET ── */
 window._piPlaceId=null;
 
@@ -2101,11 +2322,62 @@ function renderInfoPhotos(p){
 }
 
 function openLightbox(url){
+  if(!url)return;
   document.getElementById('lightboxImg').src=url;
   document.getElementById('lightbox').style.display='flex';
+  // Hide like btn for plain lightbox
+  const lb=document.getElementById('lightboxLikeBtn');
+  if(lb) lb.style.display='none';
 }
+
+let _lbPlaceId=null, _lbPhotoUrl=null;
+function openPhotoLightbox(url, placeId){
+  if(!url)return;
+  _lbPlaceId=placeId; _lbPhotoUrl=url;
+  document.getElementById('lightboxImg').src=url;
+  document.getElementById('lightbox').style.display='flex';
+  // Show like button
+  let lb=document.getElementById('lightboxLikeBtn');
+  if(!lb){
+    lb=document.createElement('button');
+    lb.id='lightboxLikeBtn';
+    lb.style.cssText='position:absolute;bottom:30px;right:50%;transform:translateX(50%);background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.4);color:#fff;font-family:Nunito,sans-serif;font-size:15px;font-weight:800;padding:10px 24px;border-radius:30px;cursor:pointer;display:flex;align-items:center;gap:8px;backdrop-filter:blur(8px);';
+    lb.onclick=(e)=>{e.stopPropagation();togglePhotoLike();};
+    document.getElementById('lightbox').appendChild(lb);
+  }
+  lb.style.display='flex';
+  // Find current like state
+  const place=_upData&&_upData.places&&_upData.places.find(p=>p._id===placeId);
+  const likes=place?(place.photoLikes||[]).filter(l=>l.url===url).length:0;
+  const myLike=place&&currentUser&&(place.photoLikes||[]).some(l=>l.url===url&&(l.user===currentUser._id||l.user===(currentUser&&currentUser._id)));
+  lb.innerHTML=`<span>${myLike?'❤️':'🤍'}</span><span id="lbLikeCount">${likes}</span>`;
+}
+
+async function togglePhotoLike(){
+  if(!_lbPlaceId||!_lbPhotoUrl)return;
+  try{
+    const res=await apiFetch('/api/photos/like',{method:'POST',body:JSON.stringify({photoUrl:_lbPhotoUrl,placeId:_lbPlaceId})});
+    if(!res.ok)throw new Error();
+    const{liked,count}=await res.json();
+    const lb=document.getElementById('lightboxLikeBtn');
+    lb.innerHTML=`<span>${liked?'❤️':'🤍'}</span><span id="lbLikeCount">${count}</span>`;
+    // Update local data
+    if(_upData&&_upData.places){
+      const p=_upData.places.find(x=>x._id===_lbPlaceId);
+      if(p){
+        if(!p.photoLikes)p.photoLikes=[];
+        if(liked) p.photoLikes.push({url:_lbPhotoUrl,user:currentUser&&currentUser._id||''});
+        else p.photoLikes=p.photoLikes.filter(l=>!(l.url===_lbPhotoUrl&&l.user===(currentUser&&currentUser._id||'')));
+      }
+    }
+    // Refresh grid
+    renderProfileContent();
+  }catch{toast('Error liking photo','err');}
+}
+
 function closeLightbox(){
   document.getElementById('lightbox').style.display='none';
+  _lbPlaceId=null; _lbPhotoUrl=null;
 }
 
 function editFromInfo(){
