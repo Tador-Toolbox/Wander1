@@ -38,7 +38,7 @@ router.get('/:id', async (req, res) => {
       Post.find({ user: req.params.id }).sort({ createdAt: -1 }).limit(50),
       Follow.findOne({ follower: req.userId, following: req.params.id })
     ]);
-    const places = await Place.find({ user: req.params.id }, 'name location coverPhoto photos tags rating photoLikes').sort({ createdAt: -1 });
+    const places = await Place.find({ user: req.params.id }, 'name location coverPhoto photos tags rating status photoLikes').sort({ createdAt: -1 });
     res.json({
       user: { ...user, followersCount: followers, followingCount: following, placesCount },
       places, posts,
