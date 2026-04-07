@@ -8,7 +8,7 @@ const PlaceSchema = new mongoose.Schema({
   placeId:   { type: String, default: '' },
   notes:     { type: String, default: '' },
   link:      { type: String, default: '' },
-  tags:      { type: [String], enum: ['Food','Beach','Nightlife','Nature','Culture','Coffee'], default: [] },
+  tags:      { type: [String], default: [] },
   lat:       { type: Number, required: true },
   lng:       { type: Number, required: true },
   status:    { type: String, enum: ['none','tobe','been'], default: 'none' },
@@ -16,7 +16,8 @@ const PlaceSchema = new mongoose.Schema({
   isPublic:  { type: Boolean, default: false },
   visibility:{ type: String, enum: ['private','public','both'], default: 'private' },
   coverPhoto:{ type: String, default: '' },
-  photos:    { type: [String], default: [] }
+  photos:    { type: [String], default: [] },
+  photoLikes:[ { url: String, user: { type: require('mongoose').Schema.Types.ObjectId, ref: 'User' } } ]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Place', PlaceSchema);
