@@ -587,9 +587,8 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         </div>
         <div class="up-actions" id="upActions"></div>
         <div class="up-tabs">
-          <div class="up-tab on" id="upTabPhotos" onclick="switchProfileTab('photos')">🖼️ Photos</div>
-          <div class="up-tab" id="upTabPlaces" onclick="switchProfileTab('places')">📍 Places</div>
-          <div class="up-tab" id="upTabPosts" onclick="switchProfileTab('posts')">🌐 Posts</div>
+          <div class="up-tab on" id="upTabBeen" onclick="switchProfileTab('been')">✅ Been There</div>
+          <div class="up-tab" id="upTabTobe" onclick="switchProfileTab('tobe')">🗺️ To Be There</div>
         </div>
       </div>
       <div class="up-scroll" id="upContent"></div>
@@ -2038,7 +2037,7 @@ async function showMyProfile(){
 
 async function openUserProfile(userId){
   _upUserId=userId;
-  _upTab='photos';
+  _upTab='been';
   // Show view
   ['mapContainer','listView','tripsView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('userProfileView').style.display='flex';
@@ -2095,7 +2094,7 @@ async function toggleFollowUser(userId){
 
 function switchProfileTab(tab){
   _upTab=tab;
-  ['photos','places','posts'].forEach(t=>{
+  ['been','tobe'].forEach(t=>{
     const el=document.getElementById('upTab'+t.charAt(0).toUpperCase()+t.slice(1));
     if(el) el.className='up-tab'+(t===tab?' on':'');
   });
@@ -2105,65 +2104,32 @@ function switchProfileTab(tab){
 function renderProfileContent(){
   if(!_upData)return;
   const el=document.getElementById('upContent');
-  const{places,posts}=_upData;
+  const{places}=_upData;
 
-  if(_upTab==='photos'){
-    // Collect all photos from all places
+  const filtered=places.filter(p=>p.status===_upTab);
+  const emoji=_upTab==='been'?'✅':'🗺️';
+  const label=_upTab==='been'?'Been There':'To Be There';
+
+  if(!filtered.length){
+    el.innerHTML=`<div class="no-posts"><div class="ni">${emoji}</div><p>No "${label}" places yet</p></div>`;
+    return;
+  }
+
+  el.innerHTML='<div style="padding:12px 16px;">'+filtered.map(p=>{
     const allPhotos=[];
-    places.forEach(p=>{
-      if(p.coverPhoto) allPhotos.push({url:p.coverPhoto,place:p});
-      (p.photos||[]).forEach(url=>allPhotos.push({url,place:p}));
-    });
-    if(!allPhotos.length){
-      el.innerHTML='<div class="no-posts"><div class="ni">📷</div><p>No photos yet</p></div>';
-      return;
-    }
-    el.innerHTML='<div class="up-grid">'+allPhotos.map(({url,place})=>{
-      const likes=(place.photoLikes||[]).filter(l=>l.url===url).length;
-      const myLike=currentUser&&(place.photoLikes||[]).some(l=>l.url===url&&(l.user===currentUser._id||l.user===(currentUser&&currentUser._id)));
-      return `<div class="up-grid-item" onclick="openPhotoLightbox('${esc(url)}','${place._id}')">
-        <img src="${esc(url)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=up-grid-placeholder>📷</div>'">
-        ${likes>0?`<div style="position:absolute;bottom:4px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;">❤️ ${likes}</div>`:''}
-      </div>`;}).join('')+'</div>';
-  }
-
-  else if(_upTab==='places'){
-    if(!places.length){
-      el.innerHTML='<div class="no-posts"><div class="ni">📍</div><p>No places yet</p></div>';return;
-    }
-    el.innerHTML='<div style="padding:12px 16px;">'+places.map(p=>`
-      <div style="background:#fff;border:2px solid var(--border);border-radius:18px;margin-bottom:10px;overflow:hidden;cursor:pointer;" onclick="openLightbox('${p.coverPhoto||''}')">
-        ${p.coverPhoto?`<img src="${esc(p.coverPhoto)}" style="width:100%;height:120px;object-fit:cover;" loading="lazy">`:''}
-        <div style="padding:12px 14px;">
-          <div style="font-size:14px;font-weight:800;color:var(--txt);">${esc(p.name)}</div>
-          ${p.location?`<div style="font-size:12px;font-weight:600;color:var(--txt2);">📍 ${esc(p.location)}</div>`:''}
-          ${p.rating?`<div style="margin-top:4px;">${starsHtml(p.rating)}</div>`:''}
-          ${(p.tags||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">${(p.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('')}</div>`:''}
-        </div>
-      </div>`).join('')+'</div>';
-  }
-
-  else if(_upTab==='posts'){
-    if(!posts.length){
-      el.innerHTML='<div class="no-posts"><div class="ni">🌐</div><p>No posts yet</p></div>';return;
-    }
-    el.innerHTML='<div style="padding:12px 16px;">'+posts.map(p=>`
-      <div class="post-card">
-        ${p.coverPhoto?`<img src="${esc(p.coverPhoto)}" class="post-cover" loading="lazy">`:''}
-        <div class="post-body">
-          <div class="post-place-name">${esc(p.placeName)}</div>
-          ${p.location?`<div class="post-location">📍 ${esc(p.location)}</div>`:''}
-          ${p.notes?`<div class="post-notes">${esc(p.notes)}</div>`:''}
-          <div class="post-footer">
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-              ${p.status==='been'?'<span class="post-status-badge been">✅ Been There</span>':p.status==='tobe'?'<span class="post-status-badge tobe">🗺️ To Be There</span>':''}
-              ${p.rating?`<div>${starsHtml(p.rating)}</div>`:''}
-            </div>
-            <span style="font-size:11px;font-weight:600;color:var(--txt3);">${formatTimeAgo(p.createdAt)}</span>
-          </div>
-        </div>
-      </div>`).join('')+'</div>';
-  }
+    if(p.coverPhoto) allPhotos.push(p.coverPhoto);
+    (p.photos||[]).forEach(url=>allPhotos.push(url));
+    return `<div style="background:#fff;border:2px solid var(--border);border-radius:18px;margin-bottom:12px;overflow:hidden;">
+      ${p.coverPhoto?`<img src="${esc(p.coverPhoto)}" style="width:100%;height:160px;object-fit:cover;display:block;cursor:pointer;" loading="lazy" onclick="openPhotoLightbox('${esc(p.coverPhoto)}','${p._id}')">`:''}
+      <div style="padding:12px 14px;">
+        <div style="font-size:15px;font-weight:800;color:var(--txt);margin-bottom:3px;">${esc(p.name)}</div>
+        ${p.location?`<div style="font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:6px;">📍 ${esc(p.location)}</div>`:''}
+        ${p.rating?`<div style="margin-bottom:6px;">${starsHtml(p.rating)}</div>`:''}
+        ${(p.tags||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;">${(p.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('')}</div>`:''}
+        ${allPhotos.length>1?`<div style="display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;">${allPhotos.slice(1,6).map(url=>`<img src="${esc(url)}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:pointer;" onclick="openPhotoLightbox('${esc(url)}','${p._id}')" loading="lazy">`).join('')}</div>`:''}
+      </div>
+    </div>`;
+  }).join('')+'</div>';
 }
 
 function closeUserProfile(){
