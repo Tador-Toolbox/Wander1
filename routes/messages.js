@@ -5,15 +5,21 @@ const User    = require('../models/User');
 
 router.use(auth);
 
+// GET /api/messages/unread/count — MUST be before /:userId
+router.get('/unread/count', async (req, res) => {
+  try {
+    const count = await Message.countDocuments({ to: req.userId, read: false });
+    res.json({ count });
+  } catch { res.status(500).json({ error: 'Server error' }); }
+});
+
 // GET /api/messages — list all conversations (inbox)
 router.get('/', async (req, res) => {
   try {
     const uid = req.userId;
-    // Get all messages involving this user
     const msgs = await Message.find({ $or: [{ from: uid }, { to: uid }] })
       .sort({ createdAt: -1 });
-    
-    // Group by conversation partner
+
     const convMap = {};
     msgs.forEach(m => {
       const partner = m.from.toString() === uid.toString() ? m.to.toString() : m.from.toString();
@@ -21,7 +27,6 @@ router.get('/', async (req, res) => {
       if (!m.read && m.to.toString() === uid.toString()) convMap[partner].unread++;
     });
 
-    // Get partner user info
     const partnerIds = Object.keys(convMap);
     const users = await User.find({ _id: { $in: partnerIds } }, 'firstName lastName handle avatar email');
     const userMap = {};
@@ -48,7 +53,6 @@ router.get('/:userId', async (req, res) => {
       ]
     }).sort({ createdAt: 1 }).limit(100);
 
-    // Mark as read
     await Message.updateMany(
       { from: req.params.userId, to: uid, read: false },
       { $set: { read: true } }
@@ -73,14 +77,6 @@ router.post('/:userId', async (req, res) => {
     });
     res.status(201).json(msg);
   } catch(e) { res.status(500).json({ error: 'Server error' }); }
-});
-
-// GET /api/messages/unread/count — total unread count
-router.get('/unread/count', async (req, res) => {
-  try {
-    const count = await Message.countDocuments({ to: req.userId, read: false });
-    res.json({ count });
-  } catch { res.status(500).json({ error: 'Server error' }); }
 });
 
 module.exports = router;
