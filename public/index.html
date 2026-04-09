@@ -1262,7 +1262,7 @@ function showMap(){
   if(gmap)google.maps.event.trigger(gmap,'resize');
 }
 function showList(){
-  ['mapContainer','tripsView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  ['mapContainer','tripsView','exploreView','searchView','messagesView','chatView','userProfileView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('listView').style.display='flex';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   ['btnMap','btnList','btnTrips','btnExplore','btnMessages','btnSearch'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
@@ -1740,7 +1740,7 @@ function populateTripSelect(){
 }
 
 function showTrips(){
-  ['mapContainer','listView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  ['mapContainer','listView','tripsView','exploreView','searchView','messagesView','chatView','userProfileView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('tripsView').style.display='flex';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   ['btnMap','btnList','btnTrips','btnExplore','btnMessages','btnSearch'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
@@ -1750,7 +1750,7 @@ function showTrips(){
 
 let exploreMap=null;
 async function showExplore(){
-  ['mapContainer','listView','tripsView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  ['mapContainer','listView','tripsView','exploreView','searchView','messagesView','chatView','userProfileView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('exploreView').style.display='block';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   ['btnMap','btnList','btnTrips','btnExplore','btnMessages','btnSearch'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
