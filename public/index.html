@@ -2230,28 +2230,37 @@ async function loadChatMessages(){
   if(!_chatPartnerId)return;
   try{
     const res=await apiFetch(`/api/messages/${_chatPartnerId}`);
+    if(!res.ok){
+      const err=await res.json().catch(()=>({}));
+      document.getElementById('chatMessages').innerHTML=`<div style="text-align:center;padding:30px;color:var(--coral);">Error: ${err.error||res.status}</div>`;
+      return;
+    }
     const{messages,partner}=await res.json();
-    // Update header
     const name=partner?([partner.firstName,partner.lastName].filter(Boolean).join(' ')||partner.email||'User'):'User';
     document.getElementById('chatPartnerName').textContent=name;
     document.getElementById('chatPartnerHandle').textContent=partner&&partner.handle?'@'+partner.handle:'';
     const av=document.getElementById('chatPartnerAv');
     av.innerHTML=partner&&partner.avatar?`<img src="${esc(partner.avatar)}" style="width:100%;height:100%;object-fit:cover;">`:(name[0]||'?').toUpperCase();
-    // Render messages
     const myId=currentUser&&(currentUser._id||currentUser.id||JSON.parse(atob(token.split('.')[1])).id);
     const el=document.getElementById('chatMessages');
     const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;
-    el.innerHTML=messages.map(m=>{
-      const mine=m.from===myId||m.from.toString&&m.from.toString()===myId;
-      return `<div style="display:flex;flex-direction:column;align-items:${mine?'flex-end':'flex-start'};">
-        <div class="chat-bubble ${mine?'mine':'theirs'}">${esc(m.text)}</div>
-        <div class="chat-time">${formatTimeAgo(m.createdAt)}</div>
-      </div>`;
-    }).join('');
+    if(!messages.length){
+      el.innerHTML='<div style="text-align:center;padding:40px;color:var(--txt3);font-size:13px;font-weight:600;">No messages yet — say hi! 👋</div>';
+    } else {
+      el.innerHTML=messages.map(m=>{
+        const mine=m.from===myId||m.from.toString&&m.from.toString()===myId;
+        return `<div style="display:flex;flex-direction:column;align-items:${mine?'flex-end':'flex-start'};">
+          <div class="chat-bubble ${mine?'mine':'theirs'}">${esc(m.text)}</div>
+          <div class="chat-time">${formatTimeAgo(m.createdAt)}</div>
+        </div>`;
+      }).join('');
+    }
     if(wasAtBottom||messages.length<2) el.scrollTop=el.scrollHeight;
-    // Update unread badge
     checkUnreadCount();
-  }catch{}
+  }catch(e){
+    document.getElementById('chatMessages').innerHTML=`<div style="text-align:center;padding:30px;color:var(--coral);">Could not load messages</div>`;
+    console.error('chat error:',e);
+  }
 }
 
 async function sendMessage(){
