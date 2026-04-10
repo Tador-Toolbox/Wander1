@@ -2148,10 +2148,13 @@ function searchUsers(q){
   _searchDebounce=setTimeout(()=>{
     const el=document.getElementById('userSearchList');
     if(!q.trim()){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--txt3);font-weight:600;font-size:13px;">Start typing to find people on Wandr</div>';return;}
-    const lower=q.toLowerCase();
+    const lower=q.toLowerCase().replace(/_/g,' ');
     const results=_allUsers.filter(u=>{
       const name=([u.firstName,u.lastName].filter(Boolean).join(' ')).toLowerCase();
-      return name.includes(lower)||(u.handle||'').toLowerCase().includes(lower)||(u.email||'').toLowerCase().includes(lower);
+      const handle=(u.handle||'').toLowerCase().replace(/_/g,' ');
+      const email=(u.email||'').toLowerCase();
+      const qParts=lower.split(/\s+/).filter(Boolean);
+      return qParts.every(part=>name.includes(part)||handle.includes(part)||email.includes(part));
     });
     if(!results.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--txt3);font-weight:600;font-size:13px;">No users found</div>';return;}
     const myId=currentUser&&(currentUser._id||JSON.parse(atob(token.split('.')[1])).id);
