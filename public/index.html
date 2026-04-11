@@ -535,6 +535,9 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <div class="auth-error" id="authErr"></div>
     <button class="btn-primary" id="authBtn" onclick="doAuth()">Sign In 🚀</button>
     <div class="switch-mode" id="switchMode">Don't have an account? <span onclick="toggleMode()">Create one →</span></div>
+    <div style="text-align:center;margin-top:8px;" id="forgotLink">
+      <span onclick="forgotPassword()" style="font-size:12px;font-weight:700;color:var(--txt3);cursor:pointer;">Forgot password?</span>
+    </div>
   </div>
 </div>
 
@@ -1104,12 +1107,66 @@ async function doAuth(){
     if(isReg){body.firstName=document.getElementById('authFirst').value.trim();body.lastName=document.getElementById('authLast').value.trim();body.handle=document.getElementById('authHandle').value.trim();}
     const res=await fetch(isReg?'/api/auth/register':'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
-    if(!res.ok){showAuthErr(data.error||'Something went wrong');return;}
+    if(!res.ok){
+      // Special case: email not verified
+      if(res.status===403){
+        showAuthErr(data.error+' <a href="#" onclick="resendVerification()" style="color:var(--sky);font-weight:700;">Resend email</a>');
+      } else {
+        showAuthErr(data.error||'Something went wrong');
+      }
+      return;
+    }
+    if(isReg){
+      // Registration success — show verify message
+      document.getElementById('loginScreen').innerHTML=`
+        <div class="login-card" style="text-align:center;">
+          <div style="font-size:56px;margin-bottom:16px;">📧</div>
+          <h2 style="font-family:'Fraunces',serif;font-size:24px;color:var(--txt);margin-bottom:10px;">Check your email!</h2>
+          <p style="color:var(--txt2);font-size:14px;font-weight:600;line-height:1.6;margin-bottom:20px;">
+            We sent a verification link to<br><strong>${body.email}</strong>
+          </p>
+          <p style="color:var(--txt3);font-size:12px;font-weight:600;margin-bottom:20px;">Click the link in the email to activate your account.</p>
+          <button class="btn-primary" onclick="location.reload()">Back to Sign In</button>
+          <div style="margin-top:16px;font-size:12px;font-weight:600;color:var(--txt3);">
+            Didn't get it? <a href="#" onclick="resendVerificationEmail('${body.email}')" style="color:var(--sky);">Resend</a>
+          </div>
+        </div>`;
+      return;
+    }
     token=data.token;localStorage.setItem('wandr_token',token);if(data.user){localStorage.setItem('wandr_user',JSON.stringify(data.user));currentUser=data.user;}
     showScreen('mapScreen');await initApp();
   }catch{showAuthErr('Network error – is the server running?');}
   finally{btn.disabled=false;btn.textContent=isReg?'Create Account 🌍':'Sign In 🚀';}
 }
+
+async function sendPasswordReset(){
+  const email=currentUser&&currentUser.email;
+  if(!email){toast('No email found','err');return;}
+  try{
+    const res=await fetch('/api/auth/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const data=await res.json();
+    toast('📧 Password reset email sent!','ok');
+    closeOverlay('profileOverlay');
+  }catch{toast('Could not send email','err');}
+}
+
+async function forgotPassword(){
+  const email=document.getElementById('authEmail').value.trim();
+  if(!email){showAuthErr('Enter your email first, then click Forgot Password');return;}
+  try{
+    await fetch('/api/auth/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    showAuthErr('✅ If this email exists, a reset link was sent. Check your inbox.');
+  }catch{showAuthErr('Could not send reset email');}
+}
+async function resendVerificationEmail(email){
+  if(!email){email=document.getElementById('authEmail').value.trim();}
+  if(!email){showAuthErr('Please enter your email first');return;}
+  try{
+    await fetch('/api/auth/resend-verification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    showAuthErr('✅ Verification email sent! Check your inbox.');
+  }catch{showAuthErr('Could not resend email');}
+}
+
 function showAuthErr(m){const e=document.getElementById('authErr');e.textContent=m;e.style.display='block';}
 function logout(){
   if(!confirm('Sign out of Wandr?'))return;
