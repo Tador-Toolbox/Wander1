@@ -16,7 +16,7 @@ const publicUser = (u) => ({
 async function sendVerificationEmail(user, token) {
   const verifyUrl = `${process.env.APP_URL || 'https://wander1.onrender.com'}/api/auth/verify/${token}`;
   await resend.emails.send({
-    from: 'Wandr <onboarding@resend.dev>',
+    from: 'Wandr <noreply@yovix.com>',
     to:   user.email,
     subject: '✈️ Verify your Wandr account',
     html: `
@@ -178,7 +178,7 @@ router.post('/forgot-password', async (req, res) => {
     const resetUrl = `${process.env.APP_URL || 'https://wander1.onrender.com'}/reset-password?token=${resetToken}`;
 
     await resend.emails.send({
-      from: 'Wandr <onboarding@resend.dev>',
+      from: 'Wandr <noreply@yovix.com>',
       to:   user.email,
       subject: '🔑 Reset your Wandr password',
       html: `
