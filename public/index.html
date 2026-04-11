@@ -1141,10 +1141,10 @@ async function sendPasswordReset(){
   const email=currentUser&&currentUser.email;
   if(!email){toast('No email found','err');return;}
   try{
-    const res=await fetch('/api/auth/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
-    const data=await res.json();
-    toast('📧 Password reset email sent!','ok');
+    await fetch('/api/auth/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
     closeOverlay('profileOverlay');
+    // Show confirmation with email
+    toast(`📧 Reset link sent to ${email}`,'ok',5000);
   }catch{toast('Could not send email','err');}
 }
 
@@ -2975,7 +2975,7 @@ function locateMe(){
 }
 function updateCount(){const el=document.getElementById('placeCount');if(el)el.textContent=places.length;}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type}`;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+function toast(msg,type='',duration=2800){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type}`;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),duration);}
 
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('loginScreen').classList.contains('active'))doAuth();});
