@@ -1116,17 +1116,17 @@ async function doAuth(){
     }
     if(isReg){
       // Registration success — show verify message
-      document.getElementById('loginScreen').innerHTML=`
-        <div class="login-card" style="text-align:center;">
-          <div style="font-size:56px;margin-bottom:16px;">📧</div>
-          <h2 style="font-family:'Fraunces',serif;font-size:24px;color:var(--txt);margin-bottom:10px;">Check your email!</h2>
-          <p style="color:var(--txt2);font-size:14px;font-weight:600;line-height:1.6;margin-bottom:20px;">
-            We sent a verification link to<br><strong>${body.email}</strong>
-          </p>
-          <p style="color:var(--txt3);font-size:12px;font-weight:600;margin-bottom:20px;">Click the link in the email to activate your account.</p>
-          <button class="btn-primary" onclick="location.reload()">Back to Sign In</button>
-          <div style="margin-top:16px;font-size:12px;font-weight:600;color:var(--txt3);">
-            Didn't get it? <a href="#" onclick="resendVerificationEmail('${body.email}')" style="color:var(--sky);">Resend</a>
+      const screen=document.getElementById('loginScreen');
+      screen.innerHTML=`
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:30px;text-align:center;background:var(--bg);">
+          <div style="font-size:64px;margin-bottom:20px;">📧</div>
+          <h2 style="font-family:'Fraunces',serif;font-size:26px;color:var(--txt);margin-bottom:10px;">Check your email!</h2>
+          <p style="color:var(--txt2);font-size:15px;font-weight:600;line-height:1.7;margin-bottom:8px;">We sent a verification link to</p>
+          <p style="color:var(--sky);font-size:15px;font-weight:800;margin-bottom:24px;">${body.email}</p>
+          <p style="color:var(--txt3);font-size:13px;font-weight:600;margin-bottom:28px;">Click the link in the email to activate your account.</p>
+          <button class="btn-primary" style="width:100%;max-width:320px;" onclick="location.reload()">← Back to Sign In</button>
+          <div style="margin-top:20px;font-size:13px;font-weight:600;color:var(--txt3);">
+            Didn't get it? <a href="#" onclick="resendVerificationEmail('${body.email}')" style="color:var(--sky);font-weight:800;">Resend email</a>
           </div>
         </div>`;
       return;
