@@ -109,6 +109,11 @@ app.use('/api/users',    require('./routes/users'));
 app.use('/api/photos',   require('./routes/photos'));
 app.use('/api/messages', require('./routes/messages'));
 
+// Reset password page
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+});
+
 // SPA fallback - serves index.html for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
