@@ -7,7 +7,10 @@ const UserSchema = new mongoose.Schema({
   firstName:  { type: String, default: '', trim: true },
   lastName:   { type: String, default: '', trim: true },
   handle:     { type: String, default: '', trim: true, lowercase: true },
-  avatar:     { type: String, default: '' }  // Cloudinary URL
+  avatar:       { type: String, default: '' },
+  verified:     { type: Boolean, default: false },
+  verifyToken:  { type: String, default: null },
+  verifyExpires:{ type: Date, default: null }
 }, { timestamps: true });
 
 UserSchema.pre('save', async function (next) {
