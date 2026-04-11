@@ -42,7 +42,20 @@ router.post('/register', async (req, res) => {
     const { email, password, firstName, lastName, handle } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
     if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    if (await User.findOne({ email })) return res.status(409).json({ error: 'Email already registered' });
+    const existing = await User.findOne({ email });
+    if (existing) {
+      // If exists but not verified, resend verification email
+      if (!existing.verified && existing.verifyToken) {
+        const verifyToken   = crypto.randomBytes(32).toString('hex');
+        const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        existing.verifyToken   = verifyToken;
+        existing.verifyExpires = verifyExpires;
+        await existing.save();
+        try { await sendVerificationEmail(existing, verifyToken); } catch(e) { console.error('Email send error:', e); }
+        return res.status(201).json({ message: 'Verification email resent! Please check your inbox.' });
+      }
+      return res.status(409).json({ error: 'Email already registered' });
+    }
 
     const verifyToken   = crypto.randomBytes(32).toString('hex');
     const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
