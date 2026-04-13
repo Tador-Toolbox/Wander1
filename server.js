@@ -108,6 +108,7 @@ app.use('/api/posts',    require('./routes/posts'));
 app.use('/api/users',    require('./routes/users'));
 app.use('/api/photos',   require('./routes/photos'));
 app.use('/api/messages', require('./routes/messages'));
+app.use('/api/ai',       require('./routes/ai'));
 
 // Reset password page
 app.get('/reset-password', (req, res) => {
