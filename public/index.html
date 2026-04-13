@@ -107,6 +107,59 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Nunito',
 .trip-btn.del{background:var(--coral-light);border-color:rgba(255,107,71,.3);color:var(--coral);}
 .trip-btn.ai{background:linear-gradient(135deg,#667eea18,#764ba218);border-color:#764ba2;color:#764ba2;}
 .trip-btn.ai:hover{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-color:#667eea;}
+.trip-btn.story{background:#fff8e8;border-color:#f5a623;color:#f5a623;}
+.trip-btn.story:hover{background:#f5a623;color:#fff;}
+/* Trip Plan Modal */
+#tripPlanModal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:9999;}
+#tripPlanModal .tpm-sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;}
+#tripPlanModal .tpm-head{padding:20px 20px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid var(--border);}
+#tripPlanModal .tpm-body{overflow-y:auto;padding:18px 20px 32px;flex:1;}
+#tripPlanModal .tpm-title{font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:var(--txt);}
+#tripPlanModal .tpm-sub{font-size:12px;color:var(--txt3);margin-top:2px;}
+#tripPlanModal .tpm-close{background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);}
+#tripPlanModal .day-block{margin-bottom:22px;}
+#tripPlanModal .day-label{font-size:13px;font-weight:800;color:var(--txt);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border);}
+#tripPlanModal .place-row{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;}
+#tripPlanModal .place-time{background:#f0f4ff;border-radius:8px;padding:4px 9px;font-size:11px;color:#667eea;white-space:nowrap;font-weight:700;margin-top:2px;flex-shrink:0;}
+#tripPlanModal .place-name{font-size:14px;font-weight:700;color:var(--txt);}
+#tripPlanModal .place-meta{font-size:11px;color:var(--txt3);margin-top:2px;line-height:1.5;}
+#tripPlanModal .tpm-loading{text-align:center;padding:40px 20px;}
+#tripPlanModal .tpm-spinner{font-size:32px;animation:spin 1.5s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+/* Story Selector Sheet */
+#storySheet{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:9998;}
+#storySheet .ss-inner{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;}
+#storySheet .ss-head{padding:18px 18px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+#storySheet .ss-title{font-family:'Fraunces',serif;font-size:17px;font-weight:700;color:var(--txt);}
+#storySheet .ss-sub{font-size:12px;color:var(--txt3);padding:0 18px 10px;}
+#storySheet .ss-list{flex:1;overflow-y:auto;padding:0 18px 8px;}
+#storySheet .ss-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;margin-bottom:6px;border:2px solid var(--border);background:#fff;cursor:grab;transition:all .15s;}
+#storySheet .ss-item.selected{border-color:var(--sky);background:var(--sky-light);}
+#storySheet .ss-item.dragging{opacity:.4;}
+#storySheet .ss-num{width:24px;height:24px;border-radius:50%;background:var(--sky);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+#storySheet .ss-item:not(.selected) .ss-num{background:var(--border);color:var(--txt3);}
+#storySheet .ss-drag{color:var(--txt3);font-size:16px;cursor:grab;padding:0 2px;}
+#storySheet .ss-pname{font-size:13px;font-weight:700;color:var(--txt);flex:1;}
+#storySheet .ss-ploc{font-size:11px;color:var(--txt3);}
+#storySheet .ss-foot{padding:14px 18px 28px;flex-shrink:0;border-top:1px solid var(--border);}
+#storySheet .ss-create{width:100%;padding:14px;border:none;border-radius:18px;background:linear-gradient(135deg,#f5a623,#e8890a);color:#fff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;}
+#storySheet .ss-create:disabled{opacity:.5;cursor:not-allowed;}
+/* Story Player */
+#storyPlayer{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:#000;}
+#storyMap{flex:1;width:100%;}
+#storyNarration{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(0,0,0,.85) 0%,transparent 100%);padding:32px 22px 40px;transform:translateY(100%);transition:transform .5s cubic-bezier(.4,0,.2,1);}
+#storyNarration.visible{transform:translateY(0);}
+#storyNarration .sn-num{font-size:11px;font-weight:800;color:rgba(255,255,255,.6);letter-spacing:.1em;margin-bottom:4px;}
+#storyNarration .sn-name{font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:6px;}
+#storyNarration .sn-text{font-size:14px;color:rgba(255,255,255,.85);line-height:1.6;}
+#storyControls{position:absolute;top:0;left:0;right:0;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to bottom,rgba(0,0,0,.6) 0%,transparent 100%);}
+#storyControls .sc-title{font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:#fff;}
+#storyControls .sc-close{background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+#storyProgress{position:absolute;top:60px;left:18px;right:18px;display:flex;gap:4px;}
+#storyProgress .sp-bar{flex:1;height:3px;background:rgba(255,255,255,.3);border-radius:2px;overflow:hidden;}
+#storyProgress .sp-bar .sp-fill{height:100%;background:#fff;width:0%;transition:width linear;}
+#storyProgress .sp-bar.done .sp-fill{width:100%;}
+#storyNextBtn{position:absolute;bottom:44px;right:22px;background:rgba(255,255,255,.25);border:2px solid rgba(255,255,255,.4);color:#fff;border-radius:22px;padding:9px 18px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;}
 #tripPlanModal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:9999;}
 #tripPlanModal .tpm-sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;}
 #tripPlanModal .tpm-head{padding:20px 20px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid var(--border);}
@@ -1887,6 +1940,7 @@ function renderTrips(){
         <button class="trip-btn view" style="border-color:${t.color};color:${t.color};background:${t.color}15" onclick="viewTrip('${t._id}')">🗺 View</button>
         <button class="trip-btn share" onclick="openShare('${t._id}')">🔗 Share</button>
         <button class="trip-btn ai" onclick="openAIPlan('${t._id}','${esc(t.name)}')">✦ AI Plan</button>
+        <button class="trip-btn story" onclick="openStory('${t._id}','${esc(t.name)}')">🎬 Story</button>
         <button class="trip-btn" onclick="openEditTrip('${t._id}')">✏️</button>
         <button class="trip-btn del" onclick="deleteTrip('${t._id}')">🗑</button>
       </div>
@@ -1894,47 +1948,275 @@ function renderTrips(){
   }).join('');
 }
 
-async function openAIPlan(tripId, tripName){
-  const tripPlaces=places.filter(p=>p.trip===tripId);
-  if(!tripPlaces.length){toast('This trip has no places yet!','err');return;}
+/* ── AI PLAN ── */
+async function openAIPlan(tripId,tripName){
+  const tp=places.filter(p=>p.trip===tripId);
+  if(!tp.length){toast('This trip has no places yet!','err');return;}
   showTripPlanModal(tripName,null,true);
   try{
     const r=await apiFetch(`/api/ai/trip-plan/${tripId}`,{method:'POST'});
     const plan=await r.json();
     if(plan.error)throw new Error(plan.error);
     showTripPlanModal(tripName,plan,false);
-  }catch(e){
-    document.getElementById('tripPlanModal')?.remove();
-    toast('AI plan failed: '+e.message,'err');
-  }
+  }catch(e){document.getElementById('tripPlanModal')?.remove();toast('AI plan failed: '+e.message,'err');}
 }
 function showTripPlanModal(tripName,plan,loading){
   document.getElementById('tripPlanModal')?.remove();
-  const m=document.createElement('div');
-  m.id='tripPlanModal';
+  const m=document.createElement('div');m.id='tripPlanModal';
   if(loading){
     m.innerHTML=`<div class="tpm-sheet"><div class="tpm-loading"><div class="tpm-spinner">✦</div><div style="margin-top:14px;font-size:15px;font-weight:700;color:var(--txt)">Building your itinerary…</div><div style="font-size:12px;color:var(--txt3);margin-top:6px">Analyzing places in ${tripName}</div></div></div>`;
-  } else {
-    const daysHtml=plan.days.map(d=>`
-      <div class="day-block">
-        <div class="day-label">Day ${d.day} — ${d.theme}</div>
-        ${d.places.map(p=>`<div class="place-row">
-          <div class="place-time">${p.time}</div>
-          <div><div class="place-name">${p.name}</div>
-          <div class="place-meta">${p.duration} · ${p.tip}</div></div>
-        </div>`).join('')}
-      </div>`).join('');
-    m.innerHTML=`<div class="tpm-sheet">
-      <div class="tpm-head">
-        <div><div class="tpm-title">✦ ${plan.title}</div><div class="tpm-sub">${plan.summary}</div></div>
-        <button class="tpm-close" onclick="document.getElementById('tripPlanModal').remove()">✕</button>
-      </div>
-      <div class="tpm-body">${daysHtml}</div>
-    </div>`;
+  }else{
+    const daysHtml=plan.days.map(d=>`<div class="day-block"><div class="day-label">Day ${d.day} — ${d.theme}</div>${d.places.map(p=>`<div class="place-row"><div class="place-time">${p.time}</div><div><div class="place-name">${p.name}</div><div class="place-meta">${p.duration} · ${p.tip}</div></div></div>`).join('')}</div>`).join('');
+    m.innerHTML=`<div class="tpm-sheet"><div class="tpm-head"><div><div class="tpm-title">✦ ${plan.title}</div><div class="tpm-sub">${plan.summary}</div></div><button class="tpm-close" onclick="document.getElementById('tripPlanModal').remove()">✕</button></div><div class="tpm-body">${daysHtml}</div></div>`;
   }
   m.addEventListener('click',e=>{if(e.target===m)m.remove();});
   document.body.appendChild(m);
 }
+
+/* ── STORY ── */
+let storyTrip=null,storyOrderedPlaces=[],storyDragSrc=null,storyMapInst=null,storyMarker=null,storyDirections=null,storyNarrations=[],storyStep=0,storyAnimTimer=null;
+
+async function openStory(tripId,tripName){
+  const trip=trips.find(t=>t._id===tripId);
+  if(!trip)return;
+  // If saved story exists — play it directly
+  if(trip.story&&trip.story.narrations&&trip.story.narrations.length){
+    const reuse=confirm(`You have a saved story for "${tripName}".\nPlay it, or recreate?`);
+    if(reuse){startStoryPlayer(trip,trip.story.orderedPlaces.map(id=>places.find(p=>p._id===id)).filter(Boolean),trip.story.narrations);return;}
+  }
+  // Otherwise open selector
+  const tp=places.filter(p=>p.trip===tripId);
+  if(!tp.length){toast('Add some places to this trip first!','err');return;}
+  storyTrip=trip;
+  storyOrderedPlaces=[...tp];
+  renderStorySheet(tripName);
+}
+
+function renderStorySheet(tripName){
+  document.getElementById('storySheet')?.remove();
+  const sheet=document.createElement('div');sheet.id='storySheet';
+  sheet.innerHTML=`<div class="ss-inner">
+    <div class="ss-head">
+      <div class="ss-title">🎬 ${tripName} Story</div>
+      <button style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;color:var(--txt2)" onclick="document.getElementById('storySheet').remove()">✕</button>
+    </div>
+    <div class="ss-sub">Tap to include · Drag to reorder · Car drives in this order</div>
+    <div class="ss-list" id="ssPlaceList"></div>
+    <div class="ss-foot">
+      <button class="ss-create" id="ssCreateBtn" onclick="createStory()">🎬 Create Story</button>
+    </div>
+  </div>`;
+  sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.remove();});
+  document.body.appendChild(sheet);
+  renderSSList();
+}
+
+function renderSSList(){
+  const list=document.getElementById('ssPlaceList');if(!list)return;
+  list.innerHTML=storyOrderedPlaces.map((p,i)=>`
+    <div class="ss-item selected" id="ssi_${p._id}" draggable="true"
+      ondragstart="ssDragStart(event,'${p._id}')" ondragover="ssDragOver(event,'${p._id}')" ondragend="ssDragEnd()"
+      onclick="ssToggle('${p._id}')">
+      <span class="ss-drag">⠿</span>
+      <span class="ss-num">${i+1}</span>
+      <div style="flex:1"><div class="ss-pname">${esc(p.name)}</div><div class="ss-ploc">${esc(p.location||'')}</div></div>
+    </div>`).join('');
+}
+
+function ssToggle(id){
+  const el=document.getElementById('ssi_'+id);if(!el)return;
+  const inList=storyOrderedPlaces.find(p=>p._id===id);
+  if(inList){
+    if(storyOrderedPlaces.length<=2){toast('Keep at least 2 places','err');return;}
+    storyOrderedPlaces=storyOrderedPlaces.filter(p=>p._id!==id);
+  }else{
+    const orig=places.find(p=>p._id===id);
+    if(orig)storyOrderedPlaces.push(orig);
+  }
+  renderSSList();
+}
+
+function ssDragStart(e,id){storyDragSrc=id;e.currentTarget.classList.add('dragging');}
+function ssDragOver(e,id){
+  e.preventDefault();if(id===storyDragSrc)return;
+  const from=storyOrderedPlaces.findIndex(p=>p._id===storyDragSrc);
+  const to=storyOrderedPlaces.findIndex(p=>p._id===id);
+  if(from<0||to<0)return;
+  const arr=[...storyOrderedPlaces];arr.splice(to,0,arr.splice(from,1)[0]);
+  storyOrderedPlaces=arr;renderSSList();
+}
+function ssDragEnd(){storyDragSrc=null;}
+
+async function createStory(){
+  const btn=document.getElementById('ssCreateBtn');
+  if(btn)btn.disabled=true;
+  if(storyOrderedPlaces.length<2){toast('Need at least 2 places','err');return;}
+  toast('✦ Generating story narration…','');
+  try{
+    const r=await apiFetch(`/api/ai/story/${storyTrip._id}`,{
+      method:'POST',
+      body:JSON.stringify({orderedPlaceIds:storyOrderedPlaces.map(p=>p._id)})
+    });
+    const data=await r.json();
+    if(data.error)throw new Error(data.error);
+    // Update local trip object
+    const idx=trips.findIndex(t=>t._id===storyTrip._id);
+    if(idx>=0)trips[idx].story=data.story;
+    document.getElementById('storySheet')?.remove();
+    startStoryPlayer(storyTrip,storyOrderedPlaces,data.story.narrations);
+  }catch(e){toast('Story failed: '+e.message,'err');if(btn)btn.disabled=false;}
+}
+
+function startStoryPlayer(trip,orderedPlaces,narrations){
+  document.getElementById('storyPlayer')?.remove();
+  storyNarrations=narrations;
+  storyStep=0;
+  if(storyAnimTimer)clearTimeout(storyAnimTimer);
+
+  const player=document.createElement('div');player.id='storyPlayer';
+  const progressBars=orderedPlaces.map((_,i)=>`<div class="sp-bar" id="spb_${i}"><div class="sp-fill" id="spf_${i}"></div></div>`).join('');
+  player.innerHTML=`
+    <div id="storyControls">
+      <div class="sc-title">🎬 ${esc(trip.name)}</div>
+      <button class="sc-close" onclick="closeStoryPlayer()">✕</button>
+    </div>
+    <div id="storyProgress">${progressBars}</div>
+    <div id="storyMap"></div>
+    <div id="storyNarration">
+      <div class="sn-num" id="snNum"></div>
+      <div class="sn-name" id="snName"></div>
+      <div class="sn-text" id="snText"></div>
+    </div>
+    <button id="storyNextBtn" onclick="storyNext()">Next ›</button>`;
+  document.body.appendChild(player);
+
+  // Init map
+  const mapKey=window._mapsKey;
+  if(!mapKey){toast('Maps key missing','err');return;}
+  storyMapInst=new google.maps.Map(document.getElementById('storyMap'),{
+    zoom:12,center:{lat:orderedPlaces[0].lat,lng:orderedPlaces[0].lng},
+    disableDefaultUI:true,gestureHandling:'none',
+    styles:[{featureType:'poi',stylers:[{visibility:'off'}]},{featureType:'transit',stylers:[{visibility:'off'}]}]
+  });
+
+  // Car marker
+  storyMarker=new google.maps.Marker({
+    position:{lat:orderedPlaces[0].lat,lng:orderedPlaces[0].lng},
+    map:storyMapInst,
+    icon:{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text y="32" font-size="30">🚗</text></svg>'),scaledSize:new google.maps.Size(40,40),anchor:new google.maps.Point(20,20)}
+  });
+
+  // Place markers
+  orderedPlaces.forEach((p,i)=>{
+    new google.maps.Marker({
+      position:{lat:p.lat,lng:p.lng},map:storyMapInst,
+      label:{text:String(i+1),color:'#fff',fontWeight:'800',fontSize:'12px'},
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:14,fillColor:trip.color||'#4a9eff',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}
+    });
+  });
+
+  // Drive to first place then continue
+  driveToStep(orderedPlaces,0);
+}
+
+function driveToStep(places,step){
+  storyStep=step;
+  if(step>=places.length){storyFinish();return;}
+
+  // Mark previous bars done
+  for(let i=0;i<step;i++){
+    const b=document.getElementById('spb_'+i);if(b)b.classList.add('done');
+    const f=document.getElementById('spf_'+i);if(f)f.style.width='100%';
+  }
+
+  const dest={lat:places[step].lat,lng:places[step].lng};
+
+  if(step===0){
+    storyMapInst.panTo(dest);
+    showNarration(step,places);
+    animateProgressBar(step,5000,()=>driveToStep(places,step+1));
+  }else{
+    const prev={lat:places[step-1].lat,lng:places[step-1].lng};
+    const ds=new google.maps.DirectionsService();
+    ds.route({origin:prev,destination:dest,travelMode:google.maps.TravelMode.DRIVING},
+      (result,status)=>{
+        if(status==='OK'){
+          animateCar(result.routes[0].overview_path,storyMapInst,storyMarker,()=>{
+            showNarration(step,places);
+            animateProgressBar(step,6000,()=>driveToStep(places,step+1));
+          });
+        }else{
+          // Fallback: just pan
+          storyMarker.setPosition(dest);storyMapInst.panTo(dest);
+          showNarration(step,places);
+          animateProgressBar(step,5000,()=>driveToStep(places,step+1));
+        }
+      }
+    );
+  }
+}
+
+function animateCar(path,map,marker,onDone){
+  let i=0;
+  const step=()=>{
+    if(i>=path.length){onDone();return;}
+    marker.setPosition(path[i]);map.panTo(path[i]);i++;
+    storyAnimTimer=setTimeout(step,Math.max(16,3000/path.length));
+  };
+  step();
+}
+
+function animateProgressBar(step,duration,onDone){
+  const fill=document.getElementById('spf_'+step);
+  if(fill){fill.style.transition=`width ${duration}ms linear`;fill.style.width='100%';}
+  storyAnimTimer=setTimeout(onDone,duration);
+}
+
+function showNarration(step,places){
+  const nr=document.getElementById('storyNarration');
+  if(!nr)return;
+  nr.classList.remove('visible');
+  setTimeout(()=>{
+    document.getElementById('snNum').textContent=`Stop ${step+1} of ${places.length}`;
+    document.getElementById('snName').textContent=places[step].name;
+    document.getElementById('snText').textContent=storyNarrations[step]||'';
+    nr.classList.add('visible');
+  },400);
+}
+
+function storyNext(){
+  if(storyAnimTimer)clearTimeout(storyAnimTimer);
+  const allPlaces=storyNarrations.length;
+  const nextStep=storyStep+1;
+  const orderedPlaces=[];
+  // Reconstruct from DOM markers — pull from saved trip
+  const trip=trips.find(t=>t.story&&t.story.narrations===storyNarrations||
+    (t.story&&t.story.narrations&&t.story.narrations.length===storyNarrations.length));
+  if(trip&&trip.story){
+    const op=trip.story.orderedPlaces.map(id=>places.find(p=>p._id===id)).filter(Boolean);
+    if(nextStep<op.length)driveToStep(op,nextStep);
+    else storyFinish();
+  }
+}
+
+function storyFinish(){
+  const nr=document.getElementById('storyNarration');if(nr)nr.classList.remove('visible');
+  const nb=document.getElementById('storyNextBtn');if(nb)nb.style.display='none';
+  setTimeout(()=>{
+    if(nr){
+      document.getElementById('snNum').textContent='The End';
+      document.getElementById('snName').textContent='✈️ What a journey!';
+      document.getElementById('snText').textContent='';
+      nr.classList.add('visible');
+    }
+  },600);
+}
+
+function closeStoryPlayer(){
+  if(storyAnimTimer)clearTimeout(storyAnimTimer);
+  document.getElementById('storyPlayer')?.remove();
+}
+
 function openNewTrip(){
   editTripId=null; selEmoji='✈️'; selColor='#4a9eff';
   document.getElementById('tripFormTitle').textContent='✈️ New Trip';
