@@ -147,19 +147,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Nunito',
 /* Story Player */
 #storyPlayer{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:#000;}
 #storyMap{flex:1;width:100%;}
-#storyNarration{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(0,0,0,.85) 0%,transparent 100%);padding:32px 22px 40px;transform:translateY(100%);transition:transform .5s cubic-bezier(.4,0,.2,1);}
-#storyNarration.visible{transform:translateY(0);}
-#storyNarration .sn-num{font-size:11px;font-weight:800;color:rgba(255,255,255,.6);letter-spacing:.1em;margin-bottom:4px;}
-#storyNarration .sn-name{font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:6px;}
-#storyNarration .sn-text{font-size:14px;color:rgba(255,255,255,.85);line-height:1.6;}
-#storyControls{position:absolute;top:0;left:0;right:0;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to bottom,rgba(0,0,0,.6) 0%,transparent 100%);}
-#storyControls .sc-title{font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:#fff;}
-#storyControls .sc-close{background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-#storyProgress{position:absolute;top:60px;left:18px;right:18px;display:flex;gap:4px;}
-#storyProgress .sp-bar{flex:1;height:3px;background:rgba(255,255,255,.3);border-radius:2px;overflow:hidden;}
+#storyControls{position:absolute;top:0;left:0;right:0;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to bottom,rgba(0,0,0,.55) 0%,transparent 100%);pointer-events:none;}
+#storyControls .sc-title{font-family:'Fraunces',serif;font-size:16px;font-weight:700;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.4);}
+#storyControls .sc-close{pointer-events:all;background:rgba(0,0,0,.35);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+#storyProgress{position:absolute;top:58px;left:18px;right:18px;display:flex;gap:4px;}
+#storyProgress .sp-bar{flex:1;height:3px;background:rgba(255,255,255,.28);border-radius:2px;overflow:hidden;}
 #storyProgress .sp-bar .sp-fill{height:100%;background:#fff;width:0%;transition:width linear;}
 #storyProgress .sp-bar.done .sp-fill{width:100%;}
-#storyNextBtn{position:absolute;bottom:44px;right:22px;background:rgba(255,255,255,.25);border:2px solid rgba(255,255,255,.4);color:#fff;border-radius:22px;padding:9px 18px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;}
+@keyframes arrivalPulse{0%{transform:scale(1);opacity:.8}70%{transform:scale(2.4);opacity:0}100%{transform:scale(1);opacity:0}}
+@keyframes planeFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+#transportLabel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(.6);opacity:0;font-size:52px;transition:opacity .3s,transform .3s;pointer-events:none;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5));}
+#transportLabel.show{opacity:1;transform:translate(-50%,-58%) scale(1);}
+#storyEndCard{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .8s;}
+#storyEndCard.show{opacity:1;pointer-events:all;}
+#storyEndCard .sec-emoji{font-size:56px;margin-bottom:12px;}
+#storyEndCard .sec-title{font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.4);}
+#storyEndCard .sec-replay{margin-top:24px;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.5);color:#fff;border-radius:22px;padding:10px 26px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
 #tripPlanModal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:9999;}
 #tripPlanModal .tpm-sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;}
 #tripPlanModal .tpm-head{padding:20px 20px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid var(--border);}
@@ -2067,103 +2070,209 @@ async function createStory(){
   }catch(e){toast('Story failed: '+e.message,'err');if(btn)btn.disabled=false;}
 }
 
+function storyDistanceKm(p1,p2){
+  const R=6371,dLat=(p2.lat-p1.lat)*Math.PI/180,dLng=(p2.lng-p1.lng)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(p1.lat*Math.PI/180)*Math.cos(p2.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function storyTransportMode(km){
+  if(km<2)return{mode:'walk',emoji:'🚶',travelMode:null,speed:1.4,label:'walk'};
+  if(km<80)return{mode:'car',emoji:'🚗',travelMode:'DRIVING',speed:null,label:'drive'};
+  return{mode:'plane',emoji:'✈️',travelMode:null,speed:null,label:'fly'};
+}
+function storyGenderEmoji(){return Math.random()<.5?'🚶‍♀️':'🚶‍♂️';}
+
+let _storyPlaces=[];
+
 function startStoryPlayer(trip,orderedPlaces,narrations){
   document.getElementById('storyPlayer')?.remove();
   storyNarrations=narrations;
   storyStep=0;
+  _storyPlaces=orderedPlaces;
   if(storyAnimTimer)clearTimeout(storyAnimTimer);
 
-  const player=document.createElement('div');player.id='storyPlayer';
   const progressBars=orderedPlaces.map((_,i)=>`<div class="sp-bar" id="spb_${i}"><div class="sp-fill" id="spf_${i}"></div></div>`).join('');
+
+  const player=document.createElement('div');player.id='storyPlayer';
   player.innerHTML=`
+    <div id="storyMap"></div>
     <div id="storyControls">
       <div class="sc-title">🎬 ${esc(trip.name)}</div>
       <button class="sc-close" onclick="closeStoryPlayer()">✕</button>
     </div>
     <div id="storyProgress">${progressBars}</div>
-    <div id="storyMap"></div>
-    <div id="storyNarration">
-      <div class="sn-num" id="snNum"></div>
-      <div class="sn-name" id="snName"></div>
-      <div class="sn-text" id="snText"></div>
-    </div>
-    <button id="storyNextBtn" onclick="storyNext()">Next ›</button>`;
+    <div id="transportLabel"></div>
+    <div id="storyEndCard">
+      <div class="sec-emoji">🌍</div>
+      <div class="sec-title">What a journey!</div>
+      <button class="sec-replay" onclick="startStoryPlayer(storyTrip,_storyPlaces,storyNarrations)">▶ Replay</button>
+    </div>`;
   document.body.appendChild(player);
 
-  // Init map
-  const mapKey=window._mapsKey;
-  if(!mapKey){toast('Maps key missing','err');return;}
   storyMapInst=new google.maps.Map(document.getElementById('storyMap'),{
-    zoom:12,center:{lat:orderedPlaces[0].lat,lng:orderedPlaces[0].lng},
+    zoom:13,center:{lat:orderedPlaces[0].lat,lng:orderedPlaces[0].lng},
     disableDefaultUI:true,gestureHandling:'none',
-    styles:[{featureType:'poi',stylers:[{visibility:'off'}]},{featureType:'transit',stylers:[{visibility:'off'}]}]
+    styles:[
+      {featureType:'poi',stylers:[{visibility:'off'}]},
+      {featureType:'transit',stylers:[{visibility:'off'}]},
+      {featureType:'road',elementType:'labels',stylers:[{visibility:'off'}]},
+      {featureType:'administrative.locality',elementType:'labels',stylers:[{visibility:'simplified'}]}
+    ]
   });
 
-  // Car marker
-  storyMarker=new google.maps.Marker({
-    position:{lat:orderedPlaces[0].lat,lng:orderedPlaces[0].lng},
-    map:storyMapInst,
-    icon:{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text y="32" font-size="30">🚗</text></svg>'),scaledSize:new google.maps.Size(40,40),anchor:new google.maps.Point(20,20)}
-  });
-
-  // Place markers
+  // Place numbered pins
   orderedPlaces.forEach((p,i)=>{
     new google.maps.Marker({
       position:{lat:p.lat,lng:p.lng},map:storyMapInst,
+      zIndex:10,
       label:{text:String(i+1),color:'#fff',fontWeight:'800',fontSize:'12px'},
       icon:{path:google.maps.SymbolPath.CIRCLE,scale:14,fillColor:trip.color||'#4a9eff',fillOpacity:1,strokeColor:'#fff',strokeWeight:2}
     });
   });
 
-  // Drive to first place then continue
-  driveToStep(orderedPlaces,0);
+  // Character marker (starts at first place)
+  const walkEmoji=storyGenderEmoji();
+  storyMarker=new google.maps.Marker({
+    position:{lat:orderedPlaces[0].lat,lng:orderedPlaces[0].lng},
+    map:storyMapInst,zIndex:20,
+    icon:storyEmojiIcon('📍',44)
+  });
+
+  // Kick off
+  storyArrive(orderedPlaces,0,walkEmoji,trip);
 }
 
-function driveToStep(places,step){
+function storyEmojiIcon(emoji,size){
+  return{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><text y="${size*.8}" font-size="${size*.75}">${emoji}</text></svg>`),scaledSize:new google.maps.Size(size,size),anchor:new google.maps.Point(size/2,size/2)};
+}
+
+function storyArrive(places,step,walkEmoji,trip){
   storyStep=step;
   if(step>=places.length){storyFinish();return;}
 
-  // Mark previous bars done
+  // Mark previous bars complete
   for(let i=0;i<step;i++){
     const b=document.getElementById('spb_'+i);if(b)b.classList.add('done');
     const f=document.getElementById('spf_'+i);if(f)f.style.width='100%';
   }
 
+  // Park marker on arrival spot
   const dest={lat:places[step].lat,lng:places[step].lng};
+  storyMarker.setPosition(dest);
+  storyMapInst.panTo(dest);
 
-  if(step===0){
-    storyMapInst.panTo(dest);
-    showNarration(step,places);
-    animateProgressBar(step,5000,()=>driveToStep(places,step+1));
+  // Arrival pulse on the numbered pin
+  storyPulse(dest);
+
+  // Dwell at each stop — then decide how to travel to next
+  const dwellMs=2200;
+  animateProgressBar(step,dwellMs,()=>{
+    const nextStep=step+1;
+    if(nextStep>=places.length){storyFinish();return;}
+
+    const from=places[step];
+    const to=places[nextStep];
+    const km=storyDistanceKm(from,to);
+    const transport=storyTransportMode(km);
+
+    storyTravelTo(places,nextStep,from,to,transport,walkEmoji,trip);
+  });
+}
+
+function storyTravelTo(places,nextStep,from,to,transport,walkEmoji,trip){
+  const label=document.getElementById('transportLabel');
+  // Show transport emoji briefly in center screen
+  label.textContent=transport.mode==='walk'?walkEmoji:transport.emoji;
+  label.classList.add('show');
+  storyAnimTimer=setTimeout(()=>label.classList.remove('show'),1200);
+
+  if(transport.mode==='walk'||transport.mode==='plane'){
+    // Walk or fly: animate straight line on map
+    storyMarker.setIcon(storyEmojiIcon(transport.mode==='walk'?walkEmoji:transport.emoji,44));
+    storyAnimStraightLine(
+      {lat:from.lat,lng:from.lng},
+      {lat:to.lat,lng:to.lng},
+      transport.mode==='plane'?5000:3500,
+      ()=>{
+        storyMarker.setIcon(storyEmojiIcon('📍',44));
+        storyArrive(places,nextStep,walkEmoji,trip);
+      }
+    );
   }else{
-    const prev={lat:places[step-1].lat,lng:places[step-1].lng};
+    // Car: use Directions API for road path
+    storyMarker.setIcon(storyEmojiIcon('🚗',44));
     const ds=new google.maps.DirectionsService();
-    ds.route({origin:prev,destination:dest,travelMode:google.maps.TravelMode.DRIVING},
+    ds.route(
+      {origin:{lat:from.lat,lng:from.lng},destination:{lat:to.lat,lng:to.lng},travelMode:google.maps.TravelMode.DRIVING},
       (result,status)=>{
         if(status==='OK'){
-          animateCar(result.routes[0].overview_path,storyMapInst,storyMarker,()=>{
-            showNarration(step,places);
-            animateProgressBar(step,6000,()=>driveToStep(places,step+1));
+          storyAnimRoadPath(result.routes[0].overview_path,4500,()=>{
+            storyMarker.setIcon(storyEmojiIcon('📍',44));
+            storyArrive(places,nextStep,walkEmoji,trip);
           });
         }else{
-          // Fallback: just pan
-          storyMarker.setPosition(dest);storyMapInst.panTo(dest);
-          showNarration(step,places);
-          animateProgressBar(step,5000,()=>driveToStep(places,step+1));
+          // Fallback to straight line
+          storyAnimStraightLine({lat:from.lat,lng:from.lng},{lat:to.lat,lng:to.lng},3500,()=>{
+            storyMarker.setIcon(storyEmojiIcon('📍',44));
+            storyArrive(places,nextStep,walkEmoji,trip);
+          });
         }
       }
     );
   }
 }
 
-function animateCar(path,map,marker,onDone){
+function storyAnimStraightLine(from,to,durationMs,onDone){
+  const steps=60;
+  const dLat=(to.lat-from.lat)/steps;
+  const dLng=(to.lng-from.lng)/steps;
+  const interval=durationMs/steps;
   let i=0;
-  const step=()=>{
-    if(i>=path.length){onDone();return;}
-    marker.setPosition(path[i]);map.panTo(path[i]);i++;
-    storyAnimTimer=setTimeout(step,Math.max(16,3000/path.length));
+  const tick=()=>{
+    if(i>steps){onDone();return;}
+    const pos={lat:from.lat+dLat*i,lng:from.lng+dLng*i};
+    storyMarker.setPosition(pos);
+    storyMapInst.panTo(pos);
+    i++;
+    storyAnimTimer=setTimeout(tick,interval);
   };
-  step();
+  tick();
+}
+
+function storyAnimRoadPath(path,durationMs,onDone){
+  const n=path.length;
+  if(!n){onDone();return;}
+  const interval=Math.max(16,durationMs/n);
+  let i=0;
+  const tick=()=>{
+    if(i>=n){onDone();return;}
+    storyMarker.setPosition(path[i]);
+    storyMapInst.panTo(path[i]);
+    i++;
+    storyAnimTimer=setTimeout(tick,interval);
+  };
+  tick();
+}
+
+function storyPulse(latLng){
+  // Create a temporary overlay pulse circle at the destination
+  const map=storyMapInst;
+  class PulseOverlay extends google.maps.OverlayView{
+    constructor(pos){super();this.pos=pos;this.div=null;}
+    onAdd(){
+      const d=document.createElement('div');
+      d.style.cssText='position:absolute;width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,.9);animation:arrivalPulse 1s ease-out forwards;';
+      this.div=d;this.getPanes().overlayMouseTarget.appendChild(d);
+    }
+    draw(){
+      const p=this.getProjection().fromLatLngToDivPixel(this.pos);
+      if(p&&this.div){this.div.style.left=(p.x-18)+'px';this.div.style.top=(p.y-18)+'px';}
+    }
+    onRemove(){this.div?.remove();}
+  }
+  const ov=new PulseOverlay(new google.maps.LatLng(latLng.lat,latLng.lng));
+  ov.setMap(map);
+  setTimeout(()=>ov.setMap(null),1100);
 }
 
 function animateProgressBar(step,duration,onDone){
@@ -2172,44 +2281,9 @@ function animateProgressBar(step,duration,onDone){
   storyAnimTimer=setTimeout(onDone,duration);
 }
 
-function showNarration(step,places){
-  const nr=document.getElementById('storyNarration');
-  if(!nr)return;
-  nr.classList.remove('visible');
-  setTimeout(()=>{
-    document.getElementById('snNum').textContent=`Stop ${step+1} of ${places.length}`;
-    document.getElementById('snName').textContent=places[step].name;
-    document.getElementById('snText').textContent=storyNarrations[step]||'';
-    nr.classList.add('visible');
-  },400);
-}
-
-function storyNext(){
-  if(storyAnimTimer)clearTimeout(storyAnimTimer);
-  const allPlaces=storyNarrations.length;
-  const nextStep=storyStep+1;
-  const orderedPlaces=[];
-  // Reconstruct from DOM markers — pull from saved trip
-  const trip=trips.find(t=>t.story&&t.story.narrations===storyNarrations||
-    (t.story&&t.story.narrations&&t.story.narrations.length===storyNarrations.length));
-  if(trip&&trip.story){
-    const op=trip.story.orderedPlaces.map(id=>places.find(p=>p._id===id)).filter(Boolean);
-    if(nextStep<op.length)driveToStep(op,nextStep);
-    else storyFinish();
-  }
-}
-
 function storyFinish(){
-  const nr=document.getElementById('storyNarration');if(nr)nr.classList.remove('visible');
-  const nb=document.getElementById('storyNextBtn');if(nb)nb.style.display='none';
-  setTimeout(()=>{
-    if(nr){
-      document.getElementById('snNum').textContent='The End';
-      document.getElementById('snName').textContent='✈️ What a journey!';
-      document.getElementById('snText').textContent='';
-      nr.classList.add('visible');
-    }
-  },600);
+  const ec=document.getElementById('storyEndCard');
+  if(ec)ec.classList.add('show');
 }
 
 function closeStoryPlayer(){
