@@ -2126,7 +2126,7 @@ function startStoryPlayer(trip,orderedPlaces,narrations){
   ];
 
   storyMapInst=new google.maps.Map(document.getElementById('storyMap'),{
-    zoom:2,center:{lat:orderedPlaces[0].lat,lng:orderedPlaces[0].lng},
+    zoom:5,center:{lat:orderedPlaces[0].lat,lng:orderedPlaces[0].lng},
     disableDefaultUI:true,gestureHandling:'none',
     backgroundColor:'#1a1a2e',styles:mapStyles
   });
@@ -2156,16 +2156,18 @@ function startStoryPlayer(trip,orderedPlaces,narrations){
     icon:storyEmojiIcon(walkEmoji,42)
   });
 
-  // Step 1: fit bounds to show ALL pins
+  // Fit bounds to show ALL pins — wait for map idle so fitBounds is instant, no zoom-out animation
   const bounds=new google.maps.LatLngBounds();
   orderedPlaces.forEach(p=>bounds.extend({lat:p.lat,lng:p.lng}));
-  storyMapInst.fitBounds(bounds,{top:80,bottom:60,left:40,right:40});
-
-  // Step 2: after 2s, start traveling
-  _storyTimeout(()=>{
-    // Preload all road paths for car segments, then kick off
-    _storyPreloadRoutes(orderedPlaces,trip,pinMarkers,walkEmoji);
-  },2000);
+  google.maps.event.addListenerOnce(storyMapInst,'idle',()=>{
+    storyMapInst.fitBounds(bounds,{top:90,bottom:80,left:60,right:60});
+    google.maps.event.addListenerOnce(storyMapInst,'idle',()=>{
+      // Start traveling after 1.8s pause so user can see full route
+      _storyTimeout(()=>{
+        _storyPreloadRoutes(orderedPlaces,trip,pinMarkers,walkEmoji);
+      },1800);
+    });
+  });
 }
 
 function _storyPreloadRoutes(places,trip,pinMarkers,walkEmoji){
