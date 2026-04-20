@@ -29,7 +29,9 @@ router.get('/', async (req, res) => {
 // GET /api/users/:id — user profile
 router.get('/:id', async (req, res) => {
   try {
-    const user = await User.findById(req.params.id, 'firstName lastName handle avatar email').lean();
+    const isOwnProfile = req.params.id === req.userId.toString();
+    const fields = isOwnProfile ? 'firstName lastName handle avatar email aiProfile' : 'firstName lastName handle avatar email';
+    const user = await User.findById(req.params.id, fields).lean();
     if (!user) return res.status(404).json({ error: 'Not found' });
     const [followers, following, placesCount, posts, isFollowing] = await Promise.all([
       Follow.countDocuments({ following: req.params.id }),
