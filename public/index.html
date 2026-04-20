@@ -809,7 +809,6 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div class="up-tabs">
           <div class="up-tab on" id="upTabBeen" onclick="switchProfileTab('been')">✅ Been There</div>
           <div class="up-tab" id="upTabTobe" onclick="switchProfileTab('tobe')">🗺️ To Be There</div>
-          <div class="up-tab" id="upTabAI" onclick="switchProfileTab('ai')">✦ AI</div>
         </div>
       </div>
       <div class="up-scroll" id="upContent"></div>
@@ -1093,6 +1092,17 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <button class="btn-save" onclick="saveProfile()">Save Profile ✓</button>
     </div>
     <button onclick="sendPasswordReset()" style="width:100%;margin-top:10px;padding:13px;border-radius:16px;border:2px solid var(--border);background:#fff;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;color:var(--txt2);">🔑 Change Password</button>
+    <!-- AI Profile section -->
+    <div style="margin-top:18px;border-top:1.5px solid var(--border);padding-top:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:800;color:var(--txt);display:flex;align-items:center;gap:6px;"><span style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">✦ AI Profile</span></div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="openAIAgent()" style="background:#f8f5ff;border:2px solid #764ba2;color:#764ba2;border-radius:10px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">+ Add photos</button>
+          <button onclick="resetAIProfile()" id="resetAIBtn" style="display:none;background:var(--coral-light);border:2px solid rgba(255,107,71,.3);color:var(--coral);border-radius:10px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">Reset</button>
+        </div>
+      </div>
+      <div id="profileSheetAICard"></div>
+    </div>
   </div>
 </div>
 <div class="overlay" id="placeInfoOverlay">
@@ -2810,6 +2820,43 @@ function openProfile(){
     initEl.textContent=init; initEl.style.display='block'; imgEl.style.display='none';
   }
   openOverlay('profileOverlay');
+  renderProfileSheetAICard();
+}
+
+function renderProfileSheetAICard(){
+  const card=document.getElementById('profileSheetAICard');
+  const resetBtn=document.getElementById('resetAIBtn');
+  if(!card)return;
+  // Try to get aiProfile from currentUser (may not be loaded yet)
+  apiFetch('/api/ai/profile').then(r=>r.json()).then(data=>{
+    const p=data.profile;
+    if(!p||!p.analyzedAt){
+      card.innerHTML='<div style="font-size:12px;color:var(--txt3);line-height:1.5;">No AI profile yet. Tap "+ Add photos" to build yours.</div>';
+      if(resetBtn)resetBtn.style.display='none';
+      return;
+    }
+    if(resetBtn)resetBtn.style.display='block';
+    card.innerHTML=`
+      <div style="background:linear-gradient(135deg,#f8f5ff,#f0f4ff);border-radius:14px;padding:13px;">
+        <div style="font-size:13px;color:var(--txt);font-style:italic;line-height:1.5;margin-bottom:10px;">"${esc(p.summary)}"</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">
+          ${(p.tags||[]).map(t=>`<span style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">${esc(t)}</span>`).join('')}
+        </div>
+        ${p.locations?.length?`<div style="font-size:11px;color:var(--txt3);">📍 ${esc(p.locations.join(' · '))}</div>`:''}
+        <div style="font-size:10px;color:var(--txt3);margin-top:6px;">Updated ${new Date(p.analyzedAt).toLocaleDateString()}</div>
+      </div>`;
+  }).catch(()=>{
+    card.innerHTML='<div style="font-size:12px;color:var(--txt3);">Could not load AI profile.</div>';
+  });
+}
+
+async function resetAIProfile(){
+  if(!confirm('Reset your AI profile? This will delete your current profile and tags.'))return;
+  try{
+    await apiFetch('/api/ai/profile',{method:'DELETE'});
+    toast('AI profile reset','ok');
+    renderProfileSheetAICard();
+  }catch{toast('Error resetting profile','err');}
 }
 
 async function saveProfile(){
@@ -3177,7 +3224,7 @@ async function toggleFollowUser(userId){
 
 function switchProfileTab(tab){
   _upTab=tab;
-  ['been','tobe','ai'].forEach(t=>{
+  ['been','tobe'].forEach(t=>{
     const el=document.getElementById('upTab'+t.charAt(0).toUpperCase()+t.slice(1));
     if(el) el.className='up-tab'+(t===tab?' on':'');
   });
