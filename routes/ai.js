@@ -317,3 +317,19 @@ router.post('/geo-suggestions', auth, async (req, res) => {
     res.status(500).json({ error: 'Failed to get suggestions' });
   }
 });
+
+/* ─────────────────────────────────────────
+   DELETE /api/ai/profile
+   Resets the user's aiProfile
+───────────────────────────────────────── */
+router.delete('/profile', auth, async (req, res) => {
+  try {
+    const User = require('../models/User');
+    await User.findByIdAndUpdate(req.userId, {
+      $set: { aiProfile: { tags: [], summary: '', locations: [], analyzedAt: null } }
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
