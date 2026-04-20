@@ -110,6 +110,39 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Nunito',
 .trip-btn.story{background:#fff8e8;border-color:#f5a623;color:#f5a623;}
 .trip-btn.story:hover{background:#f5a623;color:#fff;}
 /* Trip Plan Modal */
+/* AI Agent Modal */
+#aiAgentModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:9999;backdrop-filter:blur(4px);}
+#aiAgentModal .aam-sheet{background:#fff;border-radius:28px 28px 0 0;width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;}
+#aiAgentModal .aam-head{padding:22px 20px 10px;flex-shrink:0;}
+#aiAgentModal .aam-title{font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:var(--txt);display:flex;align-items:center;gap:8px;}
+#aiAgentModal .aam-sub{font-size:13px;color:var(--txt3);margin-top:4px;line-height:1.5;}
+#aiAgentModal .aam-body{overflow-y:auto;padding:0 20px 20px;flex:1;}
+#aiAgentModal .aam-close{position:absolute;top:18px;right:18px;background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;color:var(--txt2);}
+/* Upload zone */
+.aaz-upload{border:2px dashed var(--border);border-radius:16px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;margin:12px 0;}
+.aaz-upload:hover,.aaz-upload.dragover{border-color:#764ba2;background:#f8f5ff;}
+.aaz-upload input{display:none;}
+.aaz-upload .aaz-icon{font-size:32px;margin-bottom:8px;}
+.aaz-upload .aaz-label{font-size:14px;font-weight:700;color:var(--txt);}
+.aaz-upload .aaz-hint{font-size:12px;color:var(--txt3);margin-top:4px;}
+/* Preview grid */
+.aaz-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0;}
+.aaz-thumb{width:100%;aspect-ratio:1;border-radius:10px;object-fit:cover;border:2px solid var(--border);}
+/* Analyze button */
+.aaz-btn{width:100%;padding:14px;border:none;border-radius:18px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px;box-shadow:0 6px 20px rgba(102,126,234,.3);}
+.aaz-btn:disabled{opacity:.5;cursor:not-allowed;}
+/* Progress */
+.aaz-progress{text-align:center;padding:24px 0;}
+.aaz-progress .azp-emoji{font-size:36px;animation:spin 2s linear infinite;display:inline-block;}
+.aaz-progress .azp-txt{font-size:14px;font-weight:700;color:var(--txt);margin-top:10px;}
+.aaz-progress .azp-sub{font-size:12px;color:var(--txt3);margin-top:4px;}
+/* Profile result */
+.aaz-profile{background:linear-gradient(135deg,#f8f5ff,#f0f4ff);border-radius:16px;padding:16px;margin-top:12px;}
+.aaz-profile .azpr-summary{font-size:14px;color:var(--txt);line-height:1.6;margin-bottom:12px;font-style:italic;}
+.aaz-profile .azpr-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.aaz-profile .azpr-tag{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;}
+.aaz-profile .azpr-locs{font-size:12px;color:var(--txt3);margin-top:4px;}
+.aaz-profile .azpr-date{font-size:11px;color:var(--txt3);margin-top:8px;text-align:right;}
 #tripPlanModal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:9999;}
 #tripPlanModal .tpm-sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;}
 #tripPlanModal .tpm-head{padding:20px 20px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid var(--border);}
@@ -619,6 +652,10 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div id="mapScreen" class="screen">
   <div class="app-header">
     <div class="h-logo" onclick="showMap()" style="cursor:pointer;">Wandr <span class="h-dot">·</span></div>
+    <button id="btnAIAgent" onclick="openAIAgent()" title="AI Agent" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:22px;padding:7px 14px;display:flex;align-items:center;gap:6px;cursor:pointer;box-shadow:0 4px 14px rgba(102,126,234,.35);transition:all .2s;">
+      <span style="font-size:13px;">✦</span>
+      <span style="font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;color:#fff;letter-spacing:.02em;">AI Agent</span>
+    </button>
     <div style="display:flex;align-items:center;gap:8px;">
       <button onclick="showMyProfile()" title="My Profile" style="background:none;border:none;cursor:pointer;padding:0;position:relative;">
         <div id="headerMyProfile" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--mint),var(--sky));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;overflow:hidden;border:2px solid var(--mint);flex-shrink:0;">🗺️</div>
@@ -2335,6 +2372,122 @@ function _storyFinish(){
 function closeStoryPlayer(){
   _storyClearAll();
   document.getElementById('storyPlayer')?.remove();
+}
+
+/* ── AI AGENT ── */
+let _agentFiles=[];
+
+async function openAIAgent(){
+  document.getElementById('aiAgentModal')?.remove();
+  _agentFiles=[];
+
+  // Check if profile already exists
+  let existingProfile=null;
+  try{
+    const r=await apiFetch('/api/ai/profile');
+    const d=await r.json();
+    existingProfile=d.profile?.analyzedAt?d.profile:null;
+  }catch{}
+
+  const modal=document.createElement('div');
+  modal.id='aiAgentModal';
+  modal.innerHTML=`<div class="aam-sheet" style="position:relative;">
+    <button class="aam-close" onclick="document.getElementById('aiAgentModal').remove()">✕</button>
+    <div class="aam-head">
+      <div class="aam-title"><span style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">✦ AI Agent</span></div>
+      <div class="aam-sub">Upload photos from your travels and hobbies — AI will build a personal profile and use it to recommend places you'll love.</div>
+    </div>
+    <div class="aam-body">
+      ${existingProfile?`<div class="aaz-profile" id="existingProfile">
+        <div style="font-size:11px;font-weight:800;color:#764ba2;letter-spacing:.08em;margin-bottom:8px;">YOUR CURRENT PROFILE</div>
+        <div class="azpr-summary">${esc(existingProfile.summary)}</div>
+        <div class="azpr-tags">${(existingProfile.tags||[]).map(t=>`<span class="azpr-tag">${esc(t)}</span>`).join('')}</div>
+        ${existingProfile.locations?.length?`<div class="azpr-locs">📍 ${esc(existingProfile.locations.join(' · '))}</div>`:''}
+        <div class="azpr-date">Last analyzed: ${new Date(existingProfile.analyzedAt).toLocaleDateString()}</div>
+      </div>`:''}
+      <div class="aaz-upload" id="aazDrop" onclick="document.getElementById('aazInput').click()" ondragover="aazDragOver(event)" ondragleave="aazDragLeave(event)" ondrop="aazDrop(event)">
+        <input type="file" id="aazInput" multiple accept="image/*" onchange="aazFilesSelected(event)">
+        <div class="aaz-icon">📸</div>
+        <div class="aaz-label">Tap to select photos</div>
+        <div class="aaz-hint">Up to 20 photos · travels, food, hobbies, sports</div>
+      </div>
+      <div class="aaz-grid" id="aazGrid"></div>
+      <div id="aazCount" style="font-size:12px;color:var(--txt3);text-align:center;margin-bottom:4px;"></div>
+      <button class="aaz-btn" id="aazAnalyzeBtn" onclick="runAIAgent()" disabled>✦ Analyze &amp; Build Profile</button>
+    </div>
+  </div>`;
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
+  document.body.appendChild(modal);
+}
+
+function aazDragOver(e){e.preventDefault();document.getElementById('aazDrop').classList.add('dragover');}
+function aazDragLeave(e){document.getElementById('aazDrop').classList.remove('dragover');}
+function aazDrop(e){e.preventDefault();document.getElementById('aazDrop').classList.remove('dragover');aazProcessFiles(e.dataTransfer.files);}
+function aazFilesSelected(e){aazProcessFiles(e.target.files);}
+
+function aazProcessFiles(fileList){
+  const allowed=Array.from(fileList).filter(f=>f.type.startsWith('image/')).slice(0,20-_agentFiles.length);
+  _agentFiles=[..._agentFiles,...allowed].slice(0,20);
+  const grid=document.getElementById('aazGrid');
+  const countEl=document.getElementById('aazCount');
+  const btn=document.getElementById('aazAnalyzeBtn');
+  if(!grid)return;
+  grid.innerHTML='';
+  _agentFiles.forEach(f=>{
+    const img=document.createElement('img');
+    img.className='aaz-thumb';
+    img.src=URL.createObjectURL(f);
+    grid.appendChild(img);
+  });
+  if(countEl)countEl.textContent=_agentFiles.length>0?`${_agentFiles.length} photo${_agentFiles.length>1?'s':''} selected`:'';
+  if(btn)btn.disabled=_agentFiles.length===0;
+}
+
+async function runAIAgent(){
+  if(!_agentFiles.length)return;
+  const body=document.querySelector('#aiAgentModal .aam-body');
+  if(!body)return;
+
+  // Show loading
+  body.innerHTML=`<div class="aaz-progress">
+    <div class="azp-emoji">✦</div>
+    <div class="azp-txt">Analyzing your photos…</div>
+    <div class="azp-sub">Claude is studying your travel style and interests</div>
+  </div>`;
+
+  try{
+    // Convert files to base64
+    const images=await Promise.all(_agentFiles.map(f=>new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=e=>{
+        const base64=e.target.result.split(',')[1];
+        resolve({base64,mediaType:f.type,filename:f.name});
+      };
+      reader.onerror=reject;
+      reader.readAsDataURL(f);
+    })));
+
+    const r=await apiFetch('/api/ai/build-profile',{method:'POST',body:JSON.stringify({images})});
+    const data=await r.json();
+    if(data.error)throw new Error(data.error);
+
+    const p=data.profile;
+    body.innerHTML=`<div style="padding:8px 0;">
+      <div style="text-align:center;font-size:32px;margin-bottom:8px;">✦</div>
+      <div style="text-align:center;font-size:16px;font-weight:800;color:var(--txt);margin-bottom:16px;">Profile Built!</div>
+      <div class="aaz-profile">
+        <div style="font-size:11px;font-weight:800;color:#764ba2;letter-spacing:.08em;margin-bottom:8px;">YOUR AI PROFILE</div>
+        <div class="azpr-summary">"${esc(p.summary)}"</div>
+        <div class="azpr-tags">${(p.tags||[]).map(t=>`<span class="azpr-tag">${esc(t)}</span>`).join('')}</div>
+        ${p.locations?.length?`<div class="azpr-locs" style="margin-top:8px;">📍 ${esc(p.locations.join(' · '))}</div>`:''}
+      </div>
+      <div style="font-size:12px;color:var(--txt3);text-align:center;margin-top:16px;line-height:1.6;">This profile will be used to personalize place recommendations in the future. You can re-run anytime to update it.</div>
+      <button class="aaz-btn" style="margin-top:16px;" onclick="document.getElementById('aiAgentModal').remove()">Done ✓</button>
+    </div>`;
+    toast('✦ AI profile built!','ok');
+  }catch(e){
+    body.innerHTML=`<div style="padding:24px;text-align:center;color:var(--coral);">Something went wrong: ${esc(e.message)}<br><br><button class="aaz-btn" onclick="openAIAgent()">Try again</button></div>`;
+  }
 }
 
 function openNewTrip(){
