@@ -515,6 +515,21 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .up-tabs{display:flex;border-top:1.5px solid var(--border);}
 .up-tab{flex:1;padding:12px;text-align:center;font-size:12px;font-weight:800;color:var(--txt3);cursor:pointer;border-bottom:2px solid transparent;transition:var(--tr);}
 .up-tab.on{color:var(--sky);border-bottom-color:var(--sky);}
+#upTabAI.on{color:#764ba2;border-bottom-color:#764ba2;}
+.ai-profile-card{background:linear-gradient(135deg,#f8f5ff,#f0f4ff);border-radius:18px;padding:16px;margin:12px 16px;}
+.ai-profile-card .apc-label{font-size:11px;font-weight:800;color:#764ba2;letter-spacing:.08em;margin-bottom:10px;}
+.ai-profile-card .apc-summary{font-size:14px;color:var(--txt);line-height:1.6;font-style:italic;margin-bottom:12px;}
+.ai-profile-card .apc-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.ai-profile-card .apc-tag{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;}
+.ai-profile-card .apc-locs{font-size:12px;color:var(--txt3);margin-bottom:10px;}
+.ai-profile-card .apc-date{font-size:11px;color:var(--txt3);margin-bottom:12px;}
+.apc-add-btn{width:calc(100% - 32px);margin:0 16px 10px;padding:12px;border:2px dashed #764ba2;border-radius:14px;background:transparent;color:#764ba2;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;}
+.apc-add-btn:hover{background:#f8f5ff;}
+.geo-suggestion{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#fff;border:2px solid var(--border);border-radius:14px;margin:0 16px 8px;}
+.geo-suggestion .gs-info{flex:1;}
+.geo-suggestion .gs-name{font-size:13px;font-weight:800;color:var(--txt);}
+.geo-suggestion .gs-loc{font-size:11px;color:var(--txt3);margin-top:2px;}
+.geo-suggestion .gs-add{background:var(--mint-light);border:2px solid var(--mint);color:var(--mint);border-radius:10px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;margin-left:10px;}
 .up-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;overflow-y:auto;flex:1;}
 .up-grid-item{aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--border);position:relative;}
 .up-grid-item img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -794,6 +809,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div class="up-tabs">
           <div class="up-tab on" id="upTabBeen" onclick="switchProfileTab('been')">✅ Been There</div>
           <div class="up-tab" id="upTabTobe" onclick="switchProfileTab('tobe')">🗺️ To Be There</div>
+          <div class="up-tab" id="upTabAI" onclick="switchProfileTab('ai')">✦ AI</div>
         </div>
       </div>
       <div class="up-scroll" id="upContent"></div>
@@ -2377,6 +2393,64 @@ function closeStoryPlayer(){
 /* ── AI AGENT ── */
 let _agentFiles=[];
 
+function _extractExifGPS(view){
+  // Only JPEG
+  if(view.getUint16(0)!==0xFFD8)return null;
+  let offset=2;
+  while(offset<view.byteLength-2){
+    const marker=view.getUint16(offset);
+    if(marker===0xFFE1){
+      // APP1 — EXIF
+      const len=view.getUint16(offset+2);
+      const exifStart=offset+4;
+      // Check Exif header
+      const hdr=String.fromCharCode(view.getUint8(exifStart),view.getUint8(exifStart+1),view.getUint8(exifStart+2),view.getUint8(exifStart+3));
+      if(hdr!=='Exif')break;
+      const tiffStart=exifStart+6;
+      const littleEndian=view.getUint16(tiffStart)===0x4949;
+      const readUint16=(o)=>view.getUint16(tiffStart+o,littleEndian);
+      const readUint32=(o)=>view.getUint32(tiffStart+o,littleEndian);
+      const ifd0=readUint32(4);
+      const nEntries=readUint16(ifd0);
+      let gpsOffset=null;
+      for(let i=0;i<nEntries;i++){
+        const entryOffset=ifd0+2+i*12;
+        const tag=readUint16(entryOffset);
+        if(tag===0x8825){gpsOffset=readUint32(entryOffset+8);break;}
+      }
+      if(gpsOffset===null)break;
+      const gpsEntries=readUint16(gpsOffset);
+      let latRef='N',lat=null,lngRef='E',lng=null;
+      for(let i=0;i<gpsEntries;i++){
+        const e=gpsOffset+2+i*12;
+        const tag=readUint16(e);
+        const valOffset=readUint32(e+8);
+        if(tag===0x0001)latRef=String.fromCharCode(view.getUint8(tiffStart+valOffset));
+        if(tag===0x0002){
+          const d=view.getUint32(tiffStart+valOffset,littleEndian)/view.getUint32(tiffStart+valOffset+4,littleEndian);
+          const m=view.getUint32(tiffStart+valOffset+8,littleEndian)/view.getUint32(tiffStart+valOffset+12,littleEndian);
+          const s=view.getUint32(tiffStart+valOffset+16,littleEndian)/view.getUint32(tiffStart+valOffset+20,littleEndian);
+          lat=d+m/60+s/3600;
+        }
+        if(tag===0x0003)lngRef=String.fromCharCode(view.getUint8(tiffStart+valOffset));
+        if(tag===0x0004){
+          const d=view.getUint32(tiffStart+valOffset,littleEndian)/view.getUint32(tiffStart+valOffset+4,littleEndian);
+          const m=view.getUint32(tiffStart+valOffset+8,littleEndian)/view.getUint32(tiffStart+valOffset+12,littleEndian);
+          const s=view.getUint32(tiffStart+valOffset+16,littleEndian)/view.getUint32(tiffStart+valOffset+20,littleEndian);
+          lng=d+m/60+s/3600;
+        }
+      }
+      if(lat!==null&&lng!==null){
+        return{lat:latRef==='S'?-lat:lat,lng:lngRef==='W'?-lng:lng};
+      }
+      break;
+    }
+    if(offset+2+view.getUint16(offset+2)>=view.byteLength)break;
+    offset+=2+view.getUint16(offset+2);
+  }
+  return null;
+}
+
 async function openAIAgent(){
   document.getElementById('aiAgentModal')?.remove();
   _agentFiles=[];
@@ -2475,11 +2549,40 @@ async function runAIAgent(){
       img.src=url;
     })));
 
+    // Extract GPS from files using EXIF (if available via browser)
+    const geoLocations=[];
+    await Promise.all(_agentFiles.map((f,fi)=>new Promise(resolve=>{
+      // Try reading EXIF GPS — browser can read it from ArrayBuffer
+      const reader=new FileReader();
+      reader.onload=e=>{
+        try{
+          const buf=e.target.result;
+          const view=new DataView(buf);
+          // Quick JPEG EXIF GPS extraction
+          const gps=_extractExifGPS(view);
+          if(gps)geoLocations.push({...gps,filename:f.name});
+        }catch{}
+        resolve();
+      };
+      reader.onerror=resolve;
+      reader.readAsArrayBuffer(f);
+    })));
+
     const r=await apiFetch('/api/ai/build-profile',{method:'POST',body:JSON.stringify({images})});
     const data=await r.json();
     if(data.error)throw new Error(data.error);
 
+    // Fetch geo suggestions if we have GPS coords
+    if(geoLocations.length){
+      try{
+        const gr=await apiFetch('/api/ai/geo-suggestions',{method:'POST',body:JSON.stringify({locations:geoLocations})});
+        const gd=await gr.json();
+        window._pendingGeoSuggestions=gd.suggestions||[];
+      }catch{window._pendingGeoSuggestions=[];}
+    }else{window._pendingGeoSuggestions=[];}
+
     const p=data.profile;
+    const geoCount=window._pendingGeoSuggestions?.length||0;
     body.innerHTML=`<div style="padding:8px 0;">
       <div style="text-align:center;font-size:32px;margin-bottom:8px;">✦</div>
       <div style="text-align:center;font-size:16px;font-weight:800;color:var(--txt);margin-bottom:16px;">Profile Built!</div>
@@ -2489,10 +2592,12 @@ async function runAIAgent(){
         <div class="azpr-tags">${(p.tags||[]).map(t=>`<span class="azpr-tag">${esc(t)}</span>`).join('')}</div>
         ${p.locations?.length?`<div class="azpr-locs" style="margin-top:8px;">📍 ${esc(p.locations.join(' · '))}</div>`:''}
       </div>
-      <div style="font-size:12px;color:var(--txt3);text-align:center;margin-top:16px;line-height:1.6;">This profile will be used to personalize place recommendations in the future. You can re-run anytime to update it.</div>
-      <button class="aaz-btn" style="margin-top:16px;" onclick="document.getElementById('aiAgentModal').remove()">Done ✓</button>
+      ${geoCount?`<div style="background:#e8f8f0;border:2px solid var(--mint);border-radius:12px;padding:10px 14px;margin-top:12px;font-size:13px;color:var(--mint);font-weight:700;">📍 Found ${geoCount} place${geoCount>1?'s':''} from photo GPS — view in your profile</div>`:''}
+      <div style="font-size:12px;color:var(--txt3);text-align:center;margin-top:14px;line-height:1.6;">Profile saved. View it in your profile page under the ✦ AI tab.</div>
+      <button class="aaz-btn" style="margin-top:14px;" onclick="document.getElementById('aiAgentModal').remove();showMyProfile().then(()=>switchProfileTab('ai'))">View my AI profile →</button>
     </div>`;
     toast('✦ AI profile built!','ok');
+    document.dispatchEvent(new Event('aiProfileBuilt'));
   }catch(e){
     body.innerHTML=`<div style="padding:24px;text-align:center;color:var(--coral);">Something went wrong: ${esc(e.message)}<br><br><button class="aaz-btn" onclick="openAIAgent()">Try again</button></div>`;
   }
@@ -3072,7 +3177,7 @@ async function toggleFollowUser(userId){
 
 function switchProfileTab(tab){
   _upTab=tab;
-  ['been','tobe'].forEach(t=>{
+  ['been','tobe','ai'].forEach(t=>{
     const el=document.getElementById('upTab'+t.charAt(0).toUpperCase()+t.slice(1));
     if(el) el.className='up-tab'+(t===tab?' on':'');
   });
@@ -3083,6 +3188,13 @@ function renderProfileContent(){
   if(!_upData)return;
   const el=document.getElementById('upContent');
   const{places}=_upData;
+
+  // AI tab — show profile + add photos + geo suggestions
+  if(_upTab==='ai'){
+    if(!_upData.isMe){el.innerHTML='<div class="no-posts"><div class="ni">✦</div><p>AI profile is private</p></div>';return;}
+    renderAIProfileTab(el);
+    return;
+  }
 
   const filtered=places.filter(p=>p.status===_upTab);
   const emoji=_upTab==='been'?'✅':'🗺️';
@@ -3108,6 +3220,95 @@ function renderProfileContent(){
       </div>
     </div>`;
   }).join('')+'</div>';
+}
+
+function renderAIProfileTab(el){
+  const profile=_upData?.user?.aiProfile;
+  const hasProfile=profile&&profile.analyzedAt;
+
+  let html='<div style="padding-bottom:24px;">';
+
+  if(hasProfile){
+    html+=`<div class="ai-profile-card">
+      <div class="apc-label">✦ YOUR AI PROFILE</div>
+      <div class="apc-summary">"${esc(profile.summary)}"</div>
+      <div class="apc-tags">${(profile.tags||[]).map(t=>`<span class="apc-tag">${esc(t)}</span>`).join('')}</div>
+      ${profile.locations?.length?`<div class="apc-locs">📍 ${esc(profile.locations.join(' · '))}</div>`:''}
+      <div class="apc-date">Last updated: ${new Date(profile.analyzedAt).toLocaleDateString()}</div>
+    </div>`;
+  }else{
+    html+=`<div class="ai-profile-card">
+      <div class="apc-label">✦ AI PROFILE</div>
+      <div style="font-size:14px;color:var(--txt3);line-height:1.6;">No profile yet. Add some photos to build your AI profile.</div>
+    </div>`;
+  }
+
+  html+=`<button class="apc-add-btn" onclick="openAIAgentFromProfile()">
+    ${hasProfile?'+ Add more photos to update profile':'📸 Build your AI profile'}
+  </button>`;
+
+  // Geo suggestions section
+  html+=`<div id="geoSuggestionsSection" style="margin-top:4px;"></div>`;
+
+  html+='</div>';
+  el.innerHTML=html;
+
+  // Load geo suggestions if any
+  loadGeoSuggestions();
+}
+
+function openAIAgentFromProfile(){
+  // Open AI Agent modal, and after completion refresh the profile tab
+  openAIAgent();
+  // Patch Done button to also reload profile
+  const orig=window._origAgentDone;
+  document.addEventListener('aiProfileBuilt',async()=>{
+    await openUserProfile(_upUserId);
+    switchProfileTab('ai');
+  },{once:true});
+}
+
+async function loadGeoSuggestions(){
+  const sec=document.getElementById('geoSuggestionsSection');
+  if(!sec)return;
+  // Check if we have pending geo suggestions in session
+  const pending=window._pendingGeoSuggestions;
+  if(!pending||!pending.length){
+    sec.innerHTML='';
+    return;
+  }
+  sec.innerHTML=`<div style="padding:0 16px;margin-bottom:8px;">
+    <div style="font-size:12px;font-weight:800;color:var(--txt);margin-bottom:8px;">📍 Places from your photos</div>
+    ${pending.map((s,i)=>`
+      <div class="geo-suggestion" id="geo_${i}">
+        <div class="gs-info">
+          <div class="gs-name">${esc(s.name)}</div>
+          <div class="gs-loc">${esc(s.location)}</div>
+        </div>
+        <button class="gs-add" onclick="addGeoPlace(${i})">+ Add</button>
+      </div>`).join('')}
+  </div>`;
+}
+
+async function addGeoPlace(idx){
+  const s=window._pendingGeoSuggestions[idx];
+  if(!s)return;
+  try{
+    const res=await apiFetch('/api/places',{method:'POST',body:JSON.stringify({
+      name:s.name,location:s.location,address:s.address,
+      lat:s.lat,lng:s.lng,status:'been',tags:[],notes:'Added from photo GPS 📸',
+      isPublic:false,visibility:'private'
+    })});
+    if(!res.ok)throw new Error();
+    const p=await res.json();
+    places.unshift(p);
+    addMarker(p);
+    updateCount();
+    // Remove from suggestions
+    window._pendingGeoSuggestions.splice(idx,1);
+    toast(`📍 "${s.name}" added as Been There!`,'ok');
+    loadGeoSuggestions();
+  }catch{toast('Could not add place','err');}
 }
 
 function closeUserProfile(){
