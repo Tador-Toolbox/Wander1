@@ -10,7 +10,13 @@ const UserSchema = new mongoose.Schema({
   avatar:       { type: String, default: '' },
   verified:     { type: Boolean, default: false },
   verifyToken:  { type: String, default: null },
-  verifyExpires:{ type: Date, default: null }
+  verifyExpires:{ type: Date, default: null },
+  aiProfile: {
+    tags:        { type: [String], default: [] },
+    summary:     { type: String, default: '' },
+    locations:   { type: [String], default: [] },
+    analyzedAt:  { type: Date, default: null }
+  }
 }, { timestamps: true });
 
 UserSchema.pre('save', async function (next) {
