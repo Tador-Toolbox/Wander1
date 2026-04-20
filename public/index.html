@@ -109,6 +109,33 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Nunito',
 .trip-btn.ai:hover{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-color:#667eea;}
 .trip-btn.story{background:#fff8e8;border-color:#f5a623;color:#f5a623;}
 .trip-btn.story:hover{background:#f5a623;color:#fff;}
+.trip-btn.suggest{background:#e8fff5;border-color:#1D9E75;color:#1D9E75;}
+.trip-btn.suggest:hover{background:#1D9E75;color:#fff;}
+/* Suggest Modal */
+#suggestModal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:9999;backdrop-filter:blur(4px);}
+#suggestModal .sm-sheet{background:#fff;border-radius:28px 28px 0 0;width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;}
+#suggestModal .sm-head{padding:22px 20px 12px;flex-shrink:0;border-bottom:1px solid var(--border);}
+#suggestModal .sm-title{font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:var(--txt);}
+#suggestModal .sm-sub{font-size:12px;color:var(--txt3);margin-top:3px;}
+#suggestModal .sm-body{overflow-y:auto;padding:16px 18px 32px;flex:1;}
+#suggestModal .sm-close{position:absolute;top:18px;right:18px;background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;color:var(--txt2);}
+.suggest-card{background:#fff;border:2px solid var(--border);border-radius:18px;margin-bottom:12px;overflow:hidden;transition:border-color .15s;}
+.suggest-card:hover{border-color:#1D9E75;}
+.suggest-card .sc-body{padding:14px 16px;}
+.suggest-card .sc-name{font-size:15px;font-weight:800;color:var(--txt);margin-bottom:3px;}
+.suggest-card .sc-loc{font-size:12px;color:var(--txt3);margin-bottom:6px;}
+.suggest-card .sc-why{font-size:12px;color:var(--txt2);line-height:1.5;margin-bottom:8px;font-style:italic;}
+.suggest-card .sc-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;}
+.suggest-card .sc-tag{background:#e8fff5;border:1.5px solid #1D9E75;color:#0F6E56;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:700;}
+.suggest-card .sc-add{width:100%;padding:9px;border:none;border-radius:12px;background:linear-gradient(135deg,#1D9E75,#0F6E56);color:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;}
+.suggest-card .sc-add:disabled{opacity:.5;cursor:not-allowed;}
+.suggest-loading{text-align:center;padding:40px 20px;}
+.suggest-loading .sl-icon{font-size:36px;animation:spin 1.5s linear infinite;display:inline-block;}
+.suggest-no-profile{text-align:center;padding:32px 20px;}
+.suggest-no-profile .snp-icon{font-size:40px;margin-bottom:10px;}
+.suggest-no-profile p{font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:16px;}
+.suggest-no-profile button{background:linear-gradient(135deg,#667eea,#764ba2);border:none;color:#fff;border-radius:18px;padding:11px 24px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
+.trip-btn.story:hover{background:#f5a623;color:#fff;}
 /* Trip Plan Modal */
 /* AI Agent Modal */
 #aiAgentModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:9999;backdrop-filter:blur(4px);}
@@ -2006,6 +2033,7 @@ function renderTrips(){
         <button class="trip-btn view" style="border-color:${t.color};color:${t.color};background:${t.color}15" onclick="viewTrip('${t._id}')">🗺 View</button>
         <button class="trip-btn share" onclick="openShare('${t._id}')">🔗 Share</button>
         <button class="trip-btn ai" onclick="openAIPlan('${t._id}','${esc(t.name)}')">✦ AI Plan</button>
+        <button class="trip-btn suggest" onclick="openTripSuggest('${t._id}','${esc(t.name)}')">✦ Suggest</button>
         <button class="trip-btn story" onclick="openStory('${t._id}','${esc(t.name)}')">🎬 Story</button>
         <button class="trip-btn" onclick="openEditTrip('${t._id}')">✏️</button>
         <button class="trip-btn del" onclick="deleteTrip('${t._id}')">🗑</button>
@@ -2014,7 +2042,123 @@ function renderTrips(){
   }).join('');
 }
 
+/* ── TRIP SUGGEST ── */
+async function openTripSuggest(tripId, tripName){
+  document.getElementById('suggestModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'suggestModal';
+  modal.innerHTML = `<div class="sm-sheet" style="position:relative;">
+    <button class="sm-close" onclick="document.getElementById('suggestModal').remove()">✕</button>
+    <div class="sm-head">
+      <div class="sm-title">✦ Suggestions for ${esc(tripName)}</div>
+      <div class="sm-sub">AI-powered places based on your profile and trip destination</div>
+    </div>
+    <div class="sm-body" id="suggestBody">
+      <div class="suggest-loading"><div class="sl-icon">✦</div><div style="margin-top:14px;font-size:14px;font-weight:700;color:var(--txt)">Finding places for you…</div></div>
+    </div>
+  </div>`;
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+
+  try {
+    // Check AI profile exists
+    const pr = await apiFetch('/api/ai/profile');
+    const pd = await pr.json();
+    if(!pd.profile || !pd.profile.analyzedAt) {
+      document.getElementById('suggestBody').innerHTML = `<div class="suggest-no-profile">
+        <div class="snp-icon">✦</div>
+        <p>You need an AI profile first so we can personalize suggestions for you.</p>
+        <button onclick="document.getElementById('suggestModal').remove();openAIAgent()">Build AI Profile</button>
+      </div>`;
+      return;
+    }
+
+    // Places already in this trip — names only to avoid re-suggesting
+    const tripPlaces = places.filter(p => p.trip === tripId).map(p => p.name);
+
+    // All saved places on the map — used as taste signals (name, tags, rating, status)
+    const allSavedPlaces = places.map(p => ({
+      name: p.name,
+      location: p.location || '',
+      tags: p.tags || [],
+      rating: p.rating || 0,
+      status: p.status || 'none'
+    }));
+
+    const r = await apiFetch('/api/ai/trip-suggest', {
+      method: 'POST',
+      body: JSON.stringify({ tripId, tripName, tripPlaces, allSavedPlaces })
+    });
+    const data = await r.json();
+    if(data.error) throw new Error(data.error);
+
+    const body = document.getElementById('suggestBody');
+    if(!body) return;
+    if(!data.suggestions || !data.suggestions.length) {
+      body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--txt3);font-size:14px;">No suggestions found. Try building your AI profile with more photos.</div>';
+      return;
+    }
+
+    body.innerHTML = `
+      <div style="font-size:12px;color:var(--txt3);margin-bottom:14px;line-height:1.5;">Based on your taste for <strong>${esc((pd.profile.tags||[]).slice(0,4).join(', '))}</strong></div>
+      ${data.suggestions.map((s,i) => `
+        <div class="suggest-card" id="scard_${i}">
+          <div class="sc-body">
+            <div class="sc-name">${esc(s.name)}</div>
+            <div class="sc-loc">📍 ${esc(s.location)}</div>
+            <div class="sc-why">"${esc(s.why)}"</div>
+            <div class="sc-tags">${(s.tags||[]).map(t=>`<span class="sc-tag">${esc(t)}</span>`).join('')}</div>
+            <button class="sc-add" onclick="addSuggestionToTrip(${i},'${tripId}')">+ Add to ${esc(tripName)}</button>
+          </div>
+        </div>`).join('')}`;
+
+    // Store suggestions globally for the add function
+    window._currentSuggestions = data.suggestions;
+    window._currentSuggestTripId = tripId;
+
+  } catch(e) {
+    const body = document.getElementById('suggestBody');
+    if(body) body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--coral);font-size:14px;">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+async function addSuggestionToTrip(idx, tripId){
+  const s = window._currentSuggestions?.[idx];
+  if(!s) return;
+  const btn = document.querySelector(`#scard_${idx} .sc-add`);
+  if(btn) btn.disabled = true;
+  try {
+    const res = await apiFetch('/api/places', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: s.name,
+        location: s.location,
+        lat: s.lat,
+        lng: s.lng,
+        tags: s.tags || [],
+        notes: s.why || '',
+        trip: tripId,
+        status: 'tobe',
+        isPublic: false,
+        visibility: 'private'
+      })
+    });
+    if(!res.ok) throw new Error();
+    const p = await res.json();
+    places.unshift(p);
+    addMarker(p);
+    updateCount();
+    renderTrips();
+    if(btn){ btn.textContent = '✓ Added!'; btn.style.background = 'var(--mint)'; }
+    toast(`📍 "${s.name}" added to trip!`, 'ok');
+  } catch {
+    if(btn) btn.disabled = false;
+    toast('Could not add place', 'err');
+  }
+}
+
 /* ── AI PLAN ── */
+
 async function openAIPlan(tripId,tripName){
   const tp=places.filter(p=>p.trip===tripId);
   if(!tp.length){toast('This trip has no places yet!','err');return;}
