@@ -340,7 +340,7 @@ router.delete('/profile', auth, async (req, res) => {
 ───────────────────────────────────────── */
 router.post('/trip-suggest', auth, async (req, res) => {
   try {
-    const { tripName, tripPlaces = [], allSavedPlaces = [] } = req.body;
+    const { tripName, tripPlaces = [], allSavedPlaces = [], visitMonth = '' } = req.body;
     if (!tripName) return res.status(400).json({ error: 'Trip name required' });
 
     // Load user's AI profile
@@ -369,6 +369,10 @@ The user has ${allSavedPlaces.length} saved places on their map. Key signals:
 - Highest rated places (4-5★): ${highRated.slice(0,6).map(p=>p.name).join(', ')||'none yet'}
 Use this to reinforce their taste patterns when making suggestions.` : '';
 
+    const seasonalNote = visitMonth
+      ? `The user plans to visit in ${visitMonth}. Factor in seasonal availability, weather, and events. Avoid suggesting places that are closed or unpleasant in ${visitMonth}.`
+      : '';
+
     const prompt = `You are a travel recommendation engine.
 
 The user is planning a trip to: "${tripName}"
@@ -380,12 +384,21 @@ Their AI taste profile (from photo analysis):
 ${savedContext}
 
 ${alreadyHas}
+${seasonalNote}
 
-Suggest exactly 6 places that:
-1. Are specifically in or near "${tripName}" destination
-2. Strongly match their taste — prioritize tags and place types they love
-3. They probably haven't been to yet
-4. Are a mix of types (e.g. restaurant, landmark, nature, cafe, market) that fit their profile
+Return exactly 10 suggestions total, split as follows:
+
+PART 1 — 8 CURATED PICKS (isGem: false):
+- Must be in or near "${tripName}" destination
+- Strongly match their taste profile
+- Balanced mix — include at least: 2 restaurants/food spots, 1 cafe, 2 landmarks/attractions, 1 nature/outdoor spot, 1 market/shopping, 1 nightlife/bar (adjust based on their interests)
+- Well-known quality places, not random tourist traps
+
+PART 2 — 2 HIDDEN GEMS (isGem: true):
+- Truly off the beaten path — places most tourists never find
+- Loved by locals, not in mainstream travel guides
+- Could be: a tiny family-run restaurant, a secret viewpoint, a neighborhood market, an underground bar, a little-known temple or gallery
+- Must still match their taste profile
 
 For each place provide accurate real coordinates (lat/lng).
 
@@ -398,7 +411,8 @@ Reply ONLY with valid JSON, no markdown, no extra text:
       "lat": 12.345,
       "lng": 67.890,
       "why": "One sentence explaining why this matches their taste",
-      "tags": ["coffee", "cozy", "local"]
+      "tags": ["coffee", "cozy", "local"],
+      "isGem": false
     }
   ]
 }`;
@@ -412,7 +426,7 @@ Reply ONLY with valid JSON, no markdown, no extra text:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1200,
+        max_tokens: 2000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
