@@ -171,3 +171,99 @@ Reply ONLY with valid JSON, no extra text, no markdown fences:
 });
 
 module.exports = router;
+
+/* ─────────────────────────────────────────
+   POST /api/ai/build-profile
+   Analyzes up to 20 uploaded images,
+   extracts interests + locations, saves aiProfile to User
+───────────────────────────────────────── */
+router.post('/build-profile', auth, async (req, res) => {
+  try {
+    const { images } = req.body;
+    // images = array of { base64, mediaType, filename }
+    if (!images || !images.length)
+      return res.status(400).json({ error: 'No images provided' });
+
+    const limited = images.slice(0, 20);
+
+    // Build multi-image message for Claude Vision
+    const imageContent = limited.map(img => ({
+      type: 'image',
+      source: { type: 'base64', media_type: img.mediaType || 'image/jpeg', data: img.base64 }
+    }));
+
+    const prompt = `You are analyzing a person's personal photos to understand who they are and what they love.
+
+Look at ALL the photos carefully. Extract:
+1. INTERESTS & HOBBIES — what activities, foods, places, sports, passions do you see? (e.g. coffee, hiking, football, sushi, nightlife, museums, beaches, dogs, photography)
+2. TRAVEL LOCATIONS — any identifiable cities, countries, landmarks, or region types (mountains, coast, jungle, urban)
+3. LIFESTYLE — are they adventurous, relaxed, social, foodie, sporty, cultural?
+4. GPS/LOCATION HINTS — if any photo has visible location text, signs, or recognizable landmarks, name them
+
+Reply ONLY with valid JSON, no markdown, no extra text:
+{
+  "tags": ["coffee", "hiking", "beach", "street-food", "dogs"],
+  "summary": "A one sentence personality summary like: Adventurous traveler who loves street food, coffee, and outdoor sports.",
+  "locations": ["Vietnam", "Thailand", "Tel Aviv beach"]
+}
+
+Tags should be lowercase, 2-15 items, specific and useful for place recommendations.`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        messages: [{
+          role: 'user',
+          content: [
+            ...imageContent,
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content?.[0]?.text || '{}';
+    const profile = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    // Save to User
+    const User = require('../models/User');
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.aiProfile = {
+      tags:       profile.tags || [],
+      summary:    profile.summary || '',
+      locations:  profile.locations || [],
+      analyzedAt: new Date()
+    };
+    await user.save();
+
+    res.json({ profile: user.aiProfile });
+
+  } catch (err) {
+    console.error('Build profile error:', err);
+    res.status(500).json({ error: 'Failed to build profile' });
+  }
+});
+
+/* ─────────────────────────────────────────
+   GET /api/ai/profile
+   Returns current user's aiProfile
+───────────────────────────────────────── */
+router.get('/profile', auth, async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.userId).select('aiProfile');
+    res.json({ profile: user?.aiProfile || null });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
