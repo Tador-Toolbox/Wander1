@@ -333,3 +333,97 @@ router.delete('/profile', auth, async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+/* ─────────────────────────────────────────
+   POST /api/ai/trip-suggest
+   Uses user's AI profile to suggest places for a specific trip
+───────────────────────────────────────── */
+router.post('/trip-suggest', auth, async (req, res) => {
+  try {
+    const { tripName, tripPlaces = [], allSavedPlaces = [] } = req.body;
+    if (!tripName) return res.status(400).json({ error: 'Trip name required' });
+
+    // Load user's AI profile
+    const User = require('../models/User');
+    const user = await User.findById(req.userId).select('aiProfile');
+    const profile = user?.aiProfile;
+
+    if (!profile || !profile.analyzedAt)
+      return res.status(400).json({ error: 'No AI profile found. Build your profile first.' });
+
+    const alreadyHas = tripPlaces.length
+      ? `The user already has these places in this trip, do NOT suggest them: ${tripPlaces.join(', ')}.`
+      : '';
+
+    // Build a compact summary of saved places for context
+    const beenPlaces = allSavedPlaces.filter(p => p.status === 'been');
+    const highRated  = allSavedPlaces.filter(p => p.rating >= 4);
+    const allTags    = allSavedPlaces.flatMap(p => p.tags);
+    const tagFreq    = allTags.reduce((acc, t) => { acc[t] = (acc[t]||0)+1; return acc; }, {});
+    const topTags    = Object.entries(tagFreq).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([t])=>t);
+
+    const savedContext = allSavedPlaces.length ? `
+The user has ${allSavedPlaces.length} saved places on their map. Key signals:
+- Top tags across all their places: ${topTags.join(', ')}
+- Places they've been to: ${beenPlaces.slice(0,8).map(p=>p.name+(p.location?' ('+p.location+')':'')).join(', ')||'none yet'}
+- Highest rated places (4-5★): ${highRated.slice(0,6).map(p=>p.name).join(', ')||'none yet'}
+Use this to reinforce their taste patterns when making suggestions.` : '';
+
+    const prompt = `You are a travel recommendation engine.
+
+The user is planning a trip to: "${tripName}"
+
+Their AI taste profile (from photo analysis):
+- Summary: ${profile.summary}
+- Interests & tags: ${(profile.tags || []).join(', ')}
+- Previously visited regions: ${(profile.locations || []).join(', ')}
+${savedContext}
+
+${alreadyHas}
+
+Suggest exactly 6 places that:
+1. Are specifically in or near "${tripName}" destination
+2. Strongly match their taste — prioritize tags and place types they love
+3. They probably haven't been to yet
+4. Are a mix of types (e.g. restaurant, landmark, nature, cafe, market) that fit their profile
+
+For each place provide accurate real coordinates (lat/lng).
+
+Reply ONLY with valid JSON, no markdown, no extra text:
+{
+  "suggestions": [
+    {
+      "name": "Place Name",
+      "location": "City, Country",
+      "lat": 12.345,
+      "lng": 67.890,
+      "why": "One sentence explaining why this matches their taste",
+      "tags": ["coffee", "cozy", "local"]
+    }
+  ]
+}`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content?.[0]?.text || '{}';
+    const result = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    res.json(result);
+  } catch (err) {
+    console.error('Trip suggest error:', err);
+    res.status(500).json({ error: 'Failed to generate suggestions' });
+  }
+});
