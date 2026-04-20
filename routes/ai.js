@@ -267,3 +267,53 @@ router.get('/profile', auth, async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+/* ─────────────────────────────────────────
+   POST /api/ai/geo-suggestions
+   Takes GPS coords from photos, reverse-geocodes them,
+   returns suggested places to add as "been there"
+───────────────────────────────────────── */
+router.post('/geo-suggestions', auth, async (req, res) => {
+  try {
+    const { locations } = req.body; // [{lat, lng, filename}]
+    if (!locations || !locations.length)
+      return res.status(400).json({ error: 'No locations provided' });
+
+    const mapsKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!mapsKey) return res.status(500).json({ error: 'Maps key missing' });
+
+    // Reverse geocode each unique location
+    const unique = locations.slice(0, 10); // max 10
+    const suggestions = await Promise.all(unique.map(async loc => {
+      try {
+        const r = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${loc.lat},${loc.lng}&key=${mapsKey}`
+        );
+        const d = await r.json();
+        if (!d.results || !d.results[0]) return null;
+        const result = d.results[0];
+        // Find a good place name — prefer establishment/point_of_interest over street address
+        const name = result.address_components.find(c =>
+          c.types.includes('point_of_interest') ||
+          c.types.includes('establishment') ||
+          c.types.includes('premise')
+        )?.long_name || result.address_components[0]?.long_name || 'Unknown Place';
+        const city = result.address_components.find(c => c.types.includes('locality'))?.long_name || '';
+        const country = result.address_components.find(c => c.types.includes('country'))?.long_name || '';
+        return {
+          name,
+          location: [city, country].filter(Boolean).join(', '),
+          address: result.formatted_address,
+          lat: loc.lat,
+          lng: loc.lng,
+          filename: loc.filename
+        };
+      } catch { return null; }
+    }));
+
+    res.json({ suggestions: suggestions.filter(Boolean) });
+  } catch (err) {
+    console.error('Geo suggestions error:', err);
+    res.status(500).json({ error: 'Failed to get suggestions' });
+  }
+});
