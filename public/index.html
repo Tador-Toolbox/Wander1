@@ -129,6 +129,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Nunito',
 .suggest-card .sc-tag{background:#e8fff5;border:1.5px solid #1D9E75;color:#0F6E56;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:700;}
 .suggest-card .sc-add{width:100%;padding:9px;border:none;border-radius:12px;background:linear-gradient(135deg,#1D9E75,#0F6E56);color:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;}
 .suggest-card .sc-add:disabled{opacity:.5;cursor:not-allowed;}
+.suggest-card.gem{border-color:#f5a623;background:linear-gradient(to bottom right,#fff,#fffbf0);}
+.suggest-card.gem:hover{border-color:#e8890a;}
+.sc-gem-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#f5a623,#e8890a);color:#fff;border-radius:10px;padding:3px 10px;font-size:10px;font-weight:800;margin-bottom:8px;letter-spacing:.03em;}
+.sc-maps-link{display:inline-flex;align-items:center;gap:4px;color:#1D9E75;font-size:11px;font-weight:700;text-decoration:none;margin-bottom:8px;}
+.sc-maps-link:hover{text-decoration:underline;}
+.sm-seasonal{background:var(--sky-light);border:1.5px solid var(--sky-mid);border-radius:14px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.sm-seasonal select{flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;color:var(--txt);background:var(--bg);outline:none;}
+.sm-seasonal label{font-size:12px;font-weight:800;color:var(--sky-dark);white-space:nowrap;}
 .suggest-loading{text-align:center;padding:40px 20px;}
 .suggest-loading .sl-icon{font-size:36px;animation:spin 1.5s linear infinite;display:inline-block;}
 .suggest-no-profile{text-align:center;padding:32px 20px;}
@@ -2047,25 +2055,48 @@ async function openTripSuggest(tripId, tripName){
   document.getElementById('suggestModal')?.remove();
   const modal = document.createElement('div');
   modal.id = 'suggestModal';
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const curMonth=new Date().getMonth();
   modal.innerHTML = `<div class="sm-sheet" style="position:relative;">
     <button class="sm-close" onclick="document.getElementById('suggestModal').remove()">✕</button>
     <div class="sm-head">
       <div class="sm-title">✦ Suggestions for ${esc(tripName)}</div>
-      <div class="sm-sub">AI-powered places based on your profile and trip destination</div>
+      <div class="sm-sub">8 curated picks + 2 hidden gems, tailored to your taste</div>
     </div>
-    <div class="sm-body" id="suggestBody">
-      <div class="suggest-loading"><div class="sl-icon">✦</div><div style="margin-top:14px;font-size:14px;font-weight:700;color:var(--txt)">Finding places for you…</div></div>
+    <div class="sm-body">
+      <div class="sm-seasonal">
+        <label>🗓 Visiting in</label>
+        <select id="visitMonth">
+          <option value="">— Not sure yet —</option>
+          ${months.map((m,i)=>`<option value="${m}" ${i===curMonth?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div id="suggestBody">
+        <div style="text-align:center;padding:12px 0 4px;">
+          <button onclick="runTripSuggest('${tripId}','${esc(tripName)}')" style="background:linear-gradient(135deg,#1D9E75,#0F6E56);border:none;color:#fff;border-radius:18px;padding:13px 32px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;width:100%;box-shadow:0 6px 20px rgba(29,158,117,.3);">✦ Find Places</button>
+        </div>
+      </div>
     </div>
   </div>`;
   modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
   document.body.appendChild(modal);
+
+  // profile check happens in runTripSuggest
+}
+
+async function runTripSuggest(tripId, tripName){
+  const body = document.getElementById('suggestBody');
+  if(!body) return;
+  const visitMonth = document.getElementById('visitMonth')?.value || '';
+
+  body.innerHTML = '<div class="suggest-loading"><div class="sl-icon">✦</div><div style="margin-top:14px;font-size:14px;font-weight:700;color:var(--txt)">Finding places for you…</div><div style="font-size:12px;color:var(--txt3);margin-top:4px;">Building 8 picks + 2 hidden gems</div></div>';
 
   try {
     // Check AI profile exists
     const pr = await apiFetch('/api/ai/profile');
     const pd = await pr.json();
     if(!pd.profile || !pd.profile.analyzedAt) {
-      document.getElementById('suggestBody').innerHTML = `<div class="suggest-no-profile">
+      body.innerHTML = `<div class="suggest-no-profile">
         <div class="snp-icon">✦</div>
         <p>You need an AI profile first so we can personalize suggestions for you.</p>
         <button onclick="document.getElementById('suggestModal').remove();openAIAgent()">Build AI Profile</button>
@@ -2073,52 +2104,58 @@ async function openTripSuggest(tripId, tripName){
       return;
     }
 
-    // Places already in this trip — names only to avoid re-suggesting
+    // Places already in this trip — to avoid re-suggesting
     const tripPlaces = places.filter(p => p.trip === tripId).map(p => p.name);
 
-    // All saved places on the map — used as taste signals (name, tags, rating, status)
+    // All saved places — taste signals
     const allSavedPlaces = places.map(p => ({
-      name: p.name,
-      location: p.location || '',
-      tags: p.tags || [],
-      rating: p.rating || 0,
-      status: p.status || 'none'
+      name: p.name, location: p.location||'', tags: p.tags||[], rating: p.rating||0, status: p.status||'none'
     }));
 
     const r = await apiFetch('/api/ai/trip-suggest', {
       method: 'POST',
-      body: JSON.stringify({ tripId, tripName, tripPlaces, allSavedPlaces })
+      body: JSON.stringify({ tripId, tripName, tripPlaces, allSavedPlaces, visitMonth })
     });
     const data = await r.json();
     if(data.error) throw new Error(data.error);
 
-    const body = document.getElementById('suggestBody');
-    if(!body) return;
     if(!data.suggestions || !data.suggestions.length) {
       body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--txt3);font-size:14px;">No suggestions found. Try building your AI profile with more photos.</div>';
       return;
     }
 
-    body.innerHTML = `
-      <div style="font-size:12px;color:var(--txt3);margin-bottom:14px;line-height:1.5;">Based on your taste for <strong>${esc((pd.profile.tags||[]).slice(0,4).join(', '))}</strong></div>
-      ${data.suggestions.map((s,i) => `
-        <div class="suggest-card" id="scard_${i}">
-          <div class="sc-body">
-            <div class="sc-name">${esc(s.name)}</div>
-            <div class="sc-loc">📍 ${esc(s.location)}</div>
-            <div class="sc-why">"${esc(s.why)}"</div>
-            <div class="sc-tags">${(s.tags||[]).map(t=>`<span class="sc-tag">${esc(t)}</span>`).join('')}</div>
-            <button class="sc-add" onclick="addSuggestionToTrip(${i},'${tripId}')">+ Add to ${esc(tripName)}</button>
-          </div>
-        </div>`).join('')}`;
-
-    // Store suggestions globally for the add function
     window._currentSuggestions = data.suggestions;
     window._currentSuggestTripId = tripId;
 
+    const normalPlaces = data.suggestions.filter(s => !s.isGem);
+    const gemPlaces    = data.suggestions.filter(s => s.isGem);
+
+    const renderCard = (s, i) => {
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name+' '+s.location)}`;
+      return `<div class="suggest-card${s.isGem?' gem':''}" id="scard_${i}">
+        <div class="sc-body">
+          ${s.isGem?`<div class="sc-gem-badge">💎 Hidden Gem</div>`:''}
+          <div class="sc-name">${esc(s.name)}</div>
+          <div class="sc-loc">📍 ${esc(s.location)}</div>
+          <a class="sc-maps-link" href="${mapsUrl}" target="_blank" rel="noopener">🗺 Open in Google Maps</a>
+          <div class="sc-why">"${esc(s.why)}"</div>
+          <div class="sc-tags">${(s.tags||[]).map(t=>`<span class="sc-tag">${esc(t)}</span>`).join('')}</div>
+          <button class="sc-add" onclick="addSuggestionToTrip(${i},'${tripId}')">+ Add to ${esc(tripName)}</button>
+        </div>
+      </div>`;
+    };
+
+    const tasteLabel = (pd.profile.tags||[]).slice(0,4).join(', ');
+    const monthLabel = visitMonth ? ` · Best time: ${visitMonth}` : '';
+    body.innerHTML = `
+      <div style="font-size:12px;color:var(--txt3);margin-bottom:14px;line-height:1.5;">Based on your taste for <strong>${esc(tasteLabel)}</strong>${monthLabel}</div>
+      ${normalPlaces.length?`<div style="font-size:11px;font-weight:800;color:var(--txt2);letter-spacing:.06em;margin-bottom:8px;">CURATED PICKS</div>`:''}
+      ${data.suggestions.filter(s=>!s.isGem).map((s,i)=>renderCard(s,data.suggestions.indexOf(s))).join('')}
+      ${gemPlaces.length?`<div style="font-size:11px;font-weight:800;color:#e8890a;letter-spacing:.06em;margin:16px 0 8px;">💎 HIDDEN GEMS</div>`:''}
+      ${gemPlaces.map(s=>renderCard(s,data.suggestions.indexOf(s))).join('')}`;
+
   } catch(e) {
-    const body = document.getElementById('suggestBody');
-    if(body) body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--coral);font-size:14px;">Error: ${esc(e.message)}</div>`;
+    body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--coral);font-size:14px;">Error: ${esc(e.message)}</div>`;
   }
 }
 
