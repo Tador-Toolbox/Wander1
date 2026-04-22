@@ -69,7 +69,7 @@ Reply ONLY with valid JSON, no extra text, no markdown fences:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+        max_tokens: 2500,
         messages: [{ role: 'user', content: prompt }]
       })
     });
@@ -414,8 +414,18 @@ Reply ONLY with valid JSON, no markdown, no extra text:
       "tags": ["coffee", "cozy", "local"],
       "isGem": false
     }
+  ],
+  "holidays": [
+    {
+      "name": "Festival or Holiday Name",
+      "dates": "April 13-15",
+      "emoji": "🎉",
+      "note": "One sentence about what it is and why it matters for a visitor"
+    }
   ]
-}`;
+}
+
+For holidays: include 2-5 major festivals, public holidays, or culturally significant events happening in "${tripName}" during ${visitMonth || 'the visit period'}. If visitMonth is unknown, list the 3 most iconic annual events. If there are no notable events, return an empty array.`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
