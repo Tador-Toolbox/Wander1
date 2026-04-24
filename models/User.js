@@ -12,10 +12,14 @@ const UserSchema = new mongoose.Schema({
   verifyToken:  { type: String, default: null },
   verifyExpires:{ type: Date, default: null },
   aiProfile: {
-    tags:        { type: [String], default: [] },
-    summary:     { type: String, default: '' },
-    locations:   { type: [String], default: [] },
-    analyzedAt:  { type: Date, default: null }
+    tags:         { type: [String], default: [] },
+    summary:      { type: String, default: '' },
+    locations:    { type: [String], default: [] },
+    analyzedAt:   { type: Date, default: null },
+    dietaryStyle: { type: String, default: '' },
+    travelStyle:  { type: String, default: '' },
+    socialStyle:  { type: String, default: '' },
+    timeOfDay:    { type: String, default: '' }
   }
 }, { timestamps: true });
 
