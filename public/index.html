@@ -15,7 +15,7 @@
   --amber:#f5a623; --amber-light:#fff8e8;
   --purple:#9b6dff;
   --txt:#1a1a2e; --txt2:#6b6880; --txt3:#a09cb0;
-  --tag-food:#ff6b47; --tag-beach:#4a9eff; --tag-night:#9b6dff; --tag-nature:#34c98a; --tag-culture:#f5a623;
+  --tag-food:#ff6b47; --tag-beach:#4a9eff; --tag-night:#9b6dff; --tag-nature:#34c98a; --tag-culture:#f5a623; --tag-beauty:#e91e8c; --tag-shopping:#00bcd4; --tag-nightclub:#6a0dad; --tag-bar:#e67e22;
   --sh:0 4px 24px rgba(74,158,255,.1); --sh2:0 12px 40px rgba(0,0,0,.08);
   --tr:.25s cubic-bezier(.4,0,.2,1);
 }
@@ -321,6 +321,10 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .chip[data-t="Nightlife"].on{border-color:var(--tag-night);color:var(--tag-night);background:rgba(155,109,255,.08);}
 .chip[data-t="Nature"].on{border-color:var(--tag-nature);color:var(--tag-nature);background:rgba(52,201,138,.08);}
 .chip[data-t="Culture"].on{border-color:var(--tag-culture);color:var(--tag-culture);background:rgba(245,166,35,.08);}
+.chip[data-t="Beauty"].on{border-color:var(--tag-beauty);color:var(--tag-beauty);background:rgba(233,30,140,.08);}
+.chip[data-t="Shopping"].on{border-color:var(--tag-shopping);color:var(--tag-shopping);background:rgba(0,188,212,.08);}
+.chip[data-t="Night Club"].on{border-color:var(--tag-nightclub);color:var(--tag-nightclub);background:rgba(106,13,173,.08);}
+.chip[data-t="Bar"].on{border-color:var(--tag-bar);color:var(--tag-bar);background:rgba(230,126,34,.08);}
 .places-list{flex:1;overflow-y:auto;padding:0 18px 24px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .pcard{background:#fff;border:2px solid var(--border);border-radius:24px;padding:16px;margin-bottom:10px;cursor:pointer;transition:var(--tr);box-shadow:0 2px 12px rgba(0,0,0,.04);animation:riseUp .3s cubic-bezier(.34,1.56,.64,1);}
 .pcard:hover{border-color:var(--sky-mid);transform:translateY(-2px);box-shadow:0 8px 24px rgba(74,158,255,.15);}
@@ -343,6 +347,10 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .tp-Nightlife{background:rgba(155,109,255,.12);color:var(--tag-night);}
 .tp-Nature{background:rgba(52,201,138,.12);color:var(--tag-nature);}
 .tp-Culture{background:rgba(245,166,35,.12);color:var(--tag-culture);}
+.tp-Beauty{background:rgba(233,30,140,.12);color:var(--tag-beauty);}
+.tp-Shopping{background:rgba(0,188,212,.12);color:var(--tag-shopping);}
+.tp-Night.Club, [class*="tp-Night Club"]{background:rgba(106,13,173,.12);color:var(--tag-nightclub);}
+.tp-Bar{background:rgba(230,126,34,.12);color:var(--tag-bar);}
 
 /* ── OVERLAYS ── */
 .overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;background:rgba(26,26,46,.45);backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center;overflow:hidden;}.overlay.open{display:flex;}
@@ -363,6 +371,10 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .topt[data-t="Nature"].sel{background:rgba(52,201,138,.1);border-color:var(--tag-nature);color:var(--tag-nature);}
 .topt[data-t="Culture"].sel{background:rgba(245,166,35,.1);border-color:var(--tag-culture);color:var(--tag-culture);}
 .topt[data-t="Coffee"].sel{background:rgba(160,82,45,.1);border-color:#a0522d;color:#a0522d;}
+.topt[data-t="Beauty"].sel{background:rgba(233,30,140,.1);border-color:var(--tag-beauty);color:var(--tag-beauty);}
+.topt[data-t="Shopping"].sel{background:rgba(0,188,212,.1);border-color:var(--tag-shopping);color:var(--tag-shopping);}
+.topt[data-t="Night Club"].sel{background:rgba(106,13,173,.1);border-color:var(--tag-nightclub);color:var(--tag-nightclub);}
+.topt[data-t="Bar"].sel{background:rgba(230,126,34,.1);border-color:var(--tag-bar);color:var(--tag-bar);}
 .sheet-divider{height:2px;background:var(--border);border-radius:1px;margin:18px -22px 18px;}
 .sec-lbl{font-size:10px;font-weight:800;color:var(--txt2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:9px;}
 .ig-row{display:flex;gap:7px;margin-bottom:6px;}
@@ -1080,6 +1092,10 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div class="topt" data-t="Nature" onclick="toggleTag(this)">🌿 Nature</div>
         <div class="topt" data-t="Culture" onclick="toggleTag(this)">🏛 Culture</div>
         <div class="topt" data-t="Coffee" onclick="toggleTag(this)">☕ Coffee</div>
+        <div class="topt" data-t="Beauty" onclick="toggleTag(this)">💅 Beauty</div>
+        <div class="topt" data-t="Shopping" onclick="toggleTag(this)">🛍 Shopping</div>
+        <div class="topt" data-t="Night Club" onclick="toggleTag(this)">🎵 Night Club</div>
+        <div class="topt" data-t="Bar" onclick="toggleTag(this)">🍸 Bar</div>
       </div>
     </div>
     <div class="mf">
@@ -1483,8 +1499,8 @@ async function apiFetch(path,opts={}){
 }
 async function loadPlaces(){try{const res=await apiFetch('/api/places');places=await res.json();updateCount();}catch(e){if(e.message!=='Unauthorized')toast('Failed to load places','err');}}
 
-const PCOL={Food:'#ff6b47',Beach:'#4a9eff',Nightlife:'#9b6dff',Nature:'#34c98a',Culture:'#f5a623',Coffee:'#a0522d'};
-const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕'};
+const PCOL={Food:'#ff6b47',Beach:'#4a9eff',Nightlife:'#9b6dff',Nature:'#34c98a',Culture:'#f5a623',Coffee:'#a0522d',Beauty:'#e91e8c',Shopping:'#00bcd4','Night Club':'#6a0dad',Bar:'#e67e22'};
+const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸'};
 function pc(t){return(t&&t[0])?PCOL[t[0]]||'#4a9eff':'#4a9eff';}
 function pi(t){return(t&&t[0])?PICO[t[0]]||'📍':'📍';}
 function mkIcon(tags){const c=pc(tags),e=pi(tags);return{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="44" height="54" viewBox="0 0 44 54"><filter id="sh"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,.18)"/></filter><path d="M22 0C9.85 0 0 9.85 0 22c0 16.5 22 32 22 32S44 38.5 44 22C44 9.85 34.15 0 22 0z" fill="${c}" filter="url(#sh)"/><circle cx="22" cy="22" r="13" fill="rgba(255,255,255,.3)"/><text x="22" y="28" text-anchor="middle" font-size="16">${e}</text></svg>`),scaledSize:new google.maps.Size(44,54),anchor:new google.maps.Point(22,54)};}
