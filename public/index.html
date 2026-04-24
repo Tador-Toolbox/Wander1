@@ -45,6 +45,30 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Nunito',
 .dot:nth-child(3){animation-delay:.4s;background:var(--sky-dark);}
 
 /* ── LOGIN ── */
+/* Onboarding */
+#onboardingScreen{background:var(--bg);}
+.ob-wrap{display:flex;flex-direction:column;align-items:center;padding:48px 24px 32px;text-align:center;flex:0 0 auto;}
+.ob-emoji{font-size:52px;margin-bottom:16px;}
+.ob-title{font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--txt);margin-bottom:8px;}
+.ob-sub{font-size:14px;color:var(--txt2);line-height:1.7;max-width:300px;margin:0 auto 28px;}
+.ob-hint{font-size:12px;color:var(--txt3);margin-bottom:20px;}
+.ob-upload-zone{width:100%;max-width:400px;border:2.5px dashed var(--border);border-radius:20px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;margin:0 auto 16px;}
+.ob-upload-zone:hover,.ob-upload-zone.dragover{border-color:#764ba2;background:#f8f5ff;}
+.ob-upload-icon{font-size:36px;margin-bottom:8px;}
+.ob-upload-label{font-size:14px;font-weight:800;color:var(--txt);margin-bottom:4px;}
+.ob-upload-hint{font-size:12px;color:var(--txt3);}
+.ob-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 24px;max-width:400px;margin:0 auto 8px;width:100%;}
+.ob-thumb{width:100%;aspect-ratio:1;border-radius:10px;object-fit:cover;border:2px solid var(--border);}
+.ob-count{font-size:12px;color:var(--txt3);text-align:center;margin-bottom:16px;}
+.ob-analyze-btn{width:calc(100% - 48px);max-width:400px;padding:15px;border:none;border-radius:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(102,126,234,.35);transition:all .2s;margin:0 auto;display:block;}
+.ob-analyze-btn:disabled{opacity:.45;cursor:not-allowed;}
+.ob-analyze-btn:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(102,126,234,.45);}
+.ob-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;}
+.ob-loading .obl-icon{font-size:44px;animation:spin 1.5s linear infinite;display:inline-block;margin-bottom:20px;}
+.ob-loading .obl-title{font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:var(--txt);margin-bottom:8px;}
+.ob-loading .obl-sub{font-size:13px;color:var(--txt3);line-height:1.6;max-width:280px;}
+.ob-progress-bar{width:240px;height:4px;background:var(--border);border-radius:4px;margin:16px auto 0;overflow:hidden;}
+.ob-progress-fill{height:100%;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:4px;width:0%;transition:width .4s ease;}
 #loginScreen{
   align-items:center;justify-content:center;padding:24px;
   background:radial-gradient(ellipse at 75% 15%,rgba(74,158,255,.16) 0%,transparent 50%),
@@ -718,6 +742,11 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
   </div>
 </div>
 
+<!-- ONBOARDING SCREEN -->
+<div id="onboardingScreen" class="screen">
+  <div id="obInner" style="display:flex;flex-direction:column;min-height:100vh;background:var(--bg);"></div>
+</div>
+
 <!-- MAP SCREEN -->
 <div id="mapScreen" class="screen">
   <div class="app-header">
@@ -1265,6 +1294,164 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <script>
 let token=localStorage.getItem('wandr_token'),currentUser=JSON.parse(localStorage.getItem('wandr_user')||'null'),places=[],trips=[],gmap=null,infoWin=null,autocomplete=null,editId=null,selTags=[],selRating=0,activeTag='All',pendingCoords=null,fabOpen=false,isReg=false,anthropicKey=null,activeTrip=null,editTripId=null,selEmoji='✈️',selColor='#4a9eff',shareTargetTrip=null,importToken=null;
 
+/* ── ONBOARDING ── */
+let _obFiles = [];
+
+async function checkAndShowOnboarding(){
+  try{
+    const r = await apiFetch('/api/ai/profile');
+    const d = await r.json();
+    if(!d.profile || !d.profile.analyzedAt){
+      showOnboarding();
+      return true; // blocked — show onboarding
+    }
+  }catch{}
+  return false; // has profile — go to app
+}
+
+function showOnboarding(){
+  showScreen('onboardingScreen');
+  _obFiles = [];
+  renderOnboardingUpload();
+}
+
+function renderOnboardingUpload(){
+  const el = document.getElementById('obInner');
+  el.innerHTML = `
+    <div class="ob-wrap">
+      <div class="ob-emoji">✦</div>
+      <div class="ob-title">Let's get to know you</div>
+      <div class="ob-sub">Upload 5–20 photos of places you've been, food you love, coffee you drink, or anything you enjoy. AI will build your personal travel profile.</div>
+    </div>
+    <div style="padding:0 24px;width:100%;max-width:448px;margin:0 auto;">
+      <div class="ob-upload-zone" id="obDropZone" onclick="document.getElementById('obInput').click()" ondragover="obDragOver(event)" ondragleave="obDragLeave(event)" ondrop="obDropFiles(event)">
+        <input type="file" id="obInput" multiple accept="image/*" style="display:none" onchange="obFilesSelected(event)">
+        <div class="ob-upload-icon">📸</div>
+        <div class="ob-upload-label">Tap to select photos</div>
+        <div class="ob-upload-hint">5 minimum · 20 maximum · travel, food, coffee, hobbies</div>
+      </div>
+      <div class="ob-grid" id="obGrid"></div>
+      <div class="ob-count" id="obCount"></div>
+      <button class="ob-analyze-btn" id="obAnalyzeBtn" onclick="runOnboarding()" disabled>✦ Build My Profile</button>
+      <div style="margin-top:14px;text-align:center;font-size:11px;color:var(--txt3);line-height:1.6;">Your photos are analyzed privately and never stored.<br>Only the insights are saved to your profile.</div>
+    </div>`;
+}
+
+function obDragOver(e){e.preventDefault();document.getElementById('obDropZone')?.classList.add('dragover');}
+function obDragLeave(){document.getElementById('obDropZone')?.classList.remove('dragover');}
+function obDropFiles(e){e.preventDefault();obDragLeave();obProcessFiles(e.dataTransfer.files);}
+function obFilesSelected(e){obProcessFiles(e.target.files);}
+
+function obProcessFiles(fileList){
+  const newFiles = Array.from(fileList).filter(f=>f.type.startsWith('image/'));
+  _obFiles = [..._obFiles, ...newFiles].slice(0,20);
+  const grid = document.getElementById('obGrid');
+  const countEl = document.getElementById('obCount');
+  const btn = document.getElementById('obAnalyzeBtn');
+  if(grid){
+    grid.innerHTML = _obFiles.map(f=>`<img class="ob-thumb" src="${URL.createObjectURL(f)}">`).join('');
+  }
+  if(countEl){
+    const n = _obFiles.length;
+    const color = n<5?'var(--coral)':n>=5?'var(--mint)':'var(--txt3)';
+    countEl.innerHTML = `<span style="color:${color};font-weight:700;">${n} photo${n!==1?'s':''} selected</span>${n<5?` — need ${5-n} more`:''}`;
+  }
+  if(btn) btn.disabled = _obFiles.length < 5;
+}
+
+async function runOnboarding(){
+  if(_obFiles.length < 5){toast('Please upload at least 5 photos','err');return;}
+  const el = document.getElementById('obInner');
+  el.innerHTML = `<div class="ob-loading">
+    <div class="obl-icon">✦</div>
+    <div class="obl-title">Getting to know you…</div>
+    <div class="obl-sub">Claude is studying your photos — your taste in food, the places you love, your travel style, and more.</div>
+    <div class="ob-progress-bar"><div class="ob-progress-fill" id="obProgressFill"></div></div>
+  </div>`;
+
+  // Animate progress bar
+  let prog = 0;
+  const progInterval = setInterval(()=>{
+    prog = Math.min(prog + Math.random()*8, 88);
+    const fill = document.getElementById('obProgressFill');
+    if(fill) fill.style.width = prog + '%';
+  }, 400);
+
+  try{
+    // Extract GPS from files
+    const geoLocations = [];
+    await Promise.all(_obFiles.map(f=>new Promise(resolve=>{
+      const reader = new FileReader();
+      reader.onload = e=>{
+        try{
+          const buf = e.target.result;
+          const view = new DataView(buf);
+          const gps = _extractExifGPS(view);
+          if(gps) geoLocations.push({...gps, filename:f.name});
+        }catch{}
+        resolve();
+      };
+      reader.onerror = resolve;
+      reader.readAsArrayBuffer(f);
+    })));
+
+    // Resize + encode all photos
+    const images = await Promise.all(_obFiles.map(f=>new Promise((resolve,reject)=>{
+      const img = new Image();
+      const url = URL.createObjectURL(f);
+      img.onload = ()=>{
+        const MAX=512;
+        let w=img.width,h=img.height;
+        if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+        const canvas=document.createElement('canvas');
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        URL.revokeObjectURL(url);
+        resolve({base64:canvas.toDataURL('image/jpeg',0.75).split(',')[1],mediaType:'image/jpeg',filename:f.name});
+      };
+      img.onerror=reject;
+      img.src=url;
+    })));
+
+    // Build profile via AI
+    const r = await apiFetch('/api/ai/build-profile',{
+      method:'POST',
+      body:JSON.stringify({images, isOnboarding:true})
+    });
+    const data = await r.json();
+    if(data.error) throw new Error(data.error);
+
+    // Handle geo suggestions
+    if(geoLocations.length){
+      try{
+        const gr = await apiFetch('/api/ai/geo-suggestions',{method:'POST',body:JSON.stringify({locations:geoLocations})});
+        const gd = await gr.json();
+        window._pendingGeoSuggestions = gd.suggestions||[];
+      }catch{ window._pendingGeoSuggestions=[]; }
+    }else{ window._pendingGeoSuggestions=[]; }
+
+    // Complete progress bar
+    clearInterval(progInterval);
+    const fill = document.getElementById('obProgressFill');
+    if(fill){fill.style.transition='width .3s ease';fill.style.width='100%';}
+
+    // Small pause then enter app
+    setTimeout(()=>{
+      showScreen('mapScreen');
+      initApp();
+    }, 600);
+
+  }catch(e){
+    clearInterval(progInterval);
+    el.innerHTML = `<div class="ob-loading">
+      <div style="font-size:40px;margin-bottom:16px;">⚠️</div>
+      <div class="obl-title">Something went wrong</div>
+      <div class="obl-sub" style="color:var(--coral);">${esc(e.message)}</div>
+      <button class="ob-analyze-btn" style="margin-top:24px;" onclick="showOnboarding()">Try Again</button>
+    </div>`;
+  }
+}
+
 window.addEventListener('load',()=>{
   setTimeout(async ()=>{
     if(token){
@@ -1272,7 +1459,14 @@ window.addEventListener('load',()=>{
       try{
         const r=await fetch('/api/places',{headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'}});
         if(r.status===401){localStorage.removeItem('wandr_token');showScreen('loginScreen');}
-        else{showScreen('mapScreen');initApp().then(()=>{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{if(gmap){gmap.panTo({lat:pos.coords.latitude,lng:pos.coords.longitude});gmap.setZoom(13);}},()=>{},{timeout:5000});});}
+        else{
+          // Check if user needs onboarding first
+          const needsOnboarding = await checkAndShowOnboarding();
+          if(!needsOnboarding){
+            showScreen('mapScreen');
+            initApp().then(()=>{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{if(gmap){gmap.panTo({lat:pos.coords.latitude,lng:pos.coords.longitude});gmap.setZoom(13);}},()=>{},{timeout:5000});});
+          }
+        }
       } catch {showScreen('mapScreen');initApp();}
     } else {
       showScreen('loginScreen');
@@ -1328,7 +1522,8 @@ async function doAuth(){
       return;
     }
     token=data.token;localStorage.setItem('wandr_token',token);if(data.user){localStorage.setItem('wandr_user',JSON.stringify(data.user));currentUser=data.user;}
-    showScreen('mapScreen');await initApp();
+    const needsOnboarding = await checkAndShowOnboarding();
+    if(!needsOnboarding){ showScreen('mapScreen'); await initApp(); }
   }catch{showAuthErr('Network error – is the server running?');}
   finally{btn.disabled=false;btn.textContent=isReg?'Create Account 🌍':'Sign In 🚀';}
 }
