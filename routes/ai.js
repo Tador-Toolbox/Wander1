@@ -4,6 +4,103 @@ const Trip   = require('../models/Trip');
 const Place  = require('../models/Place');
 
 /* ─────────────────────────────────────────
+   TAG CATEGORY MAP
+   Groups related tags so one bad rating at
+   one place doesn't penalise the whole category
+───────────────────────────────────────── */
+const TAG_CATEGORIES = {
+  coffee:    ['coffee','specialty-coffee','cafe','espresso','latte','cappuccino'],
+  food:      ['food','street-food','restaurant','dining','brunch','breakfast','lunch','dinner','local-food'],
+  fineDining:['fine-dining','michelin','omakase','tasting-menu','wagyu','steak','beef'],
+  japanese:  ['japanese','sushi','ramen','izakaya','yakitori','tempura','anime','manga','japan'],
+  nature:    ['nature','hiking','mountains','forest','waterfall','national-park','outdoor','trekking'],
+  beach:     ['beach','ocean','sea','snorkeling','surfing','island','coast'],
+  nightlife: ['nightlife','night-club','dancing','club','dj','rave'],
+  bar:       ['bar','cocktails','wine-bar','craft-beer','pub','drinks','whiskey'],
+  culture:   ['culture','museum','gallery','art','history','heritage','temple','church','monument'],
+  shopping:  ['shopping','market','boutique','luxury','vintage','mall','bazaar'],
+  beauty:    ['beauty','spa','wellness','salon','massage','yoga','gym'],
+  sports:    ['sports','football','basketball','cycling','climbing','diving','extreme'],
+  social:    ['social','rooftop','brunch-spot','trendy','instagram','popular']
+};
+
+function getCategory(tag){
+  const t = tag.toLowerCase().replace(/\s+/g,'-');
+  for(const [cat, tags] of Object.entries(TAG_CATEGORIES)){
+    if(tags.includes(t)) return cat;
+  }
+  return t; // use tag itself as category if no match
+}
+
+/* ─────────────────────────────────────────
+   FEEDBACK LOOP
+   Called after every rating change on a place
+   Requires 3+ ratings in a category before
+   drawing any conclusion
+───────────────────────────────────────── */
+async function updateFeedbackLoop(userId, tags, newRating, oldRating){
+  const User = require('../models/User');
+  const user = await User.findById(userId);
+  if(!user) return;
+
+  if(!user.feedbackLoop) user.feedbackLoop = { categories: new Map() };
+  const cats = user.feedbackLoop.categories;
+
+  // Get unique categories for this place's tags
+  const categories = [...new Set(tags.map(getCategory))];
+
+  for(const cat of categories){
+    const current = cats.get(cat) || { totalRating:0, count:0, lastUpdated:null };
+
+    // Subtract old rating if this is an update (not a new rating)
+    if(oldRating && oldRating > 0){
+      current.totalRating -= oldRating;
+      current.count = Math.max(0, current.count - 1);
+    }
+
+    // Add new rating (only if it's a real rating, not clearing)
+    if(newRating && newRating > 0){
+      current.totalRating += newRating;
+      current.count += 1;
+    }
+
+    current.lastUpdated = new Date();
+    cats.set(cat, current);
+  }
+
+  user.markModified('feedbackLoop.categories');
+  await user.save();
+}
+
+function buildFeedbackContext(feedbackLoop){
+  if(!feedbackLoop || !feedbackLoop.categories) return '';
+  const MIN_RATINGS = 3; // need at least 3 ratings to draw conclusions
+  const strong = [], positive = [], negative = [], avoid = [];
+
+  for(const [cat, data] of feedbackLoop.categories.entries()){
+    if(data.count < MIN_RATINGS) continue; // not enough data yet
+    const avg = data.totalRating / data.count;
+    if(avg >= 4.5) strong.push(cat);
+    else if(avg >= 3.5) positive.push(cat);
+    else if(avg <= 1.5) avoid.push(cat);
+    else if(avg <= 2.5) negative.push(cat);
+    // 2.5–3.5 = neutral, ignore
+  }
+
+  if(!strong.length && !positive.length && !negative.length && !avoid.length) return '';
+
+  let ctx = '\nUser rating patterns (based on actual visits, minimum 3 ratings per category):';
+  if(strong.length)   ctx += `\n- STRONGLY loves: ${strong.join(', ')} (consistently 4.5+ stars)`;
+  if(positive.length) ctx += `\n- Generally enjoys: ${positive.join(', ')} (3.5-4.5 stars average)`;
+  if(negative.length) ctx += `\n- Mixed feelings about: ${negative.join(', ')} (below 2.5 average)`;
+  if(avoid.length)    ctx += `\n- Tends to dislike: ${avoid.join(', ')} (consistently under 1.5 stars — weight heavily against these)`;
+  ctx += '\nUse this to prioritise or deprioritise suggestions accordingly.';
+  return ctx;
+}
+
+module.exports.updateFeedbackLoop = updateFeedbackLoop;
+
+/* ─────────────────────────────────────────
    POST /api/ai/trip-plan/:tripId
 ───────────────────────────────────────── */
 router.post('/trip-plan/:tripId', auth, async (req, res) => {
@@ -69,7 +166,7 @@ Reply ONLY with valid JSON, no extra text, no markdown fences:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 2500,
+        max_tokens: 3000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
@@ -415,6 +512,10 @@ router.post('/trip-suggest', auth, async (req, res) => {
     const tagFreq    = allTags.reduce((acc, t) => { acc[t] = (acc[t]||0)+1; return acc; }, {});
     const topTags    = Object.entries(tagFreq).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([t])=>t);
 
+    // Build feedback context from user's rating patterns
+    const user = await User.findById(req.userId).select('feedbackLoop');
+    const feedbackContext = buildFeedbackContext(user?.feedbackLoop);
+
     const savedContext = allSavedPlaces.length ? `
 The user has ${allSavedPlaces.length} saved places on their map. Key signals:
 - Top tags across all their places: ${topTags.join(', ')}
@@ -434,24 +535,31 @@ Their AI taste profile (from photo analysis):
 - Summary: ${profile.summary}
 - Interests & tags: ${(profile.tags || []).join(', ')}
 - Previously visited regions: ${(profile.locations || []).join(', ')}
-${savedContext}
+${savedContext}${feedbackContext}
 
 ${alreadyHas}
 ${seasonalNote}
 
-Return exactly 10 suggestions total, split as follows:
+Return exactly 11 suggestions total, split as follows:
 
-PART 1 — 8 CURATED PICKS (isGem: false):
+PART 1 — 8 CURATED PICKS (isGem: false, isMichelin: false):
 - Must be in or near "${tripName}" destination
 - Strongly match their taste profile
 - Balanced mix — include at least: 2 restaurants/food spots, 1 cafe, 2 landmarks/attractions, 1 nature/outdoor spot, 1 market/shopping, 1 nightlife/bar (adjust based on their interests)
 - Well-known quality places, not random tourist traps
 
-PART 2 — 2 HIDDEN GEMS (isGem: true):
+PART 2 — 2 HIDDEN GEMS (isGem: true, isMichelin: false):
 - Truly off the beaten path — places most tourists never find
 - Loved by locals, not in mainstream travel guides
 - Could be: a tiny family-run restaurant, a secret viewpoint, a neighborhood market, an underground bar, a little-known temple or gallery
 - Must still match their taste profile
+
+PART 3 — 1 MICHELIN PICK (isMichelin: true, isGem: false):
+- Must be a REAL Michelin-listed restaurant in or near "${tripName}" that you are CONFIDENT exists in the Michelin Guide
+- Prefer Bib Gourmand (great value) if user profile suggests budget/mid-range, otherwise 1-2 Star
+- Set michelinDistinction to exactly one of: "Bib Gourmand", "1 Star", "2 Stars", "3 Stars"
+- ONLY include if you are genuinely confident it is Michelin listed — do NOT guess or invent
+- The why field must mention the Michelin distinction and what makes it exceptional
 
 For each place provide accurate real coordinates (lat/lng).
 
@@ -465,7 +573,9 @@ Reply ONLY with valid JSON, no markdown, no extra text:
       "lng": 67.890,
       "why": "One sentence explaining why this matches their taste",
       "tags": ["coffee", "cozy", "local"],
-      "isGem": false
+      "isGem": false,
+      "isMichelin": false,
+      "michelinDistinction": ""
     }
   ],
   "holidays": [
