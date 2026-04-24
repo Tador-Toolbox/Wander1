@@ -154,6 +154,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Nunito',
 .suggest-card .sc-add{width:100%;padding:9px;border:none;border-radius:12px;background:linear-gradient(135deg,#1D9E75,#0F6E56);color:#fff;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;}
 .suggest-card .sc-add:disabled{opacity:.5;cursor:not-allowed;}
 .suggest-card.gem{border-color:#f5a623;background:linear-gradient(to bottom right,#fff,#fffbf0);}
+.suggest-card.michelin{border-color:#bf0000;background:linear-gradient(to bottom right,#fff,#fff5f5);}
+.suggest-card.michelin:hover{border-color:#8b0000;box-shadow:0 4px 16px rgba(191,0,0,.12);}
+.sc-michelin-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#bf0000,#8b0000);color:#fff;border-radius:10px;padding:4px 11px;font-size:10px;font-weight:800;margin-bottom:7px;letter-spacing:.03em;}
+.suggest-card.michelin .sc-tag{background:#fff0f0;border-color:#bf0000;color:#8b0000;}
+.suggest-card.michelin .sc-maps-link{color:#bf0000;}
+.suggest-card.michelin .sc-add{background:linear-gradient(135deg,#bf0000,#8b0000);}
 .suggest-card.gem:hover{border-color:#e8890a;}
 .sc-gem-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#f5a623,#e8890a);color:#fff;border-radius:10px;padding:3px 10px;font-size:10px;font-weight:800;margin-bottom:8px;letter-spacing:.03em;}
 .sc-maps-link{display:inline-flex;align-items:center;gap:4px;color:#1D9E75;font-size:11px;font-weight:700;text-decoration:none;margin-bottom:8px;}
@@ -2346,14 +2352,20 @@ async function runTripSuggest(tripId, tripName){
     window._currentSuggestions = data.suggestions;
     window._currentSuggestTripId = tripId;
 
-    const normalPlaces = data.suggestions.filter(s => !s.isGem);
-    const gemPlaces    = data.suggestions.filter(s => s.isGem);
+    const normalPlaces  = data.suggestions.filter(s => !s.isGem && !s.isMichelin);
+    const gemPlaces     = data.suggestions.filter(s => s.isGem);
+    const michelinPlace = data.suggestions.find(s => s.isMichelin) || null;
 
+    const michelinEmoji={'Bib Gourmand':'🍽','1 Star':'⭐','2 Stars':'⭐⭐','3 Stars':'⭐⭐⭐'};
     const renderCard = (s, i) => {
       const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name+' '+s.location)}`;
-      return `<div class="suggest-card${s.isGem?' gem':''}" id="scard_${i}">
+      const cardClass = s.isMichelin?'michelin':s.isGem?'gem':'';
+      const badge = s.isMichelin
+        ?`<div class="sc-michelin-badge">${michelinEmoji[s.michelinDistinction]||'🔴'} Michelin ${esc(s.michelinDistinction||'')}</div>`
+        :s.isGem?`<div class="sc-gem-badge">💎 Hidden Gem</div>`:'';
+      return `<div class="suggest-card${cardClass?' '+cardClass:''}" id="scard_${i}">
         <div class="sc-body">
-          ${s.isGem?`<div class="sc-gem-badge">💎 Hidden Gem</div>`:''}
+          ${badge}
           <div class="sc-name">${esc(s.name)}</div>
           <div class="sc-loc">📍 ${esc(s.location)}</div>
           <a class="sc-maps-link" href="${mapsUrl}" target="_blank" rel="noopener">🗺 Open in Google Maps</a>
@@ -2386,9 +2398,10 @@ async function runTripSuggest(tripId, tripName){
       <div style="font-size:12px;color:var(--txt3);margin-bottom:14px;line-height:1.5;">Based on your taste for <strong>${esc(tasteLabel)}</strong>${monthLabel}</div>
       ${holidaysHtml}
       ${normalPlaces.length?`<div style="font-size:11px;font-weight:800;color:var(--txt2);letter-spacing:.06em;margin-bottom:8px;">CURATED PICKS</div>`:''}
-      ${data.suggestions.filter(s=>!s.isGem).map((s,i)=>renderCard(s,data.suggestions.indexOf(s))).join('')}
+      ${data.suggestions.filter(s=>!s.isGem&&!s.isMichelin).map((s,i)=>renderCard(s,data.suggestions.indexOf(s))).join('')}
       ${gemPlaces.length?`<div style="font-size:11px;font-weight:800;color:#e8890a;letter-spacing:.06em;margin:16px 0 8px;">💎 HIDDEN GEMS</div>`:''}
-      ${gemPlaces.map(s=>renderCard(s,data.suggestions.indexOf(s))).join('')}`;
+      ${gemPlaces.map(s=>renderCard(s,data.suggestions.indexOf(s))).join('')}
+      ${michelinPlace?`<div style="font-size:11px;font-weight:800;color:#bf0000;letter-spacing:.06em;margin:16px 0 8px;">🔴 MICHELIN GUIDE</div>${renderCard(michelinPlace,data.suggestions.indexOf(michelinPlace))}`:''}`;
 
   } catch(e) {
     body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--coral);font-size:14px;">Error: ${esc(e.message)}</div>`;
