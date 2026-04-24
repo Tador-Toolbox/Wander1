@@ -513,8 +513,8 @@ router.post('/trip-suggest', auth, async (req, res) => {
     const topTags    = Object.entries(tagFreq).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([t])=>t);
 
     // Build feedback context from user's rating patterns
-    const user = await User.findById(req.userId).select('feedbackLoop');
-    const feedbackContext = buildFeedbackContext(user?.feedbackLoop);
+    const feedbackUser = await User.findById(req.userId).select('feedbackLoop');
+    const feedbackContext = buildFeedbackContext(feedbackUser?.feedbackLoop);
 
     const savedContext = allSavedPlaces.length ? `
 The user has ${allSavedPlaces.length} saved places on their map. Key signals:
