@@ -179,7 +179,7 @@ module.exports = router;
 ───────────────────────────────────────── */
 router.post('/build-profile', auth, async (req, res) => {
   try {
-    const { images } = req.body;
+    const { images, isOnboarding = false } = req.body;
     // images = array of { base64, mediaType, filename }
     if (!images || !images.length)
       return res.status(400).json({ error: 'No images provided' });
@@ -192,7 +192,54 @@ router.post('/build-profile', auth, async (req, res) => {
       source: { type: 'base64', media_type: img.mediaType || 'image/jpeg', data: img.base64 }
     }));
 
-    const prompt = `You are analyzing a person's personal photos to understand who they are and what they love.
+    const prompt = isOnboarding
+      ? `You are a travel intelligence system analyzing a new user's personal photos to build their taste and personality profile.
+
+Study EVERY photo intensely. For each photo consider:
+
+FOOD & DRINK:
+- What specific food is it? (sushi, wagyu, pad thai, shakshuka, pasta, burger, etc.)
+- Is it street food or fine dining?
+- What coffee/drink? (ice latte, espresso, black coffee, cocktail, beer, wine)
+- Is it a specialty cafe or chain?
+
+PLACES & TRAVEL:
+- What type of place? (urban street, beach, mountain, jungle, desert, market, restaurant, museum, club)
+- Which city/country if identifiable from signs, architecture, or landmarks?
+- Urban or rural? Tourist area or local neighborhood?
+- Indoor or outdoor?
+
+SOCIAL CONTEXT:
+- Is the person alone or with many people?
+- Is it a big crowded nightclub with dancing or a quiet bar with conversation?
+- Daytime activity or nightlife?
+- Luxury/high-end or budget/local?
+
+ACTIVITIES & INTERESTS:
+- Sports? (surfing, hiking, football, gym, extreme sports)
+- Arts/culture? (museums, galleries, street art, concerts)
+- Nature? (specific: beach, mountains, forest, desert, waterfalls)
+- Shopping? (luxury brands, local markets, vintage)
+- Beauty/wellness? (spas, salons, wellness centers)
+
+PERSONALITY SIGNALS:
+- Adventurous or comfort-seeking?
+- Social or solitary?
+- Foodie, explorer, party person, culture lover, nature person?
+
+Reply ONLY with valid JSON, no markdown, no extra text:
+{
+  "tags": ["specialty-coffee", "wagyu", "street-food", "hiking", "nightlife", "beach", "anime", "museums"],
+  "summary": "A vivid one-sentence profile like: A Japan-obsessed foodie who hunts specialty coffee by day, explores local street food markets at night, and balances culture with outdoor hikes.",
+  "locations": ["Tokyo", "Vietnam", "Tel Aviv beach promenade"],
+  "dietaryStyle": "meat-lover|vegetarian|vegan|omnivore",
+  "travelStyle": "luxury|budget|backpacker|mid-range",
+  "socialStyle": "solo|social|group",
+  "timeOfDay": "day-person|night-person|both"
+}
+
+Tags: 5-15 items, specific and lowercase. Use precise terms (wagyu not just beef, espresso not just coffee).`
+      : `You are analyzing a person's personal photos to understand who they are and what they love.
 
 Look at ALL the photos carefully. Extract:
 1. INTERESTS & HOBBIES — what activities, foods, places, sports, passions do you see? (e.g. coffee, hiking, football, sushi, nightlife, museums, beaches, dogs, photography)
@@ -239,10 +286,16 @@ Tags should be lowercase, 2-15 items, specific and useful for place recommendati
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     user.aiProfile = {
-      tags:       profile.tags || [],
-      summary:    profile.summary || '',
-      locations:  profile.locations || [],
-      analyzedAt: new Date()
+      tags:         profile.tags || [],
+      summary:      profile.summary || '',
+      locations:    profile.locations || [],
+      analyzedAt:   new Date(),
+      ...(isOnboarding && {
+        dietaryStyle: profile.dietaryStyle || '',
+        travelStyle:  profile.travelStyle  || '',
+        socialStyle:  profile.socialStyle  || '',
+        timeOfDay:    profile.timeOfDay    || ''
+      })
     };
     await user.save();
 
