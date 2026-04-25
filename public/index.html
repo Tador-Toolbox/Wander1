@@ -716,6 +716,9 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
   background:var(--ink);
 }
 .bnav-btn::after{content:'';position:absolute;bottom:-2px;width:0;height:3px;}
+/* Toggle bar active state */
+.map-toggle-btn{flex:1;padding:7px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid var(--border2);background:var(--bg);color:var(--ink2);}
+.map-toggle-btn.active{background:var(--ink)!important;color:#fff!important;border-color:var(--ink)!important;}
 
 /* Adjust app content for bottom nav */
 .app-content{flex:1;position:relative;overflow:hidden;padding-bottom:0;}
@@ -860,10 +863,10 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
   <!-- Map/List/Social toggle bar -->
   <div id="mapViewToggle" style="position:fixed;top:60px;left:0;right:0;z-index:199;background:rgba(250,248,244,.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;gap:6px;">
-    <button onclick="showMap()" id="toggleMap" style="flex:1;padding:7px;border-radius:10px;background:var(--ink);color:#fff;border:none;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">🗺 Map</button>
-    <button onclick="showList()" id="toggleSocial" style="flex:1;padding:7px;border-radius:10px;background:var(--bg);color:var(--ink2);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">🌐 Social</button>
-    <button onclick="showSearch()" id="toggleSearch" style="flex:1;padding:7px;border-radius:10px;background:var(--bg);color:var(--ink2);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">🔍 Search</button>
-    <button onclick="showMessages()" id="toggleMessages" style="flex:1;padding:7px;border-radius:10px;background:var(--bg);color:var(--ink2);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;position:relative;">💬 Messages<span id="msgBadge" style="display:none;position:absolute;top:2px;right:6px;width:7px;height:7px;background:var(--coral);border-radius:50%;"></span></button>
+    <button onclick="showMap()" id="toggleMap" class="map-toggle-btn active">🗺 Map</button>
+    <button onclick="showList()" id="toggleSocial" class="map-toggle-btn">🌐 Social</button>
+    <button onclick="showSearch()" id="toggleSearch" class="map-toggle-btn">🔍 Search</button>
+    <button onclick="showMessages()" id="toggleMessages" class="map-toggle-btn" style="position:relative;">💬 Messages<span id="msgBadge" style="display:none;position:absolute;top:2px;right:6px;width:7px;height:7px;background:var(--coral);border-radius:50%;"></span></button>
   </div>
 
   <div class="app-content">
@@ -1794,6 +1797,13 @@ function openIW(place,marker){
 
 function setupAC(){const input=document.getElementById('pLocation');autocomplete=new google.maps.places.Autocomplete(input,{fields:['geometry','name','formatted_address','place_id']});autocomplete.addListener('place_changed',()=>{const pl=autocomplete.getPlace();if(!pl.geometry)return;pendingCoords={lat:pl.geometry.location.lat(),lng:pl.geometry.location.lng()};if(!document.getElementById('pName').value.trim())document.getElementById('pName').value=pl.name||'';});}
 
+function _setToggleActive(btnId){
+  ['toggleMap','toggleSocial','toggleSearch','toggleMessages'].forEach(b=>{
+    const e=document.getElementById(b);if(e)e.classList.remove('active');
+  });
+  const el=document.getElementById(btnId);if(el)el.classList.add('active');
+}
+
 function _setNavActive(btnId){
   ['btnAI','btnMap','btnTrips','btnProfile'].forEach(b=>{
     const e=document.getElementById(b);if(e)e.classList.remove('on');
@@ -1851,6 +1861,7 @@ function showMap(){
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=id==='fab'?'block':'flex';});
   document.getElementById('mapViewToggle').style.display='flex';
   _setNavActive('btnMap');
+  _setToggleActive('toggleMap');
   if(gmap)google.maps.event.trigger(gmap,'resize');
 }
 function showList(){
@@ -1860,6 +1871,7 @@ function showList(){
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('mapViewToggle').style.display='flex';
   _setNavActive('btnMap');
+  _setToggleActive('toggleSocial');
   loadSocialFeed();
 }
 
