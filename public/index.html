@@ -830,10 +830,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div id="mapScreen" class="screen">
   <div class="app-header">
     <div class="h-logo" onclick="showMap()" style="cursor:pointer;">Wandr <span class="h-dot">·</span></div>
-    <button id="btnAIAgent" onclick="openAIAgent()" title="AI Agent" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:22px;padding:7px 14px;display:flex;align-items:center;gap:6px;cursor:pointer;box-shadow:0 4px 14px rgba(102,126,234,.35);transition:all .2s;">
-      <span style="font-size:13px;">✦</span>
-      <span style="font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;color:#fff;letter-spacing:.02em;">AI Agent</span>
-    </button>
+
     <div style="display:flex;align-items:center;gap:8px;">
       <button onclick="showMyProfile()" title="My Profile" style="background:none;border:none;cursor:pointer;padding:0;position:relative;">
         <div id="headerMyProfile" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--mint),var(--sky));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;overflow:hidden;border:2px solid var(--mint);flex-shrink:0;">🗺️</div>
@@ -1834,16 +1831,16 @@ function showAIScreen(){
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('mapViewToggle').style.display='none';
   _setNavActive('btnAI');
-  // Populate AI screen with real data
-  const aiText=document.getElementById('aiSummaryText');
-  if(aiText&&currentUser?.aiProfile?.summary) aiText.textContent=currentUser.aiProfile.summary;
-  const aiTags=document.getElementById('aiTagsContainer');
-  if(aiTags&&currentUser?.aiProfile?.tags?.length){
-    aiTags.innerHTML=currentUser.aiProfile.tags.map(t=>`<span style="background:var(--ink);color:#fff;border-radius:10px;padding:6px 13px;font-size:12px;font-weight:600;">${esc(t)}</span>`).join('');
-  }
+  // Greeting
+  const hr=new Date().getHours();
+  const greet=hr<12?'Good morning':hr<18?'Good afternoon':'Good evening';
+  const ag=document.getElementById('aiGreeting');
+  if(ag)ag.textContent=greet+' ✦';
+  // Show AI screen immediately
+  document.getElementById('aiScreen').style.display='flex';
+  // Populate stats from already-loaded data
   const pc=document.getElementById('aiPlacesCount');if(pc)pc.textContent=places.length;
   const tc=document.getElementById('aiTripsCount');if(tc)tc.textContent=trips.length;
-  // Top category
   const allTags=places.flatMap(p=>p.tags||[]);
   const freq=allTags.reduce((a,t)=>{a[t]=(a[t]||0)+1;return a;},{});
   const topTag=Object.entries(freq).sort((a,b)=>b[1]-a[1])[0]?.[0];
@@ -1852,21 +1849,25 @@ function showAIScreen(){
     const ti=document.getElementById('aiTopCatIcon');if(ti)ti.textContent=PICO[topTag]||'📍';
     const tl=document.getElementById('aiTopCatLabel');if(tl)tl.textContent=topTag;
   }
-  // Travel style from profile
-  const ts=currentUser?.aiProfile?.timeOfDay||currentUser?.aiProfile?.travelStyle||'';
-  const si=document.getElementById('aiStyleIcon');
-  const sl=document.getElementById('aiStyleLabel');
-  if(ts&&si&&sl){
-    si.textContent=ts.includes('night')?'🌙':ts.includes('luxury')?'💎':ts.includes('budget')?'🎒':'✈️';
-    sl.textContent=ts.replace(/-/g,' ');
-  }
-  // Greeting
-  const hr=new Date().getHours();
-  const greet=hr<12?'Good morning':hr<18?'Good afternoon':'Good evening';
-  const ag=document.getElementById('aiGreeting');
-  if(ag)ag.textContent=greet+' ✦';
-  // Show AI screen
-  document.getElementById('aiScreen').style.display='flex';
+  // Always fetch fresh AI profile from server
+  try{
+    const r=await apiFetch('/api/ai/profile');
+    const d=await r.json();
+    const p=d.profile;
+    if(p&&p.analyzedAt){
+      const aiText=document.getElementById('aiSummaryText');
+      if(aiText)aiText.textContent=p.summary||'';
+      const aiTags=document.getElementById('aiTagsContainer');
+      if(aiTags&&p.tags?.length){
+        aiTags.innerHTML=p.tags.map(t=>`<span style="background:var(--ink);color:#fff;border-radius:10px;padding:6px 13px;font-size:12px;font-weight:600;">${esc(t)}</span>`).join('');
+      }
+      const ts=p.timeOfDay||p.travelStyle||'';
+      const si=document.getElementById('aiStyleIcon');
+      const sl=document.getElementById('aiStyleLabel');
+      if(si)si.textContent=ts.includes('night')?'🌙':ts.includes('luxury')?'💎':ts.includes('budget')?'🎒':'✈️';
+      if(sl)sl.textContent=ts?ts.replace(/-/g,' '):'—';
+    }
+  }catch{}
 }
 
 function showMap(){
