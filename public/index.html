@@ -1567,7 +1567,7 @@ window.addEventListener('load',()=>{
     } else {
       showScreen('loginScreen');
     }
-  },1800);
+  },600);
 });
 
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
@@ -1823,7 +1823,7 @@ function _setNavActive(btnId){
   const el=document.getElementById(btnId);if(el)el.classList.add('on');
 }
 
-function showAIScreen(){
+async function showAIScreen(){
   // Hide map views
   ['mapContainer','listView','tripsView','exploreView','messagesView','chatView','userProfileView','searchView'].forEach(id=>{
     const e=document.getElementById(id);if(e)e.style.display='none';
