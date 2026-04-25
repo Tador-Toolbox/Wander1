@@ -870,9 +870,9 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
   <!-- Map/List/Social toggle bar -->
   <div id="mapViewToggle" style="position:fixed;top:60px;left:0;right:0;z-index:199;background:rgba(250,248,244,.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;gap:6px;">
     <button onclick="showMap()" id="toggleMap" class="map-toggle-btn active">🗺 Map</button>
-    <button onclick="showList()" id="toggleSocial" class="map-toggle-btn">🌐 Social</button>
+    <button onclick="showList()" id="toggleSocial" class="map-toggle-btn">🌐 Feed</button>
     <button onclick="showSearch()" id="toggleSearch" class="map-toggle-btn">🔍 Search</button>
-    <button onclick="showMessages()" id="toggleMessages" class="map-toggle-btn" style="position:relative;">💬 Chat<span id="msgBadge" style="display:none;position:absolute;top:2px;right:6px;width:7px;height:7px;background:var(--coral);border-radius:50%;"></span></button>
+    <button onclick="showMessages()" id="toggleMessages" class="map-toggle-btn" style="position:relative;">💬 Messages<span id="msgBadge" style="display:none;position:absolute;top:2px;right:6px;width:7px;height:7px;background:var(--coral);border-radius:50%;"></span></button>
   </div>
 
   <div class="app-content">
@@ -2400,6 +2400,42 @@ async function showExplore(){
   }catch{toast('Could not load explore','err');}
 }
 
+// Cache for trip destination photos
+const _tripPhotoCache = {};
+
+async function fetchTripPhoto(tripId, tripName){
+  if(_tripPhotoCache[tripId]) return _tripPhotoCache[tripId];
+  return new Promise(resolve=>{
+    try{
+      const svc = new google.maps.places.PlacesService(document.createElement('div'));
+      svc.textSearch({query: tripName + ' landmark'}, (results, status)=>{
+        if(status === google.maps.places.PlacesServiceStatus.OK && results?.[0]?.photos?.[0]){
+          const url = results[0].photos[0].getUrl({maxWidth:600, maxHeight:300});
+          _tripPhotoCache[tripId] = url;
+          resolve(url);
+        } else {
+          resolve(null);
+        }
+      });
+    }catch{ resolve(null); }
+  });
+}
+
+async function loadTripPhotos(){
+  // Load photos for all trips and update hero backgrounds
+  for(const t of trips){
+    const url = await fetchTripPhoto(t._id, t.name);
+    if(url){
+      const hero = document.getElementById('tripHero_'+t._id);
+      if(hero){
+        hero.style.backgroundImage = `url('${url}')`;
+        hero.style.backgroundSize = 'cover';
+        hero.style.backgroundPosition = 'center';
+      }
+    }
+  }
+}
+
 function renderTrips(){
   const el=document.getElementById('tripsList');
   if(!trips.length){
@@ -2420,7 +2456,7 @@ function renderTrips(){
     const heroGrad=`linear-gradient(135deg,${c}cc 0%,${c}88 60%,${c}44 100%)`;
     const emptyHint=count===0?`<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-65%);text-align:center;"><div style="font-size:26px;margin-bottom:6px;">🗺</div><div style="font-size:11px;color:rgba(255,255,255,.8);background:rgba(0,0,0,.2);backdrop-filter:blur(8px);padding:5px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.2);">No places yet — tap Suggest!</div></div>`:'';
     return `<div class="trip-card">
-      <div style="height:148px;background:${heroGrad};position:relative;display:flex;align-items:flex-end;overflow:hidden;">
+      <div id="tripHero_${t._id}" style="height:148px;background:${heroGrad};position:relative;display:flex;align-items:flex-end;overflow:hidden;">
         <div style="position:absolute;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06);top:-50px;right:-40px;"></div>
         <div style="position:absolute;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.04);top:10px;right:70px;"></div>
         ${emptyHint}
@@ -2441,6 +2477,7 @@ function renderTrips(){
       </div>
     </div>`;
   }).join('');
+  if(typeof google !== 'undefined' && google.maps) loadTripPhotos();
 }
 
 /* ── TRIP SUGGEST ── */
@@ -2454,7 +2491,7 @@ async function openTripSuggest(tripId, tripName){
     <button class="sm-close" onclick="document.getElementById('suggestModal').remove()">✕</button>
     <div class="sm-head">
       <div class="sm-title">✦ Suggestions for ${esc(tripName)}</div>
-      <div class="sm-sub">8 curated picks · 2 hidden gems · 1 Michelin pick — all based on what AI knows about you</div>
+      <div class="sm-sub">8 picks · 2 hidden gems · 1 Michelin — all based on what AI knows about you</div>
     </div>
     <div class="sm-body">
       <div class="sm-seasonal">
