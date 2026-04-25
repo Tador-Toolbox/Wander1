@@ -192,6 +192,27 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans'
 .holiday-item .hi-note{font-size:11px;color:var(--txt2);line-height:1.4;margin-top:3px;}
 .trip-btn.story:hover{background:#f5a623;color:#fff;}
 /* Trip Plan Modal */
+/* Right Now Modal */
+#rightNowModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:9999;backdrop-filter:blur(6px);}
+#rightNowModal .rn-sheet{background:var(--bg);border-radius:28px 28px 0 0;width:100%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;}
+#rightNowModal .rn-head{padding:22px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;}
+#rightNowModal .rn-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--ink);}
+#rightNowModal .rn-sub{font-size:12px;color:var(--ink3);margin-top:3px;}
+#rightNowModal .rn-close{background:var(--border);border:none;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;color:var(--ink2);flex-shrink:0;margin-top:2px;}
+#rightNowModal .rn-body{overflow-y:auto;padding:18px 18px 36px;flex:1;}
+.rn-idea{background:var(--card);border:1.5px solid var(--border);border-radius:20px;padding:18px;margin-bottom:12px;position:relative;overflow:hidden;}
+.rn-idea::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.rn-idea.idea-0::before{background:linear-gradient(90deg,#667eea,#764ba2);}
+.rn-idea.idea-1::before{background:linear-gradient(90deg,#1A6B4A,#2d9e75);}
+.rn-idea .ri-emoji{font-size:32px;margin-bottom:10px;}
+.rn-idea .ri-title{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:5px;}
+.rn-idea .ri-desc{font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:10px;}
+.rn-idea .ri-why{font-size:11px;color:var(--ink3);font-style:italic;}
+.rn-idea .ri-maps{display:inline-flex;align-items:center;gap:4px;color:var(--mint);font-size:11px;font-weight:700;text-decoration:none;margin-top:8px;}
+.rn-loading{text-align:center;padding:40px 20px;}
+.rn-loading .rl-icon{font-size:36px;animation:spin 1.5s linear infinite;display:inline-block;margin-bottom:12px;}
+.rn-loading p{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px;}
+.rn-loading small{font-size:12px;color:var(--ink3);}
 /* AI Agent Modal */
 #aiAgentModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:9999;backdrop-filter:blur(4px);}
 #aiAgentModal .aam-sheet{background:#fff;border-radius:28px 28px 0 0;width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;}
@@ -793,6 +814,15 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     </button>
   </div>
   <div style="padding:22px 22px 100px;">
+    <!-- Right Now button -->
+    <button onclick="openRightNow()" style="width:100%;padding:16px;border:none;border-radius:20px;background:linear-gradient(135deg,#1A1714,#2D2925);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:24px;box-shadow:0 6px 24px rgba(26,23,20,.18);transition:transform .15s;" onmousedown="this.style.transform='scale(.98)'" onmouseup="this.style.transform='scale(1)'">
+      <span style="font-size:24px;">⚡</span>
+      <div style="text-align:left;">
+        <div style="font-size:14px;font-weight:800;">What should I do right now?</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;">2 ideas based on your taste + location + time</div>
+      </div>
+      <span style="margin-left:auto;font-size:18px;color:rgba(255,255,255,.4);">›</span>
+    </button>
     <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.08em;margin-bottom:12px;">TASTE TAGS</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;" id="aiTagsContainer">
       <div style="background:var(--border);border-radius:10px;padding:7px 14px;font-size:12px;color:var(--ink3);">No tags yet</div>
@@ -1819,6 +1849,89 @@ function _setNavActive(btnId){
     const e=document.getElementById(b);if(e)e.classList.remove('on');
   });
   const el=document.getElementById(btnId);if(el)el.classList.add('on');
+}
+
+async function openRightNow(){
+  document.getElementById('rightNowModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'rightNowModal';
+
+  const hr = new Date().getHours();
+  const timeLabel = hr < 6 ? 'late night' : hr < 12 ? 'morning' : hr < 17 ? 'afternoon' : hr < 21 ? 'evening' : 'night';
+
+  modal.innerHTML = `<div class="rn-sheet">
+    <div class="rn-head">
+      <div>
+        <div class="rn-title">⚡ Right Now</div>
+        <div class="rn-sub">${timeLabel.charAt(0).toUpperCase()+timeLabel.slice(1)} ideas for you</div>
+      </div>
+      <button class="rn-close" onclick="document.getElementById('rightNowModal').remove()">✕</button>
+    </div>
+    <div class="rn-body" id="rnBody">
+      <div class="rn-loading">
+        <div class="rl-icon">⚡</div>
+        <p>Finding ideas for right now…</p>
+        <small>Checking your location and taste</small>
+      </div>
+    </div>
+  </div>`;
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+
+  try {
+    // Get user location
+    const pos = await new Promise((resolve, reject) => {
+      if(!navigator.geolocation){ reject(new Error('no-geo')); return; }
+      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000 });
+    }).catch(() => null);
+
+    const lat = pos?.coords?.latitude;
+    const lng = pos?.coords?.longitude;
+
+    // Get reverse geocoded city if we have coords
+    let locationStr = 'your current location';
+    if(lat && lng && typeof google !== 'undefined'){
+      try {
+        const geo = new google.maps.Geocoder();
+        const result = await new Promise(resolve => {
+          geo.geocode({location: {lat, lng}}, (res, status) => {
+            if(status === 'OK') resolve(res);
+            else resolve(null);
+          });
+        });
+        const city = result?.[0]?.address_components?.find(c => c.types.includes('locality'))?.long_name;
+        const country = result?.[0]?.address_components?.find(c => c.types.includes('country'))?.long_name;
+        if(city) locationStr = country ? `${city}, ${country}` : city;
+      } catch {}
+    }
+
+    const r = await apiFetch('/api/ai/right-now', {
+      method: 'POST',
+      body: JSON.stringify({ lat, lng, locationStr, timeLabel, hour: new Date().getHours() })
+    });
+    const data = await r.json();
+    if(data.error) throw new Error(data.error);
+
+    const body = document.getElementById('rnBody');
+    if(!body) return;
+
+    body.innerHTML = `
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:14px;">📍 ${esc(locationStr)} · ${timeLabel}</div>
+      ${data.ideas.map((idea, i) => `
+        <div class="rn-idea idea-${i}">
+          <div class="ri-emoji">${idea.emoji}</div>
+          <div class="ri-title">${esc(idea.title)}</div>
+          <div class="ri-desc">${esc(idea.description)}</div>
+          <div class="ri-why">${esc(idea.why)}</div>
+          ${idea.searchQuery ? `<a class="ri-maps" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(idea.searchQuery)}" target="_blank" rel="noopener">🗺 Find nearby ↗</a>` : ''}
+        </div>`).join('')}`;
+  } catch(e) {
+    const body = document.getElementById('rnBody');
+    if(body) body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--coral);">
+      ${e.message === 'no-geo' ? '📍 Location access needed for better suggestions.' : 'Something went wrong. Try again.'}
+      <br><br><button onclick="openRightNow()" style="background:var(--ink);color:#fff;border:none;border-radius:12px;padding:10px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Retry</button>
+    </div>`;
+  }
 }
 
 async function showAIScreen(){
