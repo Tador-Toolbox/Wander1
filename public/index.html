@@ -3797,6 +3797,8 @@ async function showMyProfile(){
 async function openUserProfile(userId){
   _upUserId=userId;
   _upTab='been';
+  _setNavActive('btnProfile');
+  document.getElementById('mapViewToggle').style.display='none';
   // Show view
   ['mapContainer','listView','tripsView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('userProfileView').style.display='flex';
