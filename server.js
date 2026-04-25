@@ -109,6 +109,8 @@ app.use('/api/users',    require('./routes/users'));
 app.use('/api/photos',   require('./routes/photos'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/ai',       require('./routes/ai'));
+app.use('/api/admin',    require('./routes/admin'));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 
 // Reset password page
 app.get('/reset-password', (req, res) => {
