@@ -93,6 +93,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans'
 .fg label{display:block;font-size:10px;font-weight:800;color:var(--txt2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px;}
 .fg input{width:100%;padding:13px 16px;background:var(--bg);border:2px solid var(--border);border-radius:16px;color:var(--txt);font-family:'Nunito',sans-serif;font-size:15px;font-weight:600;outline:none;transition:var(--tr);}
 .fg input:focus{border-color:var(--sky);box-shadow:0 0 0 4px var(--sky-glow);background:#fff;}
+.pwd-wrap{position:relative;}
+.pwd-wrap input{padding-right:44px;width:100%;}
+.pwd-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink3);padding:4px;display:flex;align-items:center;justify-content:center;transition:color .15s;}
+.pwd-eye:hover{color:var(--ink);}
 .auth-error{background:var(--coral-light);border:2px solid rgba(255,107,71,.3);border-radius:12px;padding:10px 14px;font-size:12px;font-weight:700;color:var(--coral);margin-bottom:10px;display:none;}
 .btn-primary{width:100%;padding:15px;background:linear-gradient(135deg,var(--sky),var(--sky-dark));border:none;border-radius:18px;color:#fff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;transition:var(--tr);margin-top:6px;box-shadow:0 8px 24px rgba(74,158,255,.4);letter-spacing:.3px;}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(74,158,255,.45);}
@@ -758,7 +762,14 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <div class="fg"><label>Handle</label><div style="position:relative"><span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--txt3);font-weight:700;">@</span><input type="text" id="authHandle" placeholder="johndoe" autocomplete="username" style="padding-left:28px;"></div></div>
     </div>
     <div class="fg"><label>Email</label><input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email"></div>
-    <div class="fg"><label>Password</label><input type="password" id="authPass" placeholder="••••••••" autocomplete="current-password"></div>
+    <div class="fg"><label>Password</label>
+      <div class="pwd-wrap">
+        <input type="password" id="authPass" placeholder="••••••••" autocomplete="current-password">
+        <button type="button" class="pwd-eye" onclick="togglePwd('authPass',this)" tabindex="-1">
+          <svg id="eyeIcon_authPass" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
     <div class="auth-error" id="authErr"></div>
     <button class="btn-primary" id="authBtn" onclick="doAuth()">Sign In 🚀</button>
     <div class="switch-mode" id="switchMode">Don't have an account? <span onclick="toggleMode()">Create one →</span></div>
@@ -1387,10 +1398,14 @@ async function checkAndShowOnboarding(){
     const d = await r.json();
     if(!d.profile || !d.profile.analyzedAt){
       showOnboarding();
-      return true; // blocked — show onboarding
+      return true; // no profile — show onboarding
     }
-  }catch{}
-  return false; // has profile — go to app
+    return false; // has profile — go to app
+  }catch{
+    // If API fails, show onboarding to be safe
+    showOnboarding();
+    return true;
+  }
 }
 
 function showOnboarding(){
@@ -1551,7 +1566,7 @@ window.addEventListener('load',()=>{
             initApp().then(()=>{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{if(gmap){gmap.panTo({lat:pos.coords.latitude,lng:pos.coords.longitude});gmap.setZoom(13);}},()=>{},{timeout:5000});});
           }
         }
-      } catch {showScreen('mapScreen');initApp();}
+      } catch {const nb=await checkAndShowOnboarding();if(!nb){showScreen('mapScreen');initApp();}}
     } else {
       showScreen('loginScreen');
     }
@@ -4478,6 +4493,21 @@ function locateMe(){
   },()=>{toast('Location access denied 🙅','err');btn.textContent='📍';},{enableHighAccuracy:true,timeout:10000});
 }
 function updateCount(){const el=document.getElementById('placeCount');if(el)el.textContent=places.length;}
+function togglePwd(inputId, btn){
+  const inp = document.getElementById(inputId);
+  const icon = document.getElementById('eyeIcon_'+inputId);
+  if(!inp) return;
+  if(inp.type === 'password'){
+    inp.type = 'text';
+    // Eye with slash (hidden)
+    if(icon) icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  } else {
+    inp.type = 'password';
+    // Eye open
+    if(icon) icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  }
+}
+
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(msg,type='',duration=2800){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type}`;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),duration);}
 
