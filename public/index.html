@@ -788,6 +788,9 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <div style="font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.1em;margin-bottom:10px;font-weight:600;">YOUR PERSONALITY</div>
       <div style="font-size:13px;color:rgba(255,255,255,.85);line-height:1.7;font-style:italic;" id="aiSummaryText">Build your AI profile to see your personality summary.</div>
     </div>
+    <button onclick="openAIAgent()" style="margin-top:14px;width:100%;padding:12px;border:1.5px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(255,255,255,.08);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:rgba(255,255,255,.8);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;backdrop-filter:blur(4px);">
+      📸 Update my AI profile
+    </button>
   </div>
   <div style="padding:22px 22px 100px;">
     <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.08em;margin-bottom:12px;">TASTE TAGS</div>
@@ -815,9 +818,6 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div style="font-size:12px;color:var(--ink);margin-top:2px;" id="aiStyleLabel">—</div>
       </div>
     </div>
-    <button onclick="openAIAgent()" style="width:100%;padding:14px;border:2px dashed var(--border2);border-radius:16px;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-      📸 Update my AI profile
-    </button>
   </div>
 </div>
 
@@ -832,9 +832,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <div class="h-logo" onclick="showMap()" style="cursor:pointer;">Wandr <span class="h-dot">·</span></div>
 
     <div style="display:flex;align-items:center;gap:8px;">
-      <button onclick="showMyProfile()" title="My Profile" style="background:none;border:none;cursor:pointer;padding:0;position:relative;">
-        <div id="headerMyProfile" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--mint),var(--sky));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;overflow:hidden;border:2px solid var(--mint);flex-shrink:0;">🗺️</div>
-      </button>
+
       <button id="profileBtn" onclick="openProfile()" title="Edit Profile" style="background:none;border:none;cursor:pointer;padding:0;">
         <div id="headerAvatar" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--sky),var(--sky-dark));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;overflow:hidden;border:2px solid var(--border);flex-shrink:0;">?</div>
       </button>
