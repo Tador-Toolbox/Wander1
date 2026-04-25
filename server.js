@@ -115,6 +115,11 @@ app.get('/reset-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
 });
 
+// Serve index-new.html directly (new design preview)
+app.get('/index-new.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index-new.html'));
+});
+
 // SPA fallback - serves index.html for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
