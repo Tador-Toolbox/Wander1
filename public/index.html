@@ -541,7 +541,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
 
 /* ── SEARCH VIEW ── */
-#searchView{display:none;position:fixed;top:0;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));background:var(--bg);flex-direction:column;z-index:2;}
+#searchView{display:none;position:fixed;top:108px;left:0;right:0;bottom:calc(68px + env(safe-area-inset-bottom));background:var(--bg);flex-direction:column;z-index:2;overflow:hidden;}
 .search-view-top{padding:14px 18px;flex-shrink:0;}
 .search-view-input{width:100%;padding:13px 16px 13px 44px;background:#fff;border:2px solid var(--border);border-radius:16px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:var(--txt);outline:none;transition:var(--tr);box-sizing:border-box;}
 .search-view-input:focus{border-color:var(--sky);}
@@ -556,7 +556,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .user-row-follow{padding:6px 14px;border-radius:20px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;border:2px solid var(--sky);background:var(--sky);color:#fff;transition:var(--tr);}
 .user-row-follow.following{background:#fff;color:var(--sky);}
 /* ── MESSAGES ── */
-#messagesView{display:none;position:fixed;top:0;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));background:var(--bg);flex-direction:column;z-index:2;}
+#messagesView{display:none;position:fixed;top:108px;left:0;right:0;bottom:calc(68px + env(safe-area-inset-bottom));background:var(--bg);flex-direction:column;z-index:2;overflow:hidden;}
 #chatView{display:none;position:fixed;top:0;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));background:var(--bg);flex-direction:column;z-index:3;}
 .msg-header{background:#fff;border-bottom:1.5px solid var(--border);padding:14px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
 .msg-back{background:none;border:none;font-size:20px;cursor:pointer;color:var(--txt2);padding:0 4px;}
@@ -863,7 +863,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <button onclick="showMap()" id="toggleMap" style="flex:1;padding:7px;border-radius:10px;background:var(--ink);color:#fff;border:none;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">🗺 Map</button>
     <button onclick="showList()" id="toggleSocial" style="flex:1;padding:7px;border-radius:10px;background:var(--bg);color:var(--ink2);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">🌐 Social</button>
     <button onclick="showSearch()" id="toggleSearch" style="flex:1;padding:7px;border-radius:10px;background:var(--bg);color:var(--ink2);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">🔍 Search</button>
-    <button onclick="showMessages()" id="toggleMessages" style="flex:1;padding:7px;border-radius:10px;background:var(--bg);color:var(--ink2);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;position:relative;">💬 <span id="msgBadge" style="display:none;position:absolute;top:2px;right:6px;width:7px;height:7px;background:var(--coral);border-radius:50%;"></span>Chat</button>
+    <button onclick="showMessages()" id="toggleMessages" style="flex:1;padding:7px;border-radius:10px;background:var(--bg);color:var(--ink2);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;position:relative;">💬 Messages<span id="msgBadge" style="display:none;position:absolute;top:2px;right:6px;width:7px;height:7px;background:var(--coral);border-radius:50%;"></span></button>
   </div>
 
   <div class="app-content">
@@ -1027,6 +1027,18 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <button onclick="closeOverlay('shareOverlay')" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);">✕</button>
     </div>
     <div class="import-preview" id="shareTripPreview"></div>
+
+    <!-- Collaborative invite section -->
+    <div style="background:var(--mint-light);border:1.5px solid rgba(26,107,74,.15);border-radius:16px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:800;color:var(--mint);letter-spacing:.05em;margin-bottom:10px;">👥 INVITE A WANDR USER</div>
+      <div style="font-size:12px;color:var(--ink2);margin-bottom:10px;line-height:1.5;">Invite a Wandr user to collaborate — they can add places to this trip too.</div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="collabHandleInput" placeholder="@username" style="flex:1;padding:10px 14px;border:1.5px solid var(--border2);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:#fff;outline:none;">
+        <button onclick="inviteCollaborator()" style="padding:10px 16px;border:none;border-radius:12px;background:var(--mint);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Invite</button>
+      </div>
+      <div id="collabList" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+
     <div class="export-opts">
       <button class="export-btn" onclick="generateShareLink()">🔗 Generate Share Link</button>
       <button class="export-btn" onclick="exportJSON()">📥 Download as JSON</button>
@@ -3284,8 +3296,49 @@ async function openShare(id){
     <h3>${shareTargetTrip.emoji} ${esc(shareTargetTrip.name)}</h3>
     <p>📍 ${count} places</p>`;
   document.getElementById('shareLinkBox').style.display='none';
+  document.getElementById('collabHandleInput').value='';
+  renderCollabList(shareTargetTrip.collaborators||[]);
   openOverlay('shareOverlay');
 }
+
+function renderCollabList(collabs){
+  const el=document.getElementById('collabList');
+  if(!el)return;
+  if(!collabs||!collabs.length){el.innerHTML='';return;}
+  el.innerHTML=collabs.map(c=>`
+    <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 12px;">
+      <div style="width:30px;height:30px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">${(c.name||c.handle||'?')[0].toUpperCase()}</div>
+      <div style="flex:1;">
+        <div style="font-size:12px;font-weight:700;color:var(--ink);">${esc(c.name||c.handle)}</div>
+        <div style="font-size:11px;color:var(--ink3);">@${esc(c.handle)}</div>
+      </div>
+      <div style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;${c.status==='accepted'?'background:var(--mint-light);color:var(--mint);':'background:var(--amber-light);color:var(--amber);'}">${c.status==='accepted'?'✓ Active':'Pending'}</div>
+    </div>`).join('');
+}
+
+async function inviteCollaborator(){
+  if(!shareTargetTrip)return;
+  const handle=document.getElementById('collabHandleInput').value.trim();
+  if(!handle){toast('Enter a @username','err');return;}
+  try{
+    const r=await apiFetch(`/api/trips/${shareTargetTrip._id}/invite`,{
+      method:'POST',body:JSON.stringify({handle})
+    });
+    const data=await r.json();
+    if(data.error)throw new Error(data.error);
+    toast(`✅ Invited ${data.collaborator.name||handle}!`,'ok');
+    document.getElementById('collabHandleInput').value='';
+    // Update local trip object
+    const t=trips.find(t=>t._id===shareTargetTrip._id);
+    if(t){
+      if(!t.collaborators)t.collaborators=[];
+      t.collaborators.push({handle:handle.replace('@',''),name:data.collaborator.name||'',status:'pending'});
+      shareTargetTrip=t;
+      renderCollabList(t.collaborators);
+    }
+  }catch(e){toast(e.message,'err');}
+}
+
 
 async function generateShareLink(){
   if(!shareTargetTrip)return;
