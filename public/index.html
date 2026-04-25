@@ -717,7 +717,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 }
 .bnav-btn::after{content:'';position:absolute;bottom:-2px;width:0;height:3px;}
 /* Toggle bar active state */
-.map-toggle-btn{flex:1;padding:7px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid var(--border2);background:var(--bg);color:var(--ink2);}
+.map-toggle-btn{flex:1;padding:6px 4px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid var(--border2);background:var(--bg);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .map-toggle-btn.active{background:var(--ink)!important;color:#fff!important;border-color:var(--ink)!important;}
 
 /* Adjust app content for bottom nav */
@@ -866,7 +866,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <button onclick="showMap()" id="toggleMap" class="map-toggle-btn active">🗺 Map</button>
     <button onclick="showList()" id="toggleSocial" class="map-toggle-btn">🌐 Social</button>
     <button onclick="showSearch()" id="toggleSearch" class="map-toggle-btn">🔍 Search</button>
-    <button onclick="showMessages()" id="toggleMessages" class="map-toggle-btn" style="position:relative;">💬 Messages<span id="msgBadge" style="display:none;position:absolute;top:2px;right:6px;width:7px;height:7px;background:var(--coral);border-radius:50%;"></span></button>
+    <button onclick="showMessages()" id="toggleMessages" class="map-toggle-btn" style="position:relative;">💬 Chat<span id="msgBadge" style="display:none;position:absolute;top:2px;right:6px;width:7px;height:7px;background:var(--coral);border-radius:50%;"></span></button>
   </div>
 
   <div class="app-content">
@@ -3590,6 +3590,7 @@ async function showSearch(){
   document.getElementById('searchView').style.display='flex';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   _setNavActive('btnMap');
+  _setToggleActive('toggleSearch');
   document.getElementById('mapViewToggle').style.display='flex';
   if(!_allUsers.length){
     try{const res=await apiFetch('/api/users');_allUsers=await res.json();}catch{}
@@ -3650,6 +3651,7 @@ function showMessages(){
   document.getElementById('messagesView').style.display='flex';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   _setNavActive('btnMap');
+  _setToggleActive('toggleMessages');
   document.getElementById('mapViewToggle').style.display='flex';
   loadConversations();
 }
