@@ -614,3 +614,86 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
     res.status(500).json({ error: 'Failed to generate suggestions' });
   }
 });
+
+/* ─────────────────────────────────────────
+   POST /api/ai/right-now
+   Returns 2 personalized activity suggestions
+   based on time of day, location, and user profile
+───────────────────────────────────────── */
+router.post('/right-now', auth, async (req, res) => {
+  try {
+    const { lat, lng, locationStr, timeLabel, hour } = req.body;
+
+    // Load user's AI profile for taste context
+    const User = require('../models/User');
+    const user = await User.findById(req.userId).select('aiProfile');
+    const profile = user?.aiProfile;
+
+    const tasteContext = profile?.tags?.length
+      ? `User taste profile: ${profile.tags.join(', ')}`
+      : 'No taste profile yet — suggest universally appealing ideas';
+
+    const locationContext = locationStr && locationStr !== 'your current location'
+      ? `User is currently in: ${locationStr}`
+      : lat && lng
+        ? `User coordinates: ${lat.toFixed(3)}, ${lng.toFixed(3)}`
+        : 'Location unknown — give general ideas';
+
+    const prompt = `You are a spontaneous activity advisor. Give exactly 2 ideas for what this person should do RIGHT NOW.
+
+Current time: ${timeLabel} (hour: ${hour}:00)
+${locationContext}
+${tasteContext}
+
+Rules:
+- Ideas must be appropriate for ${timeLabel} (e.g. don't suggest coffee at midnight, don't suggest bars at 8am)
+- Must be specific and actionable — not vague like "go for a walk"
+- Must match their taste profile
+- If location is known, ideas should be relevant to that city/country
+- One idea can be indoor, one outdoor (adjust based on time)
+- Make them feel spontaneous and exciting, not boring
+
+Reply ONLY with valid JSON, no markdown:
+{
+  "ideas": [
+    {
+      "emoji": "☕",
+      "title": "Short catchy title (4-6 words)",
+      "description": "2 sentences — what to do and why it's great right now at this time",
+      "why": "One sentence: why this matches their taste",
+      "searchQuery": "Google Maps search query to find this type of place nearby (e.g. 'specialty coffee Tel Aviv')"
+    },
+    {
+      "emoji": "🍜",
+      "title": "Second idea title",
+      "description": "2 sentences description",
+      "why": "Why it matches their taste",
+      "searchQuery": "Google Maps search query"
+    }
+  ]
+}`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 800,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content?.[0]?.text || '{}';
+    const result = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    res.json(result);
+  } catch (err) {
+    console.error('Right now error:', err);
+    res.status(500).json({ error: 'Failed to get ideas' });
+  }
+});
