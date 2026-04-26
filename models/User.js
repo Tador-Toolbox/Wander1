@@ -19,7 +19,23 @@ const UserSchema = new mongoose.Schema({
     dietaryStyle: { type: String, default: '' },
     travelStyle:  { type: String, default: '' },
     socialStyle:  { type: String, default: '' },
-    timeOfDay:    { type: String, default: '' }
+    timeOfDay:    { type: String, default: '' },
+    // Music & event preferences
+    musicGenres:  { type: [String], default: [] },
+    eventGoal:    { type: String, default: '' },
+    atmosphere:   { type: String, default: '' },
+    soundVibe:    { type: String, default: '' }
+  },
+  feedbackLoop: {
+    categories: {
+      type: Map,
+      of: new mongoose.Schema({
+        totalRating: { type: Number, default: 0 },
+        count:       { type: Number, default: 0 },
+        lastUpdated: { type: Date,   default: null }
+      }, { _id: false }),
+      default: {}
+    }
   }
 }, { timestamps: true });
 
