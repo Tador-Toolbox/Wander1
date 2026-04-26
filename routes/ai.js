@@ -327,6 +327,7 @@ PERSONALITY SIGNALS:
 Reply ONLY with valid JSON, no markdown, no extra text:
 {
   "tags": ["specialty-coffee", "wagyu", "street-food", "hiking", "nightlife", "beach", "anime", "museums"],
+  "aestheticTags": ["minimalist", "high-end", "industrial", "warm-tones", "dark-moody"],  // visual aesthetic style from photos
   "summary": "A vivid one-sentence profile like: A Japan-obsessed foodie who hunts specialty coffee by day, explores local street food markets at night, and balances culture with outdoor hikes.",
   "locations": ["Tokyo", "Vietnam", "Tel Aviv beach promenade"],
   "dietaryStyle": "meat-lover|vegetarian|vegan|omnivore",
@@ -388,6 +389,7 @@ Tags should be lowercase, 2-15 items, specific and useful for place recommendati
       summary:      profile.summary || '',
       locations:    profile.locations || [],
       analyzedAt:   new Date(),
+      aestheticTags: profile.aestheticTags || [],
       ...(isOnboarding && {
         dietaryStyle: profile.dietaryStyle || '',
         travelStyle:  profile.travelStyle  || '',
@@ -701,5 +703,139 @@ Reply ONLY with valid JSON, no markdown:
   } catch (err) {
     console.error('Right now error:', err);
     res.status(500).json({ error: 'Failed to get ideas' });
+  }
+});
+
+/* ─────────────────────────────────────────
+   POST /api/ai/event-discover
+   Identity Cube event matching:
+   Phase 2 (Search) + Phase 3 (Score) + Phase 4 (Timing)
+───────────────────────────────────────── */
+router.post('/event-discover', auth, async (req, res) => {
+  try {
+    const { locationStr, timeLabel, hour, dayOfWeek, dateStr, lat, lng } = req.body;
+
+    // Load full Identity Cube from DB
+    const User = require('../models/User');
+    const user = await User.findById(req.userId).select('aiProfile feedbackLoop');
+    const profile = user?.aiProfile;
+
+    if (!profile?.analyzedAt)
+      return res.status(400).json({ error: 'Build your AI profile first to use Event Discover.' });
+
+    // ── PHASE 1: Build Identity Cube ──
+    const aestheticTags  = profile.aestheticTags || profile.tags || [];
+    const musicGenres    = profile.musicGenres || [];
+    const eventGoal      = profile.eventGoal || '';
+    const atmosphere     = profile.atmosphere || '';
+    const soundVibe      = profile.soundVibe || '';
+    const interests      = profile.tags || [];
+    const summary        = profile.summary || '';
+    const locations      = profile.locations || [];
+
+    // Time context
+    const now = new Date();
+    const deadline48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+    // ── PHASE 2+3+4: Claude with web_search finds AND scores events ──
+    const prompt = `You are an elite personal concierge AI for a discerning traveler.
+
+== IDENTITY CUBE ==
+Visual Aesthetic Tags: ${aestheticTags.slice(0,8).join(', ')}
+Personality Summary: "${summary}"
+Interests & Hobbies: ${interests.join(', ')}
+Music Genres: ${musicGenres.join(', ') || 'not specified'}
+Event Mission: ${eventGoal || 'not specified'}
+Atmosphere Preference: ${atmosphere || 'not specified'}
+Sound/Audio Preference: ${soundVibe || 'not specified'}
+Previously Visited: ${locations.join(', ')}
+
+== CURRENT CONTEXT ==
+Location: ${locationStr}
+Date & Time: ${dateStr}, ${timeLabel} (${hour}:00), ${dayOfWeek}
+Next 48h deadline: ${deadline48h.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}
+
+== YOUR TASK ==
+1. SEARCH the web for real events happening in ${locationStr} in the next 7 days. Look for:
+   - Nightlife events, club nights, DJ sets matching their music taste
+   - Networking events, business mixers (if Goal = Network)
+   - Rooftop bars, lounges, fine dining (if Atmosphere = Top-Shelf)
+   - Underground/boutique venues (if Atmosphere = Main Street)
+   - Live music, concerts, acoustic sessions (based on Sound preference)
+   Use search queries like: "events ${locationStr} this weekend", "${musicGenres[0]||'music'} event ${locationStr}", "nightlife ${locationStr} ${dayOfWeek}"
+
+2. SCORE each found event against the Identity Cube (0-100%):
+   - +30pts: matches their music genre
+   - +25pts: matches their atmosphere preference (Top-Shelf/Electric/Main Street)  
+   - +20pts: matches their event goal (Network/Vibe/Low-Key)
+   - +15pts: matches sound preference (Background/Front&Center/Acoustic)
+   - +10pts: matches aesthetic/vibe tags
+
+3. TIMING RULE:
+   - Events in next 48h: boost score by 1.5x (max 100%)
+   - Events 3-7 days out: only include if score >= 95% (Unmissable tier)
+   - Mark hoursUntil: approximate hours from now
+
+4. Write a CONCIERGE NOTE for each — be specific and personal:
+   Bad: "This event matches your music taste"
+   Good: "Since you love Deep House and prefer high-end venues, this rooftop set by a Berlin-based DJ is exactly the sound + setting your profile signals — and it's only 6 hours away"
+
+Return ONLY valid JSON, top 3 events after scoring and filtering:
+{
+  "events": [
+    {
+      "name": "Event name",
+      "venueName": "Venue name",
+      "date": "Sat 3 May",
+      "time": "10pm",
+      "price": "Free / ₪80 / etc",
+      "matchScore": 94,
+      "hoursUntil": 18,
+      "tags": ["deep-house", "rooftop"],
+      "conciergeNote": "Personal explanation referencing their specific profile",
+      "ticketUrl": "url or empty string"
+    }
+  ]
+}`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+
+    // Extract the final text response (after tool use)
+    const textBlock = data.content?.filter(b => b.type === 'text').map(b => b.text).join('');
+    if (!textBlock) return res.status(500).json({ error: 'No response from AI' });
+
+    const clean = textBlock.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+
+    // Apply timing boost on backend as safety
+    if (result.events) {
+      result.events = result.events.map(ev => {
+        if (ev.hoursUntil !== undefined && ev.hoursUntil <= 48) {
+          ev.matchScore = Math.min(100, Math.round(ev.matchScore * 1.5));
+        }
+        return ev;
+      }).sort((a,b) => b.matchScore - a.matchScore).slice(0,3);
+    }
+
+    res.json(result);
+
+  } catch (err) {
+    console.error('Event discover error:', err);
+    res.status(500).json({ error: 'Failed to discover events. Try again.' });
   }
 });
