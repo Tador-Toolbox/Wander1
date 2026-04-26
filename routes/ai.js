@@ -634,8 +634,13 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
 
     const data = await response.json();
     const rawText = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '{}';
-    const jsonMatchRn = rawText.match(/\{[\s\S]*\}/);
-    const result = JSON.parse(jsonMatchRn ? jsonMatchRn[0] : '{}');
+    let result;
+    try {
+      result = JSON.parse(rawText.replace(/```json|```/g,'').trim());
+    } catch {
+      const s = rawText.indexOf('{'), e = rawText.lastIndexOf('}');
+      result = (s>=0&&e>s) ? JSON.parse(rawText.slice(s,e+1)) : {ideas:[]};
+    }
 
     res.json(result);
   } catch (err) {
@@ -840,10 +845,21 @@ Return ONLY valid JSON, top 3 events after scoring and filtering:
     const textBlock = data.content?.filter(b => b.type === 'text').map(b => b.text).join('');
     if (!textBlock) return res.status(500).json({ error: 'No response from AI' });
 
-    // Extract JSON robustly — find first { to last }
-    const jsonMatch = textBlock.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return res.status(500).json({ error: 'No events found in this area. Try again.' });
-    const result = JSON.parse(jsonMatch[0]);
+    // Extract JSON robustly — find the events array
+    let result;
+    try {
+      // Try direct parse first (clean response)
+      const cleaned = textBlock.replace(/```json|```/g, '').trim();
+      result = JSON.parse(cleaned);
+    } catch {
+      // Find JSON object between first { and last }
+      const start = textBlock.indexOf('{');
+      const end = textBlock.lastIndexOf('}');
+      if (start === -1 || end === -1) {
+        return res.status(500).json({ error: 'No events found for your location. Try again.' });
+      }
+      result = JSON.parse(textBlock.slice(start, end + 1));
+    }
 
     // Apply timing boost on backend as safety
     if (result.events) {
