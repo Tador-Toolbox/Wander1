@@ -56,11 +56,16 @@ function getPriceLabel(level) {
 async function callGemini(prompt) {
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
-  const models = ['gemini-2.0-flash', 'gemini-2.0-flash-001', 'gemini-1.5-flash-8b'];
+  const modelConfigs = [
+    { model: 'gemini-2.0-flash-exp', ver: 'v1beta' },
+    { model: 'gemini-1.5-flash', ver: 'v1' },
+    { model: 'gemini-1.5-pro', ver: 'v1' },
+    { model: 'gemini-2.0-flash', ver: 'v1' },
+  ];
   let lastErr;
-  for (const model of models) {
+  for (const { model, ver } of modelConfigs) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+      const url = `https://generativelanguage.googleapis.com/${ver}/models/${model}:generateContent?key=${geminiKey}`;
       const r = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
