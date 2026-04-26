@@ -3591,12 +3591,14 @@ async function openAIAgent(){
   document.getElementById('aiAgentModal')?.remove();
   _agentFiles=[];
 
-  // Check if profile already exists
-  let existingProfile=null;
+  // Load existing profile AND photos in parallel
+  let existingProfile=null, existingPhotos=[];
   try{
-    const r=await apiFetch('/api/ai/profile');
-    const d=await r.json();
-    existingProfile=d.profile?.analyzedAt?d.profile:null;
+    const [pr, phr] = await Promise.all([apiFetch('/api/ai/profile'), apiFetch('/api/ai/photos')]);
+    const pd = await pr.json();
+    const phd = await phr.json();
+    existingProfile = pd.profile?.analyzedAt ? pd.profile : null;
+    existingPhotos = phd.photos || [];
   }catch{}
 
   const modal=document.createElement('div');
@@ -3605,7 +3607,7 @@ async function openAIAgent(){
     <button class="aam-close" onclick="document.getElementById('aiAgentModal').remove()">✕</button>
     <div class="aam-head">
       <div class="aam-title"><span style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">✦ AI Agent</span></div>
-      <div class="aam-sub">Upload photos from your travels and hobbies — AI will build a personal profile and use it to recommend places you'll love.</div>
+      <div class="aam-sub">Your uploaded photos — the AI built your profile from these. Delete any and add new ones to update your profile.</div>
     </div>
     <div class="aam-body">
       ${existingProfile?`<div class="aaz-profile" id="existingProfile">
@@ -3615,6 +3617,18 @@ async function openAIAgent(){
         ${existingProfile.locations?.length?`<div class="azpr-locs">📍 ${esc(existingProfile.locations.join(' · '))}</div>`:''}
         <div class="azpr-date">Last analyzed: ${new Date(existingProfile.analyzedAt).toLocaleDateString()}</div>
       </div>`:''}
+      ${existingPhotos.length?`
+        <div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin:14px 0 8px;">📸 YOUR UPLOADED PHOTOS (${existingPhotos.length})</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;" id="existingPhotosGrid">
+          ${existingPhotos.map(p=>`
+            <div style="position:relative;">
+              <img src="${esc(p.url)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:2px solid var(--border);display:block;">
+              <button onclick="deleteAIPhoto('${esc(p.publicId)}',this)" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;" title="Delete photo">✕</button>
+            </div>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--ink3);text-align:center;margin-bottom:12px;line-height:1.5;">Tap ✕ to remove a photo · Add new photos below to re-analyze</div>
+      `:''}
+      <div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:8px;">➕ ADD NEW PHOTOS</div>
       <div class="aaz-upload" id="aazDrop" onclick="document.getElementById('aazInput').click()" ondragover="aazDragOver(event)" ondragleave="aazDragLeave(event)" ondrop="aazDrop(event)">
         <input type="file" id="aazInput" multiple accept="image/*" onchange="aazFilesSelected(event)">
         <div class="aaz-icon">📸</div>
@@ -3628,6 +3642,33 @@ async function openAIAgent(){
   </div>`;
   modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
   document.body.appendChild(modal);
+}
+
+async function deleteAIPhoto(publicId, btn){
+  btn.disabled=true;
+  btn.textContent='…';
+  try{
+    const r=await apiFetch('/api/ai/photo/'+encodeURIComponent(publicId),{method:'DELETE'});
+    const d=await r.json();
+    if(d.ok){
+      // Remove the photo card from UI
+      btn.closest('div[style*="position:relative"]').remove();
+      toast('Photo deleted');
+      // Update count label
+      const grid=document.getElementById('existingPhotosGrid');
+      if(grid){
+        const remaining=grid.querySelectorAll('div[style*="position:relative"]').length;
+        const lbl=grid.previousElementSibling;
+        if(lbl)lbl.textContent=`📸 YOUR UPLOADED PHOTOS (${remaining})`;
+      }
+    }else{
+      btn.disabled=false;btn.textContent='✕';
+      toast('Failed to delete','err');
+    }
+  }catch{
+    btn.disabled=false;btn.textContent='✕';
+    toast('Error deleting photo','err');
+  }
 }
 
 function aazDragOver(e){e.preventDefault();document.getElementById('aazDrop').classList.add('dragover');}
