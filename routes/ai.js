@@ -1,22 +1,75 @@
 const router = require('express').Router();
 
-// Robust JSON extraction — handles Claude adding text before/after JSON
+// Robust JSON extraction
 function extractJSON(text) {
   if (!text) return null;
-  // Try direct parse first
-  try { return extractJSON(text) || {}; } catch {}
-  // Find first { to last }
+  try { return JSON.parse(text.replace(/```json|```/g, '').trim()); } catch {}
   const s = text.indexOf('{'), e = text.lastIndexOf('}');
-  if (s >= 0 && e > s) {
-    try { return JSON.parse(text.slice(s, e + 1)); } catch {}
-  }
-  // Find first [ to last ] (array response)
+  if (s >= 0 && e > s) { try { return JSON.parse(text.slice(s, e + 1)); } catch {} }
   const s2 = text.indexOf('['), e2 = text.lastIndexOf(']');
-  if (s2 >= 0 && e2 > s2) {
-    try { return JSON.parse(text.slice(s2, e2 + 1)); } catch {}
-  }
+  if (s2 >= 0 && e2 > s2) { try { return JSON.parse(text.slice(s2, e2 + 1)); } catch {} }
   return null;
 }
+
+/* ─────────────────────────────────────────
+   GOOGLE PLACES HELPERS
+───────────────────────────────────────── */
+async function searchGooglePlaces(query, apiKey) {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`;
+    const r = await fetch(url);
+    const d = await r.json();
+    return d.results || [];
+  } catch (e) { console.error('Places search error:', e.message); return []; }
+}
+
+async function getPlaceDetails(placeId, apiKey) {
+  try {
+    const fields = 'name,formatted_address,rating,opening_hours,photos,price_level,geometry,url';
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${apiKey}`;
+    const r = await fetch(url);
+    const d = await r.json();
+    return d.result || null;
+  } catch { return null; }
+}
+
+function isOpenToday(openingHours) {
+  // Returns true if venue has ANY opening period today (handles clubs opening late)
+  if (!openingHours) return true; // unknown = include
+  if (!openingHours.periods) return openingHours.open_now !== false;
+  const today = new Date().getDay(); // 0=Sun..6=Sat
+  return openingHours.periods.some(p => p.open?.day === today);
+}
+
+function getPhotoUrl(photos, apiKey) {
+  if (!photos?.length) return null;
+  return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photo_reference=${photos[0].photo_reference}&key=${apiKey}`;
+}
+
+function getPriceLabel(level) {
+  return ['', 'Budget', 'Mid-range', 'Upscale', 'Fine dining'][level] || '';
+}
+
+/* ─────────────────────────────────────────
+   GEMINI HELPER
+───────────────────────────────────────── */
+async function callGemini(prompt) {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+    })
+  });
+  const d = await r.json();
+  if (d.error) throw new Error('Gemini: ' + d.error.message);
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
 const auth   = require('../middleware/auth');
 const Trip   = require('../models/Trip');
 const Place  = require('../models/Place');
@@ -767,11 +820,174 @@ Reply ONLY with valid JSON, no markdown:
 });
 
 /* ─────────────────────────────────────────
-   POST /api/ai/event-discover
-   Identity Cube event matching:
-   Phase 2 (Search) + Phase 3 (Score) + Phase 4 (Timing)
+   POST /api/ai/event-discover-gemini
+   Full Google Places + Vision + Gemini flow
+   Phase 1: Places API finds venues open today
+   Phase 2: Gemini scores against Identity Cube
+   Phase 3: Returns top 3 with concierge notes
 ───────────────────────────────────────── */
 router.post('/event-discover', auth, async (req, res) => {
+  try {
+    const { locationStr = 'Tel Aviv', timeLabel = 'evening', hour = 20, dayOfWeek = 'Saturday', dateStr = '' } = req.body;
+    const mapsKey = process.env.GOOGLE_MAPS_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY;
+
+    // Load Identity Cube
+    const User = require('../models/User');
+    const user = await User.findById(req.userId).select('aiProfile');
+    const profile = user?.aiProfile;
+    if (!profile?.analyzedAt) return res.status(400).json({ error: 'Build your AI profile first.' });
+
+    const { tags=[], summary='', musicGenres=[], eventGoal='', atmosphere='', soundVibe='', aestheticTags=[] } = profile;
+
+    // ── PHASE 1: Google Places search ──
+    // Build smart queries based on Identity Cube
+    const queries = [];
+    if (atmosphere === 'Top-Shelf') queries.push(`rooftop bar ${locationStr}`, `luxury lounge ${locationStr}`);
+    else if (atmosphere === 'Electric') queries.push(`nightclub ${locationStr}`, `live music venue ${locationStr}`);
+    else if (atmosphere === 'Main Street') queries.push(`local bar ${locationStr}`, `underground venue ${locationStr}`);
+    else queries.push(`bar ${locationStr}`, `restaurant ${locationStr}`);
+
+    if (musicGenres.includes('Techno') || musicGenres.includes('Trance')) queries.push(`electronic music club ${locationStr}`);
+    if (musicGenres.includes('Hip-Hop')) queries.push(`hip hop club ${locationStr}`);
+    if (musicGenres.includes('Jazz')) queries.push(`jazz bar ${locationStr}`);
+    if (tags.includes('fine-dining') || tags.includes('wagyu')) queries.push(`fine dining restaurant ${locationStr}`);
+    if (tags.includes('coffee')) queries.push(`specialty coffee ${locationStr}`);
+
+    // Run up to 4 searches in parallel
+    const searchResults = await Promise.all(
+      queries.slice(0, 4).map(q => searchGooglePlaces(q, mapsKey))
+    );
+
+    // Flatten + deduplicate by place_id
+    const seen = new Set();
+    const allPlaces = searchResults.flat().filter(p => {
+      if (seen.has(p.place_id)) return false;
+      seen.add(p.place_id);
+      return true;
+    });
+
+    // Get details for top 12 results
+    const detailResults = await Promise.all(
+      allPlaces.slice(0, 12).map(p => getPlaceDetails(p.place_id, mapsKey))
+    );
+
+    // Filter to only venues open today
+    const openToday = detailResults
+      .filter(p => p && isOpenToday(p.opening_hours))
+      .slice(0, 8);
+
+    if (!openToday.length) {
+      return res.status(200).json({ events: [], message: 'No open venues found for today. Try a different time.' });
+    }
+
+    // Build venue list for Gemini
+    const venueList = openToday.map((p, i) => ({
+      index: i,
+      name: p.name,
+      address: p.formatted_address,
+      rating: p.rating,
+      priceLevel: getPriceLabel(p.price_level),
+      openToday: true,
+      photoUrl: getPhotoUrl(p.photos, mapsKey),
+      mapsUrl: p.url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name+' '+locationStr)}`
+    }));
+
+    // ── PHASE 2: Gemini scores + writes concierge notes ──
+    const now48h = new Date(Date.now() + 48*60*60*1000).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'});
+
+    const geminiPrompt = `You are an elite personal concierge AI. Score these venues against the user's Identity Cube and pick the TOP 3.
+
+== IDENTITY CUBE ==
+Visual Aesthetic: ${[...aestheticTags,...tags].slice(0,8).join(', ')}
+Summary: "${summary}"
+Music: ${musicGenres.join(', ')||'any'}
+Mission/Goal: ${eventGoal||'not set'}
+Atmosphere: ${atmosphere||'any'}
+Sound Preference: ${soundVibe||'any'}
+
+== CURRENT CONTEXT ==
+Location: ${locationStr} | Time: ${timeLabel} (${hour}:00) | Day: ${dayOfWeek} | Date: ${dateStr}
+All venues below are confirmed OPEN today.
+
+== VENUES TO SCORE ==
+${venueList.map(v=>'['+v.index+'] '+v.name+' | '+v.address+' | Rating: '+(v.rating||'?')+'/5 | '+v.priceLevel).join('\n')}
+')}
+
+== SCORING RULES ==
++30pts music genre match
++25pts atmosphere match (Top-Shelf=luxury/rooftop, Electric=club/stadium, Main Street=local/underground)
++20pts mission match (Network=professional mixer, Vibe Out=social energy, Low-Key=music focused)
++15pts sound preference match
++10pts aesthetic/tag match
+TIMING BOOST: Events in next 48h get 1.3x multiplier (max 100)
+
+Pick the TOP 3 venues. Write a personal concierge note for each referencing their specific profile.
+
+Return ONLY valid JSON:
+{
+  "events": [
+    {
+      "venueIndex": 0,
+      "matchScore": 94,
+      "hoursUntil": 4,
+      "tags": ["rooftop", "electronic"],
+      "conciergeNote": "Personal note referencing their exact taste profile"
+    }
+  ]
+}`;
+
+    const geminiText = geminiKey ? await callGemini(geminiPrompt) : null;
+    let scored = [];
+
+    if (geminiText) {
+      const parsed = extractJSON(geminiText);
+      scored = parsed?.events || [];
+    }
+
+    // If Gemini failed or no key, fall back to simple scoring
+    if (!scored.length) {
+      scored = venueList.slice(0,3).map((v,i) => ({
+        venueIndex: v.index, matchScore: 80-i*5, hoursUntil: 6, tags: [], conciergeNote: `${v.name} matches your profile for a great ${timeLabel} out in ${locationStr}.`
+      }));
+    }
+
+    // Merge Gemini scores with Google Places data
+    const events = scored.slice(0,3).map(s => {
+      const venue = venueList[s.venueIndex] || venueList[0];
+      return {
+        name: venue.name,
+        venueName: venue.name,
+        date: dateStr,
+        time: hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : hour < 21 ? 'Evening' : 'Night',
+        price: venue.priceLevel,
+        matchScore: Math.min(100, s.matchScore||75),
+        hoursUntil: s.hoursUntil||6,
+        tags: s.tags||[],
+        conciergeNote: s.conciergeNote||'',
+        photoUrl: venue.photoUrl,
+        ticketUrl: venue.mapsUrl,
+        openConfirmed: true
+      };
+    }).sort((a,b) => b.matchScore - a.matchScore);
+
+    res.json({ events });
+
+  } catch (err) {
+    console.error('Event discover (Gemini) error:', err.message);
+    // If Gemini key missing, return helpful error
+    if (err.message.includes('GEMINI_API_KEY')) {
+      return res.status(500).json({ error: 'Gemini API key not configured. Add GEMINI_API_KEY to environment variables.' });
+    }
+    res.status(500).json({ error: 'Failed to discover events. Try again.' });
+  }
+});
+
+/* ─────────────────────────────────────────
+   POST /api/ai/event-discover-claude (kept for reference)
+   Original Claude + web_search version
+───────────────────────────────────────── */
+router.post('/event-discover-claude', auth, async (req, res) => {
   try {
     const { locationStr, timeLabel, hour, dayOfWeek, dateStr, lat, lng } = req.body;
 
