@@ -652,11 +652,22 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
 
     const data = await response.json();
     const rawText = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '';
+    console.log('Trip suggest raw (first 500):', (rawText||'').slice(0,500));
     const result = extractJSON(rawText);
+    console.log('Trip suggest parsed:', result ? JSON.stringify(result).slice(0,200) : 'NULL');
 
-    if (!result || !result.suggestions) {
-      console.error('Trip suggest parse failed. Raw:', (rawText||'').slice(0,300));
+    if (!result) {
       return res.status(500).json({ error: 'Could not parse suggestions. Please try again.' });
+    }
+
+    // Handle both {suggestions:[]} and direct array formats
+    if (!result.suggestions) {
+      // Try wrapping if Claude returned array directly
+      if (Array.isArray(result)) {
+        return res.json({ suggestions: result });
+      }
+      // Return whatever we got — frontend will handle empty array
+      result.suggestions = [];
     }
 
     res.json(result);
