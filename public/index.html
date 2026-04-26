@@ -3655,21 +3655,21 @@ function renderAazPrefs(existingProfile){
   if(!el) return;
   const mg = existingProfile?.musicGenres||[];
   const genres = ['Hip-Hop','80s','90s','Mainstream','Techno','Trance','R&B','Jazz','Rock','Electronic'];
-  const goals = [{v:'Network',l:'💼 Secure the bag',s:"I'm here for tech, real estate, or business."},
+  const goals = [{v:'Network',l:'💼 Secure the bag',s:"I’m here for tech, real estate, or business."},
                  {v:'Vibe Out',l:'⚡ Just for the energy',s:'I want to meet people and hang out.'},
-                 {v:'Low-Key',l:'🎧 Staying in my lane',s:"I'm here for the music or the activity itself."}];
+                 {v:'Low-Key',l:'🎧 Staying in my lane',s:"I’m here for the music or the activity itself."}];
   const atms  = [{v:'Top-Shelf',l:'🥂 Top-Shelf',s:'High-end, sophisticated, and polished. Think rooftops or lounges.'},
                  {v:'Electric',l:'⚡ Electric',s:'High-energy, loud, and main-character energy. Think clubs or stadiums.'},
                  {v:'Main Street',l:'🏠 Main Street',s:'Local, authentic, and hidden gems. Think underground or boutique.'}];
   const sounds= [{v:'Background',l:'💬 Background',s:'Clean audio, but keep it conversational.'},
-                 {v:'Front & Center',l:'🎛 Front & Center',s:"Crank it. I'm here for the DJ/Band."},
+                 {v:'Front & Center',l:'🎛 Front & Center',s:"Crank it. I’m here for the DJ/Band."},
                  {v:'Acoustic',l:'🎸 Acoustic',s:'Raw, chill, and stripped back.'}];
   el.innerHTML =
     '<div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:10px;">🎵 MUSIC YOU VIBE WITH</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;">' +
     genres.map(g=>'<div class="ob-chip'+(mg.includes(g)?' sel':'')+'" data-group="music" data-val="'+g+'" onclick="obToggleChip(this)">'+g+'</div>').join('') +
     '</div>' +
-    '<div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:8px;">🎯 WHAT'S THE MISSION?</div>' +
+    '<div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:8px;">🎯 WHAT’S THE MISSION?</div>' +
     '<div class="ob-radio-group" style="margin-bottom:14px;">' +
     goals.map(o=>'<div class="ob-radio'+(existingProfile?.eventGoal===o.v?' sel':'')+'" data-group="goal" data-val="'+o.v+'" onclick="obSelectRadio(this)"><div class="or-label">'+o.l+'</div><div class="or-sub">'+o.s+'</div></div>').join('') +
     '</div>' +
@@ -3677,7 +3677,7 @@ function renderAazPrefs(existingProfile){
     '<div class="ob-radio-group" style="margin-bottom:14px;">' +
     atms.map(o=>'<div class="ob-radio'+(existingProfile?.atmosphere===o.v?' sel':'')+'" data-group="atmosphere" data-val="'+o.v+'" onclick="obSelectRadio(this)"><div class="or-label">'+o.l+'</div><div class="or-sub">'+o.s+'</div></div>').join('') +
     '</div>' +
-    '<div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:8px;">🔊 HOW'S THE SOUND HITTING?</div>' +
+    '<div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:8px;">🔊 HOW’S THE SOUND HITTING?</div>' +
     '<div class="ob-radio-group" style="margin-bottom:16px;">' +
     sounds.map(o=>'<div class="ob-radio'+(existingProfile?.soundVibe===o.v?' sel':'')+'" data-group="soundVibe" data-val="'+o.v+'" onclick="obSelectRadio(this)"><div class="or-label">'+o.l+'</div><div class="or-sub">'+o.s+'</div></div>').join('') +
     '</div>' +
