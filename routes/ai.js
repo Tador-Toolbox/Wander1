@@ -550,11 +550,13 @@ router.post('/trip-suggest', auth, async (req, res) => {
     const alreadyHas = tripPlaces.length
       ? `The user already has these places in this trip, do NOT suggest them: ${tripPlaces.join(', ')}.`
       : '';
+    // Limit saved places to top 15 to reduce token usage
+    const topSavedPlaces = allSavedPlaces.slice(0, 15);
 
     // Build a compact summary of saved places for context
-    const beenPlaces = allSavedPlaces.filter(p => p.status === 'been');
-    const highRated  = allSavedPlaces.filter(p => p.rating >= 4);
-    const allTags    = allSavedPlaces.flatMap(p => p.tags);
+    const beenPlaces = topSavedPlaces.filter(p => p.status === 'been');
+    const highRated  = topSavedPlaces.filter(p => p.rating >= 4);
+    const allTags    = topSavedPlaces.flatMap(p => p.tags);
     const tagFreq    = allTags.reduce((acc, t) => { acc[t] = (acc[t]||0)+1; return acc; }, {});
     const topTags    = Object.entries(tagFreq).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([t])=>t);
 
@@ -651,12 +653,14 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
     });
 
     const data = await response.json();
-    console.log('Trip suggest HTTP status:', response.status);
-    console.log('Trip suggest data.type:', data.type, '| stop_reason:', data.stop_reason);
-    if(data.error) console.log('Trip suggest API error:', JSON.stringify(data.error));
-    console.log('Trip suggest content blocks:', JSON.stringify((data.content||[]).map(b=>({type:b.type,len:b.text?.length}))));
+    // Handle API-level errors (rate limit, auth, etc.)
+    if (data.type === 'error') {
+      if (data.error?.type === 'rate_limit_error') {
+        return res.status(429).json({ error: 'Too many requests — please wait 30 seconds and try again.' });
+      }
+      return res.status(500).json({ error: data.error?.message || 'API error' });
+    }
     const rawText = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '';
-    console.log('Trip suggest raw (first 500):', rawText.slice(0,500));
     const result = extractJSON(rawText);
     console.log('Trip suggest parsed:', result ? JSON.stringify(result).slice(0,200) : 'NULL');
 
