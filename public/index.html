@@ -870,27 +870,21 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <button onclick="openAIAgent()" style="margin-top:14px;width:100%;padding:12px;border:1.5px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(255,255,255,.08);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:rgba(255,255,255,.8);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;backdrop-filter:blur(4px);">
       📸 Update my AI profile
     </button>
+    <!-- Two action buttons in dark header -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
+      <button onclick="openRightNow()" style="padding:13px 10px;border:none;border-radius:16px;background:rgba(255,255,255,.1);color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.15);">
+        <span style="font-size:22px;">⚡</span>
+        <span>Right Now</span>
+      </button>
+      <button onclick="openEventDiscover()" style="padding:13px 10px;border:none;border-radius:16px;background:rgba(43,127,191,.3);color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;border:1px solid rgba(43,127,191,.5);">
+        <span style="font-size:22px;">🎯</span>
+        <span>Event Discover</span>
+      </button>
+    </div>
   </div>
   <div style="padding:22px 22px 100px;">
-    <!-- Right Now button -->
-    <button onclick="openRightNow()" style="width:100%;padding:16px;border:none;border-radius:20px;background:linear-gradient(135deg,#1A1714,#2D2925);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:12px;box-shadow:0 6px 24px rgba(26,23,20,.18);transition:transform .15s;" onmousedown="this.style.transform='scale(.98)'" onmouseup="this.style.transform='scale(1)'">
-      <span style="font-size:24px;">⚡</span>
-      <div style="text-align:left;">
-        <div style="font-size:14px;font-weight:800;">What should I do right now?</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;">2 ideas based on your taste + location + time</div>
-      </div>
-      <span style="margin-left:auto;font-size:18px;color:rgba(255,255,255,.4);">›</span>
-    </button>
 
-    <!-- AI Event Discover button -->
-    <button onclick="openEventDiscover()" style="width:100%;padding:16px;border:none;border-radius:20px;background:linear-gradient(135deg,#1A5F9A,#2B7FBF);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:24px;box-shadow:0 6px 24px rgba(43,127,191,.25);transition:transform .15s;" onmousedown="this.style.transform='scale(.98)'" onmouseup="this.style.transform='scale(1)'">
-      <span style="font-size:24px;">🎯</span>
-      <div style="text-align:left;">
-        <div style="font-size:14px;font-weight:800;">AI Event Discover</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:1px;">Top 3 events ranked for your Identity Cube</div>
-      </div>
-      <span style="margin-left:auto;font-size:18px;color:rgba(255,255,255,.4);">›</span>
-    </button>
+
     <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.08em;margin-bottom:12px;">TASTE TAGS</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;" id="aiTagsContainer">
       <div style="background:var(--border);border-radius:10px;padding:7px 14px;font-size:12px;color:var(--ink3);">No tags yet</div>
