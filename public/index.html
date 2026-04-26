@@ -203,6 +203,50 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans'
 .holiday-item .hi-note{font-size:11px;color:var(--txt2);line-height:1.4;margin-top:3px;}
 .trip-btn.story:hover{background:#f5a623;color:#fff;}
 /* Trip Plan Modal */
+/* Event Discover Modal */
+#eventDiscoverModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;z-index:9999;backdrop-filter:blur(8px);}
+#eventDiscoverModal .ed-sheet{background:var(--bg);border-radius:28px 28px 0 0;width:100%;max-width:520px;max-height:92vh;display:flex;flex-direction:column;}
+#eventDiscoverModal .ed-head{padding:22px 20px 16px;border-bottom:1px solid var(--border);flex-shrink:0;position:relative;}
+#eventDiscoverModal .ed-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--ink);}
+#eventDiscoverModal .ed-sub{font-size:12px;color:var(--ink3);margin-top:3px;}
+#eventDiscoverModal .ed-close{position:absolute;top:18px;right:18px;background:var(--border);border:none;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;color:var(--ink2);}
+#eventDiscoverModal .ed-body{overflow-y:auto;padding:18px 18px 36px;flex:1;-webkit-overflow-scrolling:touch;}
+/* Event card */
+.ed-card{background:var(--card);border:1.5px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:14px;}
+.ed-card-rank{height:4px;width:100%;}
+.ed-card-rank.rank-1{background:linear-gradient(90deg,#C9A84C,#f5d88a);}
+.ed-card-rank.rank-2{background:linear-gradient(90deg,#2B7FBF,#4a9eff);}
+.ed-card-rank.rank-3{background:linear-gradient(90deg,#1A6B4A,#34c98a);}
+.ed-card-body{padding:16px;}
+.ed-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
+.ed-card-name{font-size:15px;font-weight:800;color:var(--ink);flex:1;padding-right:10px;}
+.ed-match{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+.ed-match-pct{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--ink);}
+.ed-match-lbl{font-size:9px;font-weight:700;color:var(--ink3);letter-spacing:.06em;}
+.ed-meta{font-size:11px;color:var(--ink3);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:8px;}
+.ed-meta span{display:flex;align-items:center;gap:3px;}
+.ed-concierge{background:linear-gradient(135deg,#f8f5ff,#eeedfb);border-radius:12px;padding:11px 13px;margin-bottom:10px;font-size:12px;color:var(--ink2);line-height:1.6;font-style:italic;border-left:3px solid var(--purple);}
+.ed-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+.ed-tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:8px;background:var(--sky-light);color:var(--sky);}
+.ed-tag.timing-urgent{background:#fff3cd;color:#856404;}
+.ed-tag.timing-soon{background:var(--mint-light);color:var(--mint);}
+.ed-footer{display:flex;gap:8px;}
+.ed-link{flex:1;padding:9px;border-radius:12px;border:1.5px solid var(--border2);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:4px;}
+.ed-link.primary{background:var(--ink);color:#fff;border-color:var(--ink);}
+/* Loading states */
+.ed-loading{text-align:center;padding:44px 20px;}
+.ed-loading .el-icon{font-size:40px;margin-bottom:14px;}
+.ed-loading .el-steps{margin-top:16px;display:flex;flex-direction:column;gap:6px;}
+.ed-loading .el-step{font-size:12px;color:var(--ink3);padding:6px 12px;border-radius:10px;background:var(--card);border:1px solid var(--border);transition:all .3s;}
+.ed-loading .el-step.active{color:var(--ink);border-color:var(--sky);background:var(--sky-light);font-weight:700;}
+.ed-loading .el-step.done{color:var(--mint);border-color:var(--mint);background:var(--mint-light);}
+/* Identity cube pill */
+.ed-cube{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.ed-cube-label{font-size:10px;font-weight:800;color:var(--ink3);letter-spacing:.07em;width:100%;margin-bottom:4px;}
+.ed-cube-pill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:8px;background:var(--ink);color:#fff;}
+.ed-cube-pill.music{background:#5B4FCF;}
+.ed-cube-pill.goal{background:#1A6B4A;}
+.ed-cube-pill.vibe{background:#1A5F9A;}
 /* Right Now Modal */
 #rightNowModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:9999;backdrop-filter:blur(6px);}
 #rightNowModal .rn-sheet{background:var(--bg);border-radius:28px 28px 0 0;width:100%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;}
@@ -826,11 +870,21 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
   </div>
   <div style="padding:22px 22px 100px;">
     <!-- Right Now button -->
-    <button onclick="openRightNow()" style="width:100%;padding:16px;border:none;border-radius:20px;background:linear-gradient(135deg,#1A1714,#2D2925);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:24px;box-shadow:0 6px 24px rgba(26,23,20,.18);transition:transform .15s;" onmousedown="this.style.transform='scale(.98)'" onmouseup="this.style.transform='scale(1)'">
+    <button onclick="openRightNow()" style="width:100%;padding:16px;border:none;border-radius:20px;background:linear-gradient(135deg,#1A1714,#2D2925);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:12px;box-shadow:0 6px 24px rgba(26,23,20,.18);transition:transform .15s;" onmousedown="this.style.transform='scale(.98)'" onmouseup="this.style.transform='scale(1)'">
       <span style="font-size:24px;">⚡</span>
       <div style="text-align:left;">
         <div style="font-size:14px;font-weight:800;">What should I do right now?</div>
         <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;">2 ideas based on your taste + location + time</div>
+      </div>
+      <span style="margin-left:auto;font-size:18px;color:rgba(255,255,255,.4);">›</span>
+    </button>
+
+    <!-- AI Event Discover button -->
+    <button onclick="openEventDiscover()" style="width:100%;padding:16px;border:none;border-radius:20px;background:linear-gradient(135deg,#1A5F9A,#2B7FBF);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:24px;box-shadow:0 6px 24px rgba(43,127,191,.25);transition:transform .15s;" onmousedown="this.style.transform='scale(.98)'" onmouseup="this.style.transform='scale(1)'">
+      <span style="font-size:24px;">🎯</span>
+      <div style="text-align:left;">
+        <div style="font-size:14px;font-weight:800;">AI Event Discover</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:1px;">Top 3 events ranked for your Identity Cube</div>
       </div>
       <span style="margin-left:auto;font-size:18px;color:rgba(255,255,255,.4);">›</span>
     </button>
@@ -1954,6 +2008,171 @@ function _setNavActive(btnId){
     const e=document.getElementById(b);if(e)e.classList.remove('on');
   });
   const el=document.getElementById(btnId);if(el)el.classList.add('on');
+}
+
+async function openEventDiscover(){
+  document.getElementById('eventDiscoverModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'eventDiscoverModal';
+
+  const now = new Date();
+  const timeLabel = now.getHours() < 12 ? 'morning' : now.getHours() < 17 ? 'afternoon' : now.getHours() < 21 ? 'evening' : 'night';
+  const dateStr = now.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+
+  modal.innerHTML = `<div class="ed-sheet">
+    <div class="ed-head">
+      <div class="ed-title">🎯 AI Event Discover</div>
+      <div class="ed-sub">${dateStr} · ${timeLabel} · building your match list</div>
+      <button class="ed-close" onclick="document.getElementById('eventDiscoverModal').remove()">✕</button>
+    </div>
+    <div class="ed-body" id="edBody">
+      <div class="ed-loading">
+        <div class="el-icon" id="edLoadIcon" style="animation:spin 2s linear infinite;display:inline-block;">🎯</div>
+        <div style="font-size:15px;font-weight:800;color:var(--ink);margin-bottom:4px;">Reading your Identity Cube…</div>
+        <div style="font-size:12px;color:var(--ink3);">Scanning events and matching to your profile</div>
+        <div class="el-steps">
+          <div class="el-step active" id="edStep1">📊 Loading your profile</div>
+          <div class="el-step" id="edStep2">📍 Getting your location</div>
+          <div class="el-step" id="edStep3">🌐 Searching local events</div>
+          <div class="el-step" id="edStep4">🤖 Claude scoring & ranking</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+
+  const step = (n, done=[]) => {
+    ['edStep1','edStep2','edStep3','edStep4'].forEach((id,i) => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      if(done.includes(i+1)) el.className='el-step done';
+      else if(i+1 === n) el.className='el-step active';
+      else el.className='el-step';
+    });
+  };
+
+  try {
+    // Step 1 - Load profile
+    step(1);
+    const pr = await apiFetch('/api/ai/profile');
+    const pd = await pr.json();
+    const profile = pd.profile;
+    if(!profile?.analyzedAt) throw new Error('no-profile');
+    step(2,[1]);
+
+    // Step 2 - Get location
+    const pos = await new Promise((resolve,reject) => {
+      if(!navigator.geolocation){reject(new Error('no-geo'));return;}
+      navigator.geolocation.getCurrentPosition(resolve, reject, {timeout:8000});
+    }).catch(()=>null);
+
+    let locationStr = 'Tel Aviv, Israel'; // default
+    let lat = null, lng = null;
+    if(pos){
+      lat = pos.coords.latitude;
+      lng = pos.coords.longitude;
+      try{
+        const geo = new google.maps.Geocoder();
+        const res = await new Promise(resolve => {
+          geo.geocode({location:{lat,lng}}, (r,s) => resolve(s==='OK'?r:null));
+        });
+        const city = res?.[0]?.address_components?.find(c=>c.types.includes('locality'))?.long_name;
+        const country = res?.[0]?.address_components?.find(c=>c.types.includes('country'))?.long_name;
+        if(city) locationStr = country ? `${city}, ${country}` : city;
+      }catch{}
+    }
+    step(3,[1,2]);
+
+    // Step 3+4 - Send to backend
+    const r = await apiFetch('/api/ai/event-discover', {
+      method: 'POST',
+      body: JSON.stringify({
+        lat, lng, locationStr,
+        timeLabel, hour: now.getHours(),
+        dayOfWeek: now.toLocaleDateString('en-US',{weekday:'long'}),
+        dateStr
+      })
+    });
+    const data = await r.json();
+    if(data.error) throw new Error(data.error);
+    step(4,[1,2,3,4]);
+
+    // Render results
+    const body = document.getElementById('edBody');
+    if(!body) return;
+
+    // Identity cube preview
+    const cubeHtml = `<div class="ed-cube">
+      <div class="ed-cube-label">YOUR IDENTITY CUBE</div>
+      ${(profile.aestheticTags||profile.tags||[]).slice(0,4).map(t=>`<span class="ed-cube-pill">${esc(t)}</span>`).join('')}
+      ${(profile.musicGenres||[]).slice(0,3).map(g=>`<span class="ed-cube-pill music">🎵 ${esc(g)}</span>`).join('')}
+      ${profile.eventGoal?`<span class="ed-cube-pill goal">🎯 ${esc(profile.eventGoal)}</span>`:''}
+      ${profile.atmosphere?`<span class="ed-cube-pill vibe">🏛 ${esc(profile.atmosphere)}</span>`:''}
+    </div>`;
+
+    const rankColors = ['rank-1','rank-2','rank-3'];
+    const rankLabels = ['#1 Best Match','#2 Strong Match','#3 Solid Pick'];
+
+    body.innerHTML = cubeHtml + (data.events||[]).map((ev,i) => {
+      const pct = ev.matchScore||0;
+      const isUrgent = ev.hoursUntil !== undefined && ev.hoursUntil <= 48;
+      const isUnmissable = pct >= 95;
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((ev.venueName||ev.name)+' '+locationStr)}`;
+
+      return `<div class="ed-card">
+        <div class="ed-card-rank ${rankColors[i]||'rank-3'}"></div>
+        <div class="ed-card-body">
+          <div style="font-size:10px;font-weight:800;color:var(--ink3);letter-spacing:.07em;margin-bottom:6px;">${rankLabels[i]||''}</div>
+          <div class="ed-card-header">
+            <div class="ed-card-name">${esc(ev.name)}</div>
+            <div class="ed-match">
+              <div class="ed-match-pct">${pct}%</div>
+              <div class="ed-match-lbl">MATCH</div>
+            </div>
+          </div>
+          <div class="ed-meta">
+            ${ev.date?`<span>📅 ${esc(ev.date)}</span>`:''}
+            ${ev.time?`<span>🕐 ${esc(ev.time)}</span>`:''}
+            ${ev.venueName?`<span>📍 ${esc(ev.venueName)}</span>`:''}
+            ${ev.price?`<span>💰 ${esc(ev.price)}</span>`:''}
+          </div>
+          <div class="ed-tags">
+            ${isUnmissable?`<span class="ed-tag timing-urgent">🔥 Unmissable</span>`:''}
+            ${isUrgent&&!isUnmissable?`<span class="ed-tag timing-urgent">⚡ Next 48h</span>`:''}
+            ${!isUrgent?`<span class="ed-tag timing-soon">📆 This week</span>`:''}
+            ${(ev.tags||[]).map(t=>`<span class="ed-tag">${esc(t)}</span>`).join('')}
+          </div>
+          <div class="ed-concierge">✦ ${esc(ev.conciergeNote)}</div>
+          <div class="ed-footer">
+            <a class="ed-link primary" href="${mapsUrl}" target="_blank" rel="noopener">🗺 Find venue</a>
+            ${ev.ticketUrl?`<a class="ed-link" href="${esc(ev.ticketUrl)}" target="_blank" rel="noopener">🎟 Tickets</a>`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('') +
+    `<div style="text-align:center;font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.6;">
+      Ranked by Claude against your Identity Cube · ${dateStr}
+    </div>`;
+
+  } catch(e) {
+    const body = document.getElementById('edBody');
+    if(!body) return;
+    if(e.message === 'no-profile'){
+      body.innerHTML = `<div style="text-align:center;padding:40px 20px;">
+        <div style="font-size:40px;margin-bottom:14px;">✦</div>
+        <div style="font-size:15px;font-weight:800;color:var(--ink);margin-bottom:8px;">Build your AI profile first</div>
+        <div style="font-size:13px;color:var(--ink3);margin-bottom:20px;line-height:1.6;">AI Event Discover needs your Identity Cube to find events that truly match you.</div>
+        <button onclick="document.getElementById('eventDiscoverModal').remove();openAIAgent()" style="background:var(--ink);color:#fff;border:none;border-radius:14px;padding:12px 24px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">📸 Build my profile</button>
+      </div>`;
+    } else {
+      body.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--coral);">
+        <div style="font-size:32px;margin-bottom:12px;">⚠️</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:16px;">${esc(e.message)||'Something went wrong'}</div>
+        <button onclick="openEventDiscover()" style="background:var(--ink);color:#fff;border:none;border-radius:12px;padding:10px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Retry</button>
+      </div>`;
+    }
+  }
 }
 
 async function openRightNow(){
