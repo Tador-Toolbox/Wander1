@@ -2178,6 +2178,7 @@ async function openEventDiscover(){
         <div class="ed-card-rank ${rankColors[i]||'rank-3'}"></div>
         <div class="ed-card-body">
           <div style="font-size:10px;font-weight:800;color:var(--ink3);letter-spacing:.07em;margin-bottom:6px;">${rankLabels[i]||''}</div>
+          ${ev.photoUrl?`<img src="${esc(ev.photoUrl)}" style="width:100%;height:140px;object-fit:cover;display:block;margin:-16px -16px 12px;width:calc(100% + 32px);" onerror="this.style.display='none'">`:''}
           <div class="ed-card-header">
             <div class="ed-card-name">${esc(ev.name)}</div>
             <div class="ed-match">
@@ -2186,9 +2187,8 @@ async function openEventDiscover(){
             </div>
           </div>
           <div class="ed-meta">
-            ${ev.date?`<span>📅 ${esc(ev.date)}</span>`:''}
+            ${ev.openConfirmed?'<span style="color:var(--mint);font-weight:700;">✓ Open today</span>':''}
             ${ev.time?`<span>🕐 ${esc(ev.time)}</span>`:''}
-            ${ev.venueName?`<span>📍 ${esc(ev.venueName)}</span>`:''}
             ${ev.price?`<span>💰 ${esc(ev.price)}</span>`:''}
           </div>
           <div class="ed-tags">
