@@ -651,13 +651,12 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
     });
 
     const data = await response.json();
-    const rawText = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '{}';
-    let result;
-    try {
-      result = JSON.parse(rawText.replace(/```json|```/g,'').trim());
-    } catch {
-      const s = rawText.indexOf('{'), e = rawText.lastIndexOf('}');
-      result = (s>=0&&e>s) ? JSON.parse(rawText.slice(s,e+1)) : {ideas:[]};
+    const rawText = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '';
+    const result = extractJSON(rawText);
+
+    if (!result || !result.suggestions) {
+      console.error('Trip suggest parse failed. Raw:', (rawText||'').slice(0,300));
+      return res.status(500).json({ error: 'Could not parse suggestions. Please try again.' });
     }
 
     res.json(result);
