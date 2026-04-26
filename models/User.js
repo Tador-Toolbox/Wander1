@@ -27,6 +27,11 @@ const UserSchema = new mongoose.Schema({
     atmosphere:   { type: String, default: '' },
     soundVibe:    { type: String, default: '' }
   },
+  aiPhotos: [{
+    url:        { type: String },
+    publicId:   { type: String },
+    uploadedAt: { type: Date, default: Date.now }
+  }],
   feedbackLoop: {
     categories: {
       type: Map,
