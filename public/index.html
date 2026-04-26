@@ -63,7 +63,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans'
 .ob-upload-label{font-size:14px;font-weight:800;color:var(--txt);margin-bottom:4px;}
 .ob-upload-hint{font-size:12px;color:var(--txt3);}
 .ob-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 24px;max-width:400px;margin:0 auto 8px;width:100%;}
-.ob-thumb{width:100%;aspect-ratio:1;border-radius:10px;object-fit:cover;border:2px solid var(--border);}
+.ob-thumb-wrap{position:relative;}
+.ob-thumb{width:100%;aspect-ratio:1;border-radius:10px;object-fit:cover;border:2px solid var(--border);display:block;}
+.ob-thumb-del{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;}
+.ob-thumb-del:hover{background:var(--coral);}
 .ob-count{font-size:12px;color:var(--txt3);text-align:center;margin-bottom:16px;}
 .ob-analyze-btn{width:calc(100% - 48px);max-width:400px;padding:15px;border:none;border-radius:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(102,126,234,.35);transition:all .2s;margin:0 auto;display:block;}
 .ob-analyze-btn:disabled{opacity:.45;cursor:not-allowed;}
@@ -856,7 +859,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 </div>
 
 <!-- AI IDENTITY SCREEN -->
-<div id="aiScreen" class="screen" style="overflow-y:auto;-webkit-overflow-scrolling:touch;">
+<div id="aiScreen" class="screen" style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:80px;">
   <div style="background:linear-gradient(160deg,#1A1714 0%,#2D2925 55%,var(--bg) 100%);padding:56px 22px 28px;flex-shrink:0;">
     <div style="font-size:12px;color:rgba(255,255,255,.4);font-weight:500;margin-bottom:6px;" id="aiGreeting">Good day ✦</div>
     <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:20px;">Here's how AI<br>sees <span style="color:#C9A84C;">you</span></div>
@@ -1619,6 +1622,39 @@ function obGetAnswers(){
   return { music, goal, atmosphere, soundVibe };
 }
 
+function obRemoveFile(idx){
+  _obFiles.splice(idx,1);
+  obProcessFiles(new DataTransfer().files); // re-render with empty to reset, then rebuild
+  // rebuild grid from _obFiles directly
+  const grid=document.getElementById('obGrid');
+  const countEl=document.getElementById('obCount');
+  const btn=document.getElementById('obAnalyzeBtn');
+  if(grid){
+    grid.innerHTML='';
+    _obFiles.forEach((f,i)=>{
+      const wrap=document.createElement('div');
+      wrap.className='ob-thumb-wrap';
+      const img=document.createElement('img');
+      img.className='ob-thumb';
+      img.src=URL.createObjectURL(f);
+      const del=document.createElement('button');
+      del.className='ob-thumb-del';
+      del.textContent='✕';
+      del.onclick=()=>obRemoveFile(i);
+      wrap.appendChild(img);
+      wrap.appendChild(del);
+      grid.appendChild(wrap);
+    });
+  }
+  const n=_obFiles.length;
+  if(countEl){
+    const color=n<5?'var(--coral)':n>=5?'var(--mint)':'var(--txt3)';
+    const needMore = n<5 ? ` — need ${5-n} more` : '';
+    countEl.innerHTML=n?`<span style="color:${color};font-weight:700;">${n} photo${n!==1?'s':''} selected</span>${needMore}`:'';
+  }
+  if(btn)btn.disabled=n<5;
+}
+
 function obDragOver(e){e.preventDefault();document.getElementById('obDropZone')?.classList.add('dragover');}
 function obDragLeave(){document.getElementById('obDropZone')?.classList.remove('dragover');}
 function obDropFiles(e){e.preventDefault();obDragLeave();obProcessFiles(e.dataTransfer.files);}
@@ -1631,7 +1667,21 @@ function obProcessFiles(fileList){
   const countEl = document.getElementById('obCount');
   const btn = document.getElementById('obAnalyzeBtn');
   if(grid){
-    grid.innerHTML = _obFiles.map(f=>`<img class="ob-thumb" src="${URL.createObjectURL(f)}">`).join('');
+    grid.innerHTML = '';
+    _obFiles.forEach((f,i)=>{
+      const wrap=document.createElement('div');
+      wrap.className='ob-thumb-wrap';
+      const img=document.createElement('img');
+      img.className='ob-thumb';
+      img.src=URL.createObjectURL(f);
+      const del=document.createElement('button');
+      del.className='ob-thumb-del';
+      del.textContent='✕';
+      del.onclick=()=>obRemoveFile(i);
+      wrap.appendChild(img);
+      wrap.appendChild(del);
+      grid.appendChild(wrap);
+    });
   }
   if(countEl){
     const n = _obFiles.length;
