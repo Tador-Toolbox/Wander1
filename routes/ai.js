@@ -56,8 +56,7 @@ function getPriceLabel(level) {
 async function callGemini(prompt) {
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
-  // Try gemini-2.0-flash-exp first, fall back to gemini-pro
-  const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+  const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-lite'];
   let lastErr;
   for (const model of models) {
     try {
