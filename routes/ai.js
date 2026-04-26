@@ -382,6 +382,7 @@ Tags should be lowercase, 2-15 items, specific and useful for place recommendati
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    const { answers = {} } = req.body;
     user.aiProfile = {
       tags:         profile.tags || [],
       summary:      profile.summary || '',
@@ -392,7 +393,12 @@ Tags should be lowercase, 2-15 items, specific and useful for place recommendati
         travelStyle:  profile.travelStyle  || '',
         socialStyle:  profile.socialStyle  || '',
         timeOfDay:    profile.timeOfDay    || ''
-      })
+      }),
+      // Music & event preferences from questionnaire
+      ...(answers.music?.length    && { musicGenres: answers.music }),
+      ...(answers.goal             && { eventGoal:   answers.goal }),
+      ...(answers.atmosphere       && { atmosphere:  answers.atmosphere }),
+      ...(answers.soundVibe        && { soundVibe:   answers.soundVibe })
     };
     await user.save();
 
