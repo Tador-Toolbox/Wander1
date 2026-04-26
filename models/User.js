@@ -16,6 +16,7 @@ const UserSchema = new mongoose.Schema({
     summary:      { type: String, default: '' },
     locations:    { type: [String], default: [] },
     analyzedAt:   { type: Date, default: null },
+    aestheticTags:{ type: [String], default: [] },
     dietaryStyle: { type: String, default: '' },
     travelStyle:  { type: String, default: '' },
     socialStyle:  { type: String, default: '' },
