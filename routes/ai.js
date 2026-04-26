@@ -651,8 +651,12 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
     });
 
     const data = await response.json();
+    console.log('Trip suggest HTTP status:', response.status);
+    console.log('Trip suggest data.type:', data.type, '| stop_reason:', data.stop_reason);
+    if(data.error) console.log('Trip suggest API error:', JSON.stringify(data.error));
+    console.log('Trip suggest content blocks:', JSON.stringify((data.content||[]).map(b=>({type:b.type,len:b.text?.length}))));
     const rawText = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '';
-    console.log('Trip suggest raw (first 500):', (rawText||'').slice(0,500));
+    console.log('Trip suggest raw (first 500):', rawText.slice(0,500));
     const result = extractJSON(rawText);
     console.log('Trip suggest parsed:', result ? JSON.stringify(result).slice(0,200) : 'NULL');
 
