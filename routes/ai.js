@@ -402,8 +402,28 @@ Tags should be lowercase, 2-15 items, specific and useful for place recommendati
       ...(answers.atmosphere       && { atmosphere:  answers.atmosphere }),
       ...(answers.soundVibe        && { soundVibe:   answers.soundVibe })
     };
-    await user.save();
+    // Upload photos to Cloudinary and save URLs
+    try {
+      const cloudinary = require('cloudinary').v2;
+      const uploadedPhotos = [];
+      for (const img of images.slice(0, 20)) {
+        const result = await cloudinary.uploader.upload(
+          `data:${img.mediaType};base64,${img.base64}`,
+          { folder: 'wandr_ai_photos', resource_type: 'image',
+            transformation: [{ width: 400, height: 400, crop: 'fill', quality: 'auto' }] }
+        );
+        uploadedPhotos.push({ url: result.secure_url, publicId: result.public_id });
+      }
+      if (isOnboarding) {
+        user.aiPhotos = uploadedPhotos;
+      } else {
+        user.aiPhotos = [...(user.aiPhotos || []), ...uploadedPhotos].slice(-20);
+      }
+    } catch(photoErr) {
+      console.error('Photo upload error:', photoErr.message);
+    }
 
+    await user.save();
     res.json({ profile: user.aiProfile });
 
   } catch (err) {
@@ -841,4 +861,33 @@ Return ONLY valid JSON, top 3 events after scoring and filtering:
     console.error('Event discover error:', err);
     res.status(500).json({ error: 'Failed to discover events. Try again.' });
   }
+});
+
+
+/* ─────────────────────────────────────────
+   GET /api/ai/photos
+───────────────────────────────────────── */
+router.get('/photos', auth, async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.userId).select('aiPhotos');
+    res.json({ photos: user?.aiPhotos || [] });
+  } catch { res.status(500).json({ error: 'Server error' }); }
+});
+
+/* ─────────────────────────────────────────
+   DELETE /api/ai/photo/:publicId
+───────────────────────────────────────── */
+router.delete('/photo/:publicId', auth, async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const cloudinary = require('cloudinary').v2;
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'Not found' });
+    const publicId = decodeURIComponent(req.params.publicId);
+    try { await cloudinary.uploader.destroy(publicId); } catch {}
+    user.aiPhotos = (user.aiPhotos || []).filter(p => p.publicId !== publicId);
+    await user.save();
+    res.json({ ok: true });
+  } catch { res.status(500).json({ error: 'Server error' }); }
 });
