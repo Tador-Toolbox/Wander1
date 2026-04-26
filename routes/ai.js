@@ -891,3 +891,26 @@ router.delete('/photo/:publicId', auth, async (req, res) => {
     res.json({ ok: true });
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
+/* ─────────────────────────────────────────
+   POST /api/ai/preferences
+   Save music + event preferences without re-analyzing photos
+───────────────────────────────────────── */
+router.post('/preferences', auth, async (req, res) => {
+  try {
+    const { music, goal, atmosphere, soundVibe } = req.body;
+    const User = require('../models/User');
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (music?.length)    user.aiProfile.musicGenres = music;
+    if (goal)             user.aiProfile.eventGoal   = goal;
+    if (atmosphere)       user.aiProfile.atmosphere  = atmosphere;
+    if (soundVibe)        user.aiProfile.soundVibe   = soundVibe;
+
+    user.markModified('aiProfile');
+    await user.save();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
