@@ -56,18 +56,27 @@ function getPriceLabel(level) {
 async function callGemini(prompt) {
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
-    })
-  });
-  const d = await r.json();
-  if (d.error) throw new Error('Gemini: ' + d.error.message);
-  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  // Try gemini-2.0-flash-exp first, fall back to gemini-pro
+  const models = ['gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-pro'];
+  let lastErr;
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+        })
+      });
+      const d = await r.json();
+      if (d.error) { lastErr = new Error('Gemini: ' + d.error.message); continue; }
+      const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (text) { console.log('Gemini model used:', model); return text; }
+    } catch(e) { lastErr = e; }
+  }
+  throw lastErr || new Error('Gemini: all models failed');
 }
 
 const auth   = require('../middleware/auth');
