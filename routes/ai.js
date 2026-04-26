@@ -57,15 +57,16 @@ async function callGemini(prompt) {
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
   const modelConfigs = [
-    { model: 'gemini-2.0-flash-exp', ver: 'v1beta' },
-    { model: 'gemini-1.5-flash', ver: 'v1' },
-    { model: 'gemini-1.5-pro', ver: 'v1' },
-    { model: 'gemini-2.0-flash', ver: 'v1' },
+    { model: 'gemini-2.0-flash-001', ver: 'v1beta' },
+    { model: 'gemini-2.0-flash', ver: 'v1beta' },
+    { model: 'gemini-1.5-flash-001', ver: 'v1beta' },
+    { model: 'gemini-1.5-flash', ver: 'v1beta' },
   ];
   let lastErr;
   for (const { model, ver } of modelConfigs) {
     try {
       const url = `https://generativelanguage.googleapis.com/${ver}/models/${model}:generateContent?key=${geminiKey}`;
+      console.log('Trying:', url.replace(geminiKey, 'KEY'));
       const r = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
