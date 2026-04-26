@@ -3040,8 +3040,9 @@ async function runTripSuggest(tripId, tripName){
     const data = await r.json();
     if(data.error) throw new Error(data.error);
 
+    if(data.error) throw new Error(data.error);
     if(!data.suggestions || !data.suggestions.length) {
-      body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--txt3);font-size:14px;">No suggestions found. Try building your AI profile with more photos.</div>';
+      body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--txt3);font-size:14px;">No suggestions found for this destination. Try again or add more photos to your AI profile.</div>';
       return;
     }
 
