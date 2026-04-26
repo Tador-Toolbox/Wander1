@@ -184,7 +184,7 @@ Reply ONLY with valid JSON, no extra text, no markdown fences:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 3000,
+        max_tokens: 1500,
         messages: [{ role: 'user', content: prompt }]
       })
     });
@@ -564,12 +564,7 @@ router.post('/trip-suggest', auth, async (req, res) => {
     const feedbackUser = await User.findById(req.userId).select('feedbackLoop');
     const feedbackContext = buildFeedbackContext(feedbackUser?.feedbackLoop);
 
-    const savedContext = allSavedPlaces.length ? `
-The user has ${allSavedPlaces.length} saved places on their map. Key signals:
-- Top tags across all their places: ${topTags.join(', ')}
-- Places they've been to: ${beenPlaces.slice(0,8).map(p=>p.name+(p.location?' ('+p.location+')':'')).join(', ')||'none yet'}
-- Highest rated places (4-5★): ${highRated.slice(0,6).map(p=>p.name).join(', ')||'none yet'}
-Use this to reinforce their taste patterns when making suggestions.` : '';
+     const savedContext = topSavedPlaces.length ? `Top tags: ${topTags.slice(0,8).join(', ')}. Been to: ${beenPlaces.slice(0,5).map(p=>p.name).join(', ')||'none'}. Loved: ${highRated.slice(0,4).map(p=>p.name).join(', ')||'none'}.` : '';
 
     const seasonalNote = visitMonth
       ? `The user plans to visit in ${visitMonth}. Factor in seasonal availability, weather, and events. Avoid suggesting places that are closed or unpleasant in ${visitMonth}.`
@@ -647,7 +642,7 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+        max_tokens: 1200,
         messages: [{ role: 'user', content: prompt }]
       })
     });
