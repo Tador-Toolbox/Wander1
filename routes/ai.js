@@ -1,4 +1,22 @@
 const router = require('express').Router();
+
+// Robust JSON extraction — handles Claude adding text before/after JSON
+function extractJSON(text) {
+  if (!text) return null;
+  // Try direct parse first
+  try { return extractJSON(text) || {}; } catch {}
+  // Find first { to last }
+  const s = text.indexOf('{'), e = text.lastIndexOf('}');
+  if (s >= 0 && e > s) {
+    try { return JSON.parse(text.slice(s, e + 1)); } catch {}
+  }
+  // Find first [ to last ] (array response)
+  const s2 = text.indexOf('['), e2 = text.lastIndexOf(']');
+  if (s2 >= 0 && e2 > s2) {
+    try { return JSON.parse(text.slice(s2, e2 + 1)); } catch {}
+  }
+  return null;
+}
 const auth   = require('../middleware/auth');
 const Trip   = require('../models/Trip');
 const Place  = require('../models/Place');
@@ -172,8 +190,8 @@ Reply ONLY with valid JSON, no extra text, no markdown fences:
     });
 
     const data = await response.json();
-    const text = data.content?.[0]?.text || '{}';
-    const plan = JSON.parse(text.replace(/```json|```/g, '').trim());
+    const text = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '{}';
+    const plan = extractJSON(text) || {};
     res.json(plan);
 
   } catch (err) {
@@ -248,8 +266,8 @@ Reply ONLY with valid JSON, no extra text, no markdown fences:
     });
 
     const data = await response.json();
-    const text = data.content?.[0]?.text || '{}';
-    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+    const text = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '{}';
+    const parsed = extractJSON(text) || {};
 
     const story = {
       orderedPlaces: orderedPlaceIds,
@@ -375,8 +393,8 @@ Tags should be lowercase, 2-15 items, specific and useful for place recommendati
     });
 
     const data = await response.json();
-    const text = data.content?.[0]?.text || '{}';
-    const profile = JSON.parse(text.replace(/```json|```/g, '').trim());
+    const text = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '{}';
+    const profile = extractJSON(text) || {};
 
     // Save to User
     const User = require('../models/User');
@@ -722,9 +740,12 @@ Reply ONLY with valid JSON, no markdown:
     });
 
     const data = await response.json();
-    const text = data.content?.[0]?.text || '{}';
-    const result = JSON.parse(text.replace(/```json|```/g, '').trim());
-
+    const text = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '{}';
+    const result = extractJSON(text);
+    if (!result) {
+      console.error('Parse failed, raw:', (text||'').slice(0,300));
+      return res.status(500).json({ error: 'AI response could not be parsed. Try again.' });
+    }
     res.json(result);
   } catch (err) {
     console.error('Right now error:', err);
@@ -790,23 +811,29 @@ Next 48h deadline: ${deadline48h.toLocaleDateString('en-GB', {weekday:'short', d
    - Live music, concerts, acoustic sessions (based on Sound preference)
    Use search queries like: "events ${locationStr} this weekend", "${musicGenres[0]||'music'} event ${locationStr}", "nightlife ${locationStr} ${dayOfWeek}"
 
-2. SCORE each found event against the Identity Cube (0-100%):
+2. VERIFY each event/venue is open — only include events that:
+   - Have confirmed future dates (not past events)
+   - The venue is known to be operating (not permanently closed)
+   - If unsure about opening status, skip it and find another
+   Search specifically for "open" venues and upcoming events only.
+
+3. SCORE each found event against the Identity Cube (0-100%):
    - +30pts: matches their music genre
    - +25pts: matches their atmosphere preference (Top-Shelf/Electric/Main Street)  
    - +20pts: matches their event goal (Network/Vibe/Low-Key)
    - +15pts: matches sound preference (Background/Front&Center/Acoustic)
    - +10pts: matches aesthetic/vibe tags
 
-3. TIMING RULE:
+4. TIMING RULE:
    - Events in next 48h: boost score by 1.5x (max 100%)
    - Events 3-7 days out: only include if score >= 95% (Unmissable tier)
    - Mark hoursUntil: approximate hours from now
 
-4. Write a CONCIERGE NOTE for each — be specific and personal:
+5. Write a CONCIERGE NOTE for each — be specific and personal:
    Bad: "This event matches your music taste"
    Good: "Since you love Deep House and prefer high-end venues, this rooftop set by a Berlin-based DJ is exactly the sound + setting your profile signals — and it's only 6 hours away"
 
-Return ONLY valid JSON, top 3 events after scoring and filtering:
+Return ONLY valid JSON, top 3 CONFIRMED OPEN events after scoring and filtering:
 {
   "events": [
     {
