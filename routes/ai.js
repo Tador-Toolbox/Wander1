@@ -57,10 +57,10 @@ async function callGemini(prompt) {
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
   const modelConfigs = [
-    { model: 'gemini-2.0-flash-001', ver: 'v1beta' },
-    { model: 'gemini-2.0-flash', ver: 'v1beta' },
-    { model: 'gemini-1.5-flash-001', ver: 'v1beta' },
-    { model: 'gemini-1.5-flash', ver: 'v1beta' },
+    { model: 'gemini-2.5-flash-preview-04-17', ver: 'v1beta' },
+    { model: 'gemini-2.5-pro-preview-03-25', ver: 'v1beta' },
+    { model: 'gemini-2.0-flash-lite', ver: 'v1beta' },
+    { model: 'gemini-1.5-flash-latest', ver: 'v1beta' },
   ];
   let lastErr;
   for (const { model, ver } of modelConfigs) {
