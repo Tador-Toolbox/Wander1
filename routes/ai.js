@@ -228,22 +228,7 @@ Reply ONLY with valid JSON, no extra text, no markdown fences:
   ]
 }`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    const data = await response.json();
-    const text = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '{}';
+    const text = await callGemini(prompt);
     const plan = extractJSON(text) || {};
     res.json(plan);
 
@@ -304,22 +289,7 @@ Reply ONLY with valid JSON, no extra text, no markdown fences:
   ]
 }`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    const data = await response.json();
-    const text = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '{}';
+    const text = await callGemini(prompt);
     const parsed = extractJSON(text) || {};
 
     const story = {
@@ -425,28 +395,7 @@ Reply ONLY with valid JSON, no markdown, no extra text:
 
 Tags should be lowercase, 2-15 items, specific and useful for place recommendations.`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 500,
-        messages: [{
-          role: 'user',
-          content: [
-            ...imageContent,
-            { type: 'text', text: prompt }
-          ]
-        }]
-      })
-    });
-
-    const data = await response.json();
-    const text = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '{}';
+    const text = await callGemini(prompt);
     const profile = extractJSON(text) || {};
 
     // Save to User
@@ -686,29 +635,7 @@ Reply ONLY with valid JSON, no markdown, no extra text:
 
 For holidays: include 2-5 major festivals, public holidays, or culturally significant events happening in "${tripName}" during ${visitMonth || 'the visit period'}. If visitMonth is unknown, list the 3 most iconic annual events. If there are no notable events, return an empty array.`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    const data = await response.json();
-    // Handle API-level errors (rate limit, auth, etc.)
-    if (data.type === 'error') {
-      if (data.error?.type === 'rate_limit_error') {
-        return res.status(429).json({ error: 'Too many requests — please wait 30 seconds and try again.' });
-      }
-      return res.status(500).json({ error: data.error?.message || 'API error' });
-    }
-    const rawText = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '';
+    const rawText = await callGemini(prompt);
     const result = extractJSON(rawText);
     console.log('Trip suggest parsed:', result ? JSON.stringify(result).slice(0,200) : 'NULL');
 
@@ -791,22 +718,7 @@ Reply ONLY with valid JSON, no markdown:
   ]
 }`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 800,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    const data = await response.json();
-    const text = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '{}';
+    const text = await callGemini(prompt);
     const result = extractJSON(text);
     if (!result) {
       console.error('Parse failed, raw:', (text||'').slice(0,300));
