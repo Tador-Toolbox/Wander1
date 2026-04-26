@@ -613,8 +613,9 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
     });
 
     const data = await response.json();
-    const text = data.content?.[0]?.text || '{}';
-    const result = JSON.parse(text.replace(/```json|```/g, '').trim());
+    const rawText = data.content?.filter(b=>b.type==='text').map(b=>b.text).join('') || '{}';
+    const jsonMatchRn = rawText.match(/\{[\s\S]*\}/);
+    const result = JSON.parse(jsonMatchRn ? jsonMatchRn[0] : '{}');
 
     res.json(result);
   } catch (err) {
@@ -819,8 +820,10 @@ Return ONLY valid JSON, top 3 events after scoring and filtering:
     const textBlock = data.content?.filter(b => b.type === 'text').map(b => b.text).join('');
     if (!textBlock) return res.status(500).json({ error: 'No response from AI' });
 
-    const clean = textBlock.replace(/```json|```/g, '').trim();
-    const result = JSON.parse(clean);
+    // Extract JSON robustly — find first { to last }
+    const jsonMatch = textBlock.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return res.status(500).json({ error: 'No events found in this area. Try again.' });
+    const result = JSON.parse(jsonMatch[0]);
 
     // Apply timing boost on backend as safety
     if (result.events) {
