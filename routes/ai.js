@@ -56,7 +56,7 @@ function getPriceLabel(level) {
 async function callGemini(prompt) {
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
-  const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-lite'];
+  const models = ['gemini-2.0-flash', 'gemini-2.0-flash-001', 'gemini-1.5-flash-8b'];
   let lastErr;
   for (const model of models) {
     try {
@@ -70,7 +70,7 @@ async function callGemini(prompt) {
         })
       });
       const d = await r.json();
-      if (d.error) { lastErr = new Error('Gemini: ' + d.error.message); continue; }
+      if (d.error) { console.log('Gemini model', model, 'failed:', d.error.message); lastErr = new Error('Gemini: ' + d.error.message); continue; }
       const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
       if (text) { console.log('Gemini model used:', model); return text; }
     } catch(e) { lastErr = e; }
