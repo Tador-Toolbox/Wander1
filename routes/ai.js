@@ -642,7 +642,7 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1200,
+        max_tokens: 4000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
