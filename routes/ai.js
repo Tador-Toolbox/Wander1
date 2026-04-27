@@ -53,36 +53,49 @@ function getPriceLabel(level) {
 /* ─────────────────────────────────────────
    GEMINI HELPER
 ───────────────────────────────────────── */
-async function callGemini(prompt) {
+async function callAI(prompt, maxTokens = 2000) {
   const geminiKey = process.env.GEMINI_API_KEY;
-  if (!geminiKey) throw new Error('GEMINI_API_KEY not set');
-  const modelConfigs = [
-    { model: 'gemini-2.5-flash-preview-04-17', ver: 'v1beta' },
-    { model: 'gemini-2.5-pro-preview-03-25', ver: 'v1beta' },
-    { model: 'gemini-2.0-flash-lite', ver: 'v1beta' },
-    { model: 'gemini-1.5-flash-latest', ver: 'v1beta' },
-  ];
-  let lastErr;
-  for (const { model, ver } of modelConfigs) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/${ver}/models/${model}:generateContent?key=${geminiKey}`;
-      console.log('Trying:', url.replace(geminiKey, 'KEY'));
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
-        })
-      });
-      const d = await r.json();
-      if (d.error) { console.log('Gemini model', model, 'failed:', d.error.message); lastErr = new Error('Gemini: ' + d.error.message); continue; }
-      const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      if (text) { console.log('Gemini model used:', model); return text; }
-    } catch(e) { lastErr = e; }
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+  // Try Gemini first
+  if (geminiKey) {
+    const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+    for (const model of models) {
+      try {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7, maxOutputTokens: maxTokens }
+          })
+        });
+        const d = await r.json();
+        if (d.error) { console.log('Gemini', model, 'failed:', d.error.message); continue; }
+        const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (text) { console.log('✅ Gemini model used:', model); return text; }
+      } catch(e) { console.log('Gemini error:', e.message); }
+    }
+    console.log('Gemini unavailable, falling back to Claude...');
   }
-  throw lastErr || new Error('Gemini: all models failed');
+
+  // Fall back to Claude
+  if (!anthropicKey) throw new Error('No AI key available. Add ANTHROPIC_API_KEY credits at console.anthropic.com');
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+  });
+  const d = await r.json();
+  if (d.type === 'error') {
+    if (d.error?.type === 'rate_limit_error') throw new Error('Too many requests — please wait 30 seconds and try again.');
+    throw new Error(d.error?.message || 'AI error');
+  }
+  console.log('✅ Claude fallback used');
+  return d.content?.filter(b => b.type === 'text').map(b => b.text).join('') || '';
 }
+
+const callGemini = callAI;
 
 const auth   = require('../middleware/auth');
 const Trip   = require('../models/Trip');
