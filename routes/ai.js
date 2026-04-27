@@ -51,13 +51,41 @@ function getPriceLabel(level) {
 }
 
 /* ─────────────────────────────────────────
-   GEMINI HELPER
+   AI HELPER — DeepSeek → Gemini → Claude
 ───────────────────────────────────────── */
 async function callAI(prompt, maxTokens = 2000) {
-  const geminiKey = process.env.GEMINI_API_KEY;
+  const deepseekKey  = process.env.DEEPSEEK_API_KEY;
+  const geminiKey    = process.env.GEMINI_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
-  // Try Gemini first
+  // 1️⃣ Try DeepSeek first (free tier — 5M tokens on signup)
+  if (deepseekKey) {
+    try {
+      const r = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${deepseekKey}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: maxTokens,
+          temperature: 0.7
+        })
+      });
+      const d = await r.json();
+      if (d.error) {
+        console.log('DeepSeek failed:', d.error.message);
+      } else {
+        const text = d.choices?.[0]?.message?.content || '';
+        if (text) { console.log('✅ DeepSeek used'); return text; }
+      }
+    } catch(e) { console.log('DeepSeek error:', e.message); }
+    console.log('DeepSeek unavailable, trying Gemini...');
+  }
+
+  // 2️⃣ Try Gemini second
   if (geminiKey) {
     const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
     for (const model of models) {
@@ -79,8 +107,8 @@ async function callAI(prompt, maxTokens = 2000) {
     console.log('Gemini unavailable, falling back to Claude...');
   }
 
-  // Fall back to Claude
-  if (!anthropicKey) throw new Error('No AI key available. Add ANTHROPIC_API_KEY credits at console.anthropic.com');
+  // 3️⃣ Fall back to Claude
+  if (!anthropicKey) throw new Error('No AI key available. Add DEEPSEEK_API_KEY at platform.deepseek.com');
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
