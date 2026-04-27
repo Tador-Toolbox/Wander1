@@ -642,12 +642,12 @@ PART 2 — 2 HIDDEN GEMS (isGem: true, isMichelin: false):
 - Could be: a tiny family-run restaurant, a secret viewpoint, a neighborhood market, an underground bar, a little-known temple or gallery
 - Must still match their taste profile
 
-PART 3 — 1 MICHELIN PICK (isMichelin: true, isGem: false):
-- Must be a REAL Michelin-listed restaurant in or near "${tripName}" that you are CONFIDENT exists in the Michelin Guide
-- Prefer Bib Gourmand (great value) if user profile suggests budget/mid-range, otherwise 1-2 Star
+PART 3 — 1 MICHELIN OR BIB GOURMAND PICK (isMichelin: true, isGem: false):
+- First choice: a REAL Michelin Bib Gourmand or Star restaurant in or near "${tripName}"
+- Bib Gourmand is preferred — it means exceptional food at moderate prices
 - Set michelinDistinction to exactly one of: "Bib Gourmand", "1 Star", "2 Stars", "3 Stars"
-- ONLY include if you are genuinely confident it is Michelin listed — do NOT guess or invent
-- The why field must mention the Michelin distinction and what makes it exceptional
+- If NO Michelin restaurant exists in this city, pick the highest-rated restaurant matching the user taste and set michelinDistinction to "Top Rated"
+- The why field must mention the distinction and what makes it exceptional
 
 For each place provide accurate real coordinates (lat/lng).
 
