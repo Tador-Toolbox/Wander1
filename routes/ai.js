@@ -392,7 +392,7 @@ PERSONALITY SIGNALS:
 - Social or solitary?
 - Foodie, explorer, party person, culture lover, nature person?
 
-Reply ONLY with valid JSON, no markdown, no extra text:
+Reply ONLY with valid JSON, no markdown, no extra text. IMPORTANT: Do not use apostrophes or special characters inside JSON string values. Use simple ASCII only:
 {
   "tags": ["specialty-coffee", "wagyu", "street-food", "hiking", "nightlife", "beach", "anime", "museums"],
   "aestheticTags": ["minimalist", "high-end", "industrial", "warm-tones", "dark-moody"],  // visual aesthetic style from photos
@@ -677,9 +677,18 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
     let result;
     try { result = JSON.parse(cleanText); } catch(e) {
       console.log('JSON.parse error:', e.message);
-      console.log('Text around error (chars 280-350):', cleanText.slice(280,350));
-      const s = cleanText.indexOf('{'), en = cleanText.lastIndexOf('}');
-      if(s>=0&&en>s){ try{ result=JSON.parse(cleanText.slice(s,en+1)); }catch(e2){ console.log('Fallback also failed:', e2.message); } }
+      // Try fixing common JSON issues: unescaped apostrophes, smart quotes
+      try {
+        const fixed = cleanText
+          .replace(/'/g, "\'") // This won't work for JSON
+          .replace(/[\u2018\u2019]/g, "'")  // smart single quotes
+          .replace(/[\u201C\u201D]/g, '"');  // smart double quotes
+        result = JSON.parse(fixed);
+      } catch(e2) {
+        // Last resort: extract just the suggestions array
+        const s = cleanText.indexOf('{'), en = cleanText.lastIndexOf('}');
+        if(s>=0&&en>s){ try{ result=JSON.parse(cleanText.slice(s,en+1)); }catch(e3){ console.log('All parse attempts failed'); } }
+      }
     }
     console.log('Trip suggest parsed:', result ? 'OK ('+Object.keys(result)+')' : 'NULL');
 
