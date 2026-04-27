@@ -3,11 +3,11 @@ const router = require('express').Router();
 // Robust JSON extraction
 function extractJSON(text) {
   if (!text) return null;
-  try { return JSON.parse(text.replace(/```json|```/g, '').trim()); } catch {}
-  const s = text.indexOf('{'), e = text.lastIndexOf('}');
-  if (s >= 0 && e > s) { try { return JSON.parse(text.slice(s, e + 1)); } catch {} }
-  const s2 = text.indexOf('['), e2 = text.lastIndexOf(']');
-  if (s2 >= 0 && e2 > s2) { try { return JSON.parse(text.slice(s2, e2 + 1)); } catch {} }
+  // Strip markdown code blocks (with or without newline)
+  const stripped = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  try { return JSON.parse(stripped); } catch {}
+  const s = stripped.indexOf('{'), e = stripped.lastIndexOf('}');
+  if (s >= 0 && e > s) { try { return JSON.parse(stripped.slice(s, e + 1)); } catch {} }
   return null;
 }
 
