@@ -673,8 +673,9 @@ Reply ONLY with valid JSON, no markdown, no extra text:
 For holidays: include 2-5 major festivals, public holidays, or culturally significant events happening in "${tripName}" during ${visitMonth || 'the visit period'}. If visitMonth is unknown, list the 3 most iconic annual events. If there are no notable events, return an empty array.`;
 
     const rawText = await callGemini(prompt);
-    const result = extractJSON(rawText);
-    console.log('Trip suggest raw (first 300):', rawText.slice(0,300));
+    const cleanText = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    console.log('Trip suggest raw (first 300):', cleanText.slice(0,300));
+    const result = extractJSON(cleanText);
     console.log('Trip suggest parsed:', result ? JSON.stringify(result).slice(0,200) : 'NULL');
 
     if (!result) {
