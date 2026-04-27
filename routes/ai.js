@@ -678,23 +678,25 @@ Reply ONLY with valid JSON, no markdown, no extra text:
 
 For holidays: include 2-5 major festivals, public holidays, or culturally significant events happening in "${tripName}" during ${visitMonth || 'the visit period'}. If visitMonth is unknown, list the 3 most iconic annual events. If there are no notable events, return an empty array.`;
 
-    const rawText = await callGemini(prompt, 8192);
-    const cleanText = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-    let result;
-    try { result = JSON.parse(cleanText); } catch(e) {
-      console.log('JSON.parse error:', e.message);
-      // Try fixing common JSON issues: unescaped apostrophes, smart quotes
-      try {
-        const fixed = cleanText
-          .replace(/'/g, "\'") // This won't work for JSON
-          .replace(/[\u2018\u2019]/g, "'")  // smart single quotes
-          .replace(/[\u201C\u201D]/g, '"');  // smart double quotes
-        result = JSON.parse(fixed);
-      } catch(e2) {
-        // Last resort: extract just the suggestions array
-        const s = cleanText.indexOf('{'), en = cleanText.lastIndexOf('}');
-        if(s>=0&&en>s){ try{ result=JSON.parse(cleanText.slice(s,en+1)); }catch(e3){ console.log('All parse attempts failed'); } }
+    let result = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const rawText = await callGemini(prompt, 8192);
+      const cleanText = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      try { result = JSON.parse(cleanText); } catch(e) {
+        // Fix common issues: bad decimals, smart quotes
+        try {
+          const fixed = cleanText
+            .replace(/[\u2018\u2019]/g, "'")
+            .replace(/[\u201C\u201D]/g, '"')
+            .replace(/(\d+\.)(\s*[,}\]])/g, '$10$2'); // fix trailing decimal
+          result = JSON.parse(fixed);
+        } catch(e2) {
+          const s = cleanText.indexOf('{'), en = cleanText.lastIndexOf('}');
+          if(s>=0&&en>s){ try{ result=JSON.parse(cleanText.slice(s,en+1)); }catch{} }
+        }
       }
+      if (result) break;
+      console.log('Trip suggest attempt', attempt+1, 'failed, retrying...');
     }
     console.log('Trip suggest parsed:', result ? 'OK ('+Object.keys(result)+')' : 'NULL');
 
