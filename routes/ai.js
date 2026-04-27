@@ -672,7 +672,7 @@ Reply ONLY with valid JSON, no markdown, no extra text:
 
 For holidays: include 2-5 major festivals, public holidays, or culturally significant events happening in "${tripName}" during ${visitMonth || 'the visit period'}. If visitMonth is unknown, list the 3 most iconic annual events. If there are no notable events, return an empty array.`;
 
-    const rawText = await callGemini(prompt);
+    const rawText = await callGemini(prompt, 4000);
     const cleanText = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     let result;
     try { result = JSON.parse(cleanText); } catch(e) {
