@@ -674,6 +674,7 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
 
     const rawText = await callGemini(prompt);
     const result = extractJSON(rawText);
+    console.log('Trip suggest raw (first 300):', rawText.slice(0,300));
     console.log('Trip suggest parsed:', result ? JSON.stringify(result).slice(0,200) : 'NULL');
 
     if (!result) {
