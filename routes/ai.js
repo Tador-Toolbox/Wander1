@@ -392,6 +392,12 @@ PERSONALITY SIGNALS:
 - Social or solitary?
 - Foodie, explorer, party person, culture lover, nature person?
 
+CRITICAL: Only suggest venues that are CURRENTLY OPEN and OPERATING. Do NOT suggest:
+- Venues that have permanently closed
+- Venues that are rumored or known to have shut down
+- Former venues that have been replaced by something else
+If you are not confident a venue is open, skip it and suggest another.
+
 Reply ONLY with valid JSON, no markdown, no extra text. IMPORTANT: Do not use apostrophes or special characters inside JSON string values. Use simple ASCII only:
 {
   "tags": ["specialty-coffee", "wagyu", "street-food", "hiking", "nightlife", "beach", "anime", "museums"],
@@ -622,7 +628,7 @@ ${savedContext}${feedbackContext}
 ${alreadyHas}
 ${seasonalNote}
 
-Return exactly 6 suggestions total, split as follows:
+Return exactly 7 suggestions total, split as follows:
 
 PART 1 — 8 CURATED PICKS (isGem: false, isMichelin: false):
 - Must be in or near "${tripName}" destination
