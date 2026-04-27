@@ -674,9 +674,14 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
 
     const rawText = await callGemini(prompt);
     const cleanText = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-    console.log('Trip suggest raw (first 300):', cleanText.slice(0,300));
-    const result = extractJSON(cleanText);
-    console.log('Trip suggest parsed:', result ? JSON.stringify(result).slice(0,200) : 'NULL');
+    let result;
+    try { result = JSON.parse(cleanText); } catch(e) {
+      console.log('JSON.parse error:', e.message);
+      console.log('Text around error (chars 280-350):', cleanText.slice(280,350));
+      const s = cleanText.indexOf('{'), en = cleanText.lastIndexOf('}');
+      if(s>=0&&en>s){ try{ result=JSON.parse(cleanText.slice(s,en+1)); }catch(e2){ console.log('Fallback also failed:', e2.message); } }
+    }
+    console.log('Trip suggest parsed:', result ? 'OK ('+Object.keys(result)+')' : 'NULL');
 
     if (!result) {
       return res.status(500).json({ error: 'Could not parse suggestions. Please try again.' });
