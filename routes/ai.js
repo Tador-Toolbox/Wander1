@@ -59,7 +59,7 @@ async function callAI(prompt, maxTokens = 2000) {
 
   // Try Gemini first
   if (geminiKey) {
-    const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+    const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
     for (const model of models) {
       try {
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
