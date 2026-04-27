@@ -622,7 +622,7 @@ ${savedContext}${feedbackContext}
 ${alreadyHas}
 ${seasonalNote}
 
-Return exactly 11 suggestions total, split as follows:
+Return exactly 6 suggestions total, split as follows:
 
 PART 1 — 8 CURATED PICKS (isGem: false, isMichelin: false):
 - Must be in or near "${tripName}" destination
@@ -672,7 +672,7 @@ Reply ONLY with valid JSON, no markdown, no extra text:
 
 For holidays: include 2-5 major festivals, public holidays, or culturally significant events happening in "${tripName}" during ${visitMonth || 'the visit period'}. If visitMonth is unknown, list the 3 most iconic annual events. If there are no notable events, return an empty array.`;
 
-    const rawText = await callGemini(prompt, 4000);
+    const rawText = await callGemini(prompt, 8192);
     const cleanText = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     let result;
     try { result = JSON.parse(cleanText); } catch(e) {
