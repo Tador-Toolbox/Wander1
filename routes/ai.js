@@ -483,6 +483,16 @@ Tags should be lowercase, 2-15 items, specific and useful for place recommendati
    GET /api/ai/profile
    Returns current user's aiProfile
 ───────────────────────────────────────── */
+router.get('/list-models', auth, async (req, res) => {
+  try {
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
+    const d = await r.json();
+    const models = (d.models||[]).filter(m=>m.supportedGenerationMethods?.includes('generateContent')).map(m=>m.name);
+    res.json({ models });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/profile', auth, async (req, res) => {
   try {
     const User = require('../models/User');
