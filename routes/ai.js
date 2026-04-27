@@ -704,14 +704,30 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
       return res.status(500).json({ error: 'Could not parse suggestions. Please try again.' });
     }
 
-    // Handle both {suggestions:[]} and direct array formats
-    if (!result.suggestions) {
-      // Try wrapping if Claude returned array directly
-      if (Array.isArray(result)) {
-        return res.json({ suggestions: result });
+    if (!result.suggestions && Array.isArray(result)) {
+      result = { suggestions: result };
+    }
+    if (!result.suggestions) result.suggestions = [];
+
+    // Verify with Google Places — filter permanently closed venues
+    const mapsKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (mapsKey && result.suggestions.length) {
+      const verified = [];
+      for (const place of result.suggestions) {
+        try {
+          const q = encodeURIComponent(place.name + ' ' + place.location);
+          const r = await fetch(`https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${q}&inputtype=textquery&fields=business_status,permanently_closed&key=${mapsKey}`);
+          const d = await r.json();
+          const c = d.candidates?.[0];
+          if (c?.business_status === 'CLOSED_PERMANENTLY' || c?.permanently_closed) {
+            console.log('Filtered closed:', place.name);
+            continue;
+          }
+          verified.push(place);
+        } catch { verified.push(place); }
       }
-      // Return whatever we got — frontend will handle empty array
-      result.suggestions = [];
+      console.log(`Verified: ${verified.length}/${result.suggestions.length} open`);
+      result.suggestions = verified;
     }
 
     res.json(result);
