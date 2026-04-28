@@ -1090,7 +1090,7 @@ Return ONLY valid JSON:
             // Check up to 3 results — find the one that best matches the name
             let details = null;
             for (const candidate of results.slice(0, 3)) {
-              const checkUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${candidate.place_id}&fields=name,business_status,permanently_closed,formatted_address,rating,opening_hours,photos,url,website&key=${mapsKey}`;
+              const checkUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${candidate.place_id}&fields=name,business_status,permanently_closed,formatted_address,rating,opening_hours,photos,url,website,types&key=${mapsKey}`;
               const checkR = await fetch(checkUrl);
               const checkD = await checkR.json();
               const d = checkD.result;
@@ -1126,13 +1126,22 @@ Return ONLY valid JSON:
               console.log(`Weekend: "${ev.name}" is CLOSED PERMANENTLY — dropping`);
               return null;
             } else {
-              verified = true;
-              photoUrl = getPhotoUrl(details.photos, mapsKey);
-              mapsUrl = details.url || '';
-              websiteUrl = details.website || '';
-              if (!instagramHandle && websiteUrl.includes('instagram.com')) {
-                const match = websiteUrl.match(/instagram\.com\/([^/?#]+)/);
-                if (match) instagramHandle = match[1];
+              // Reject if Google Places thinks it's a gym/sports/climbing venue (wrong category)
+              const placeTypes = details.types || [];
+              const nonNightlifeTypes = ['gym','sports_complex','climbing','health','fitness_center','stadium','amusement_park'];
+              const isWrongType = nonNightlifeTypes.some(t => placeTypes.includes(t));
+              if (isWrongType) {
+                console.log(`Weekend: "${ev.name}" matched wrong venue type (${placeTypes.slice(0,3).join(',')}) — marking unverified`);
+                notFound = true;
+              } else {
+                verified = true;
+                photoUrl = getPhotoUrl(details.photos, mapsKey);
+                mapsUrl = details.url || '';
+                websiteUrl = details.website || '';
+                if (!instagramHandle && websiteUrl.includes('instagram.com')) {
+                  const match = websiteUrl.match(/instagram\.com\/([^/?#]+)/);
+                  if (match) instagramHandle = match[1];
+                }
               }
             }
           }
