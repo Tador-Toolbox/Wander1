@@ -2049,7 +2049,37 @@ async function apiFetch(path,opts={}){
   if(res.status===401){logout();throw new Error('Unauthorized');}
   return res;
 }
-async function loadPlaces(){try{const res=await apiFetch('/api/places');places=await res.json();updateCount();}catch(e){if(e.message!=='Unauthorized')toast('Failed to load places','err');}}
+async function loadPlaces(){
+  try{
+    // Load own places
+    const res=await apiFetch('/api/places');
+    places=await res.json();
+
+    // Also load places from shared (MUTUAL) trips
+    const sharedTrips=trips.filter(t=>t.isShared);
+    if(sharedTrips.length){
+      const sharedPlaces=await Promise.all(
+        sharedTrips.map(async t=>{
+          try{
+            const r=await apiFetch(`/api/places?trip=${t._id}`);
+            if(r.ok) return await r.json();
+          }catch{}
+          return [];
+        })
+      );
+      // Merge, avoiding duplicates by _id
+      const existing=new Set(places.map(p=>p._id));
+      sharedPlaces.flat().forEach(p=>{
+        if(!existing.has(p._id)){
+          places.push(p);
+          existing.add(p._id);
+        }
+      });
+    }
+
+    updateCount();
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to load places','err');}
+}
 
 const PCOL={Food:'#ff6b47',Beach:'#4a9eff',Nightlife:'#9b6dff',Nature:'#34c98a',Culture:'#f5a623',Coffee:'#a0522d',Beauty:'#e91e8c',Shopping:'#00bcd4','Night Club':'#6a0dad',Bar:'#e67e22'};
 const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸'};
@@ -4521,9 +4551,11 @@ async function acceptTripInvite(tripId, bannerId){
     if(r.ok){
       toast('✅ Joined the trip!','ok');
       document.getElementById(bannerId)?.remove();
-      // Reload trips to show the new shared trip
+      // Reload trips then places (shared trip places now accessible)
       const res=await apiFetch('/api/trips');
       if(res.ok) trips=await res.json();
+      await loadPlaces();
+      refreshMarkers();
       renderTrips();
     }
   }catch(e){toast(e.message,'err');}
