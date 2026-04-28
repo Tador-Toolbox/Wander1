@@ -1077,43 +1077,62 @@ Return ONLY valid JSON:
         let notFound = false;
 
         try {
-          const query = ev.searchQuery || `${ev.name} ${locationStr}`;
+          // Include venue type in query to avoid wrong venue matches
+          const venueType = (ev.tags||[]).includes('climbing') ? '' :
+            (ev.tags||[]).some(t=>['club','nightclub','disco','dance','electronic','bar'].includes(t)) ? 'nightclub' : 'venue';
+          const query = `${ev.name} ${venueType} ${locationStr}`.trim();
           const results = await searchGooglePlaces(query, mapsKey);
 
           if (!results.length) {
             console.log(`Weekend: "${ev.name}" not found in Places`);
             notFound = true;
           } else {
-            // Check business_status of top result
-            const topResult = results[0];
-            const checkUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${topResult.place_id}&fields=name,business_status,permanently_closed,formatted_address,rating,opening_hours,photos,url,website&key=${mapsKey}`;
-            const checkR = await fetch(checkUrl);
-            const checkD = await checkR.json();
-            const details = checkD.result;
+            // Check up to 3 results — find the one that best matches the name
+            let details = null;
+            for (const candidate of results.slice(0, 3)) {
+              const checkUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${candidate.place_id}&fields=name,business_status,permanently_closed,formatted_address,rating,opening_hours,photos,url,website&key=${mapsKey}`;
+              const checkR = await fetch(checkUrl);
+              const checkD = await checkR.json();
+              const d = checkD.result;
+              if (!d) continue;
+
+              // Strict name match — normalize both, require 75% overlap
+              const placeName = (d.name || '').toLowerCase().replace(/[^a-z0-9]/g,'');
+              const searchName = ev.name.toLowerCase().replace(/[^a-z0-9]/g,'');
+              const longer = Math.max(placeName.length, searchName.length);
+              const shorter = Math.min(placeName.length, searchName.length);
+              // Check how many chars of the shorter name appear in the longer
+              let matchChars = 0;
+              for (let ci = 0; ci < shorter; ci++) {
+                if (placeName.includes(searchName[ci])) matchChars++;
+              }
+              const similarity = shorter > 0 ? matchChars / shorter : 0;
+              // Also check if one directly contains the other (exact substring)
+              const directMatch = placeName.includes(searchName) || searchName.includes(placeName);
+
+              if (similarity >= 0.75 || directMatch) {
+                details = d;
+                console.log(`Weekend: matched "${ev.name}" → "${d.name}" (similarity: ${(similarity*100).toFixed(0)}%)`);
+                break;
+              } else {
+                console.log(`Weekend: skipping "${d.name}" — too different from "${ev.name}" (similarity: ${(similarity*100).toFixed(0)}%)`);
+              }
+            }
 
             if (!details) {
+              console.log(`Weekend: "${ev.name}" — no matching venue found in Places, marking unverified`);
               notFound = true;
             } else if (details.business_status === 'CLOSED_PERMANENTLY' || details.permanently_closed) {
               console.log(`Weekend: "${ev.name}" is CLOSED PERMANENTLY — dropping`);
-              return null; // drop this venue
+              return null;
             } else {
-              // Verify name roughly matches (avoid wrong venue like "The Bloc" vs "The Block")
-              const placeName = (details.name || '').toLowerCase().replace(/[^a-z0-9]/g,'');
-              const searchName = ev.name.toLowerCase().replace(/[^a-z0-9]/g,'');
-              const nameMatch = placeName.includes(searchName.slice(0,6)) || searchName.includes(placeName.slice(0,6));
-
-              if (!nameMatch) {
-                console.log(`Weekend: "${ev.name}" name mismatch with Places result "${details.name}" — marking unverified`);
-                notFound = true;
-              } else {
-                verified = true;
-                photoUrl = getPhotoUrl(details.photos, mapsKey);
-                mapsUrl = details.url || '';
-                websiteUrl = details.website || '';
-                if (!instagramHandle && websiteUrl.includes('instagram.com')) {
-                  const match = websiteUrl.match(/instagram\.com\/([^/?#]+)/);
-                  if (match) instagramHandle = match[1];
-                }
+              verified = true;
+              photoUrl = getPhotoUrl(details.photos, mapsKey);
+              mapsUrl = details.url || '';
+              websiteUrl = details.website || '';
+              if (!instagramHandle && websiteUrl.includes('instagram.com')) {
+                const match = websiteUrl.match(/instagram\.com\/([^/?#]+)/);
+                if (match) instagramHandle = match[1];
               }
             }
           }
