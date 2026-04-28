@@ -2198,7 +2198,7 @@ async function openEventDiscover(){
             </div>
           </div>
           <div class="ed-meta">
-            ${ev.openConfirmed?'<span style="color:var(--mint);font-weight:700;">✓ Open today</span>':''}
+            ${ev.openConfirmed?'<span style="color:var(--mint);font-weight:700;">✓ Verified open</span>':ev.unverified?'<span style="color:#f59e0b;font-weight:700;">⚠️ Verify before going</span>':''}
             ${isWeekend?`<span style="color:#a78bfa;font-weight:700;">📅 ${esc(ev.date||'Weekend')}</span>`:''}
             ${ev.time?`<span>🕐 ${esc(ev.time)}</span>`:''}
             ${ev.price?`<span>💰 ${esc(ev.price)}</span>`:''}
