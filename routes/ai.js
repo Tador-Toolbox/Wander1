@@ -1032,9 +1032,13 @@ Atmosphere: ${atmosphere||'any'}
 Tags: ${[...aestheticTags,...tags].slice(0,8).join(', ')}
 
 == TASK ==
-Suggest exactly 2 well-known venues/clubs in ${locationStr} that are famous for their Friday or Saturday nights.
+Suggest exactly 4 venues in ${locationStr} famous for their Friday or Saturday nights, split as:
+
+TYPE A — 2 dedicated nightclubs/dance venues (classic clubs, electronic venues, underground warehouse clubs, rooftop club nights)
+TYPE B — 2 hybrid venues (restaurants, bars, or rooftops that TRANSFORM into club nights on Friday/Saturday — think DJ sets, dancing, late-night energy. e.g. a garden restaurant with a Friday party night, a rooftop bar with weekly DJ, a bar known for its Saturday club night)
+
 Prioritize Friday if the venue is known for it. Otherwise Saturday.
-Focus on: disco clubs, dance clubs, nightclubs, electronic venues, rooftop parties — match the user's taste.
+Match the user's taste profile for both types.
 
 For each venue:
 - Must be a REAL, currently operating venue in ${locationStr}
@@ -1066,7 +1070,7 @@ Return ONLY valid JSON:
     let weekendEvents = [];
     try {
       // Ask for 4 candidates so we have replacements if some are closed
-      const weekendText = await callAI(weekendPrompt.replace('exactly 2', 'exactly 4'));
+      const weekendText = await callAI(weekendPrompt);
       const weekendParsed = extractJSON(weekendText);
       const raw = weekendParsed?.weekendEvents || [];
 
