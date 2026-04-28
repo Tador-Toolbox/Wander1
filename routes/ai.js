@@ -1042,7 +1042,7 @@ Match the user's taste profile for both types.
 
 For each venue:
 - Must be a REAL, currently operating venue in ${locationStr}
-- NEVER suggest these venues which are permanently closed: "The Block" (closed Tel Aviv nightclub), "The Zone", "Haoman 17" (old location)
+- NEVER suggest these venues which are permanently closed: "The Block" (closed Tel Aviv nightclub), "The Zone", "Haoman 17" (old location), "Pasaz" (closed Tel Aviv club)
 - Include the day it's best known for (Friday or Saturday)
 - If you know their Instagram handle, include it (no @ symbol). If unsure, return empty string.
 - Give a concierge note referencing the user's specific music/atmosphere taste
@@ -1121,8 +1121,10 @@ Return ONLY valid JSON:
 
               // Reject if venue type is clearly wrong category
               const placeTypesEarly = d.types || [];
+              // Reject non-nightlife venue types when searching for clubs
               const wrongCategory = ['gym','sports_complex','climbing','health','fitness_center',
-                'physiotherapist','beauty_salon','hair_care','store','shopping_mall'].some(t => placeTypesEarly.includes(t));
+                'physiotherapist','beauty_salon','hair_care','store','shopping_mall',
+                'cafe','coffee','bakery','food','meal_takeaway','meal_delivery'].some(t => placeTypesEarly.includes(t));
 
               if ((directMatch || closeMatch) && !wrongCategory) {
                 details = d;
