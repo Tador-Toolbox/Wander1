@@ -61,7 +61,7 @@ Reply ONLY with JSON in this exact format:
                 { text: prompt }
               ]
             }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 500 }
+            generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
           })
         });
         const data = await response.json();
