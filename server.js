@@ -48,7 +48,7 @@ Reply ONLY with JSON in this exact format:
 - If you cannot identify any place at all, reply: {"name":"","location":"","address":"","method":"none"}`;
 
     let text = null;
-    const models = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite'];
+    const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
     for (const model of models) {
       try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
@@ -73,7 +73,19 @@ Reply ONLY with JSON in this exact format:
 
     if (!text) return res.status(500).json({ error: 'Could not analyze image' });
 
-    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+    // Robust JSON extraction — handle markdown fences, trailing text, unterminated strings
+    let parsed = null;
+    try {
+      const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch {
+      // Try extracting JSON object between first { and last }
+      const s = text.indexOf('{'), e = text.lastIndexOf('}');
+      if (s >= 0 && e > s) {
+        try { parsed = JSON.parse(text.slice(s, e + 1)); } catch {}
+      }
+    }
+    if (!parsed) return res.status(200).json({ name: '', location: '', address: '', method: 'none' });
 
     // If we got a location, geocode it to lat/lng
     if (parsed.name || parsed.location || parsed.address) {
