@@ -1095,6 +1095,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <div class="mf">
       <label>Trip Name</label>
       <input type="text" id="tripName" placeholder="e.g. Vietnam 2025, Paris Honeymoon…">
+      <div style="font-size:12px;color:var(--txt3);margin-top:6px;line-height:1.5;">💡 Include the city or country name (e.g. "Tokyo 2025" not just "Asia Trip") — this helps the AI give more accurate place suggestions.</div>
     </div>
     <div class="mf">
       <label>Emoji</label>
@@ -3667,6 +3668,7 @@ async function openAIAgent(){
       <div style="margin:16px 0 0;" id="aazPrefsSection"></div>
 
       <button class="aaz-btn" id="aazAnalyzeBtn" onclick="runAIAgent()" disabled>✦ Analyze &amp; Build Profile</button>
+      <button onclick="document.getElementById('aiAgentModal').remove();openNewTrip();" style="margin-top:10px;width:100%;padding:13px;border:1.5px solid var(--border);border-radius:14px;background:var(--bg2);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">✈️ Plan a Trip</button>
     </div>
   </div>`;
   modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
