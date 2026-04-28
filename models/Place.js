@@ -17,7 +17,8 @@ const PlaceSchema = new mongoose.Schema({
   visibility:{ type: String, enum: ['private','public','both'], default: 'private' },
   coverPhoto:{ type: String, default: '' },
   photos:    { type: [String], default: [] },
-  photoLikes:[ { url: String, user: { type: require('mongoose').Schema.Types.ObjectId, ref: 'User' } } ]
+  photoLikes:[ { url: String, user: { type: require('mongoose').Schema.Types.ObjectId, ref: 'User' } } ],
+  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Place', PlaceSchema);
