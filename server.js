@@ -33,39 +33,48 @@ app.post('/api/scan-image', require('./middleware/auth'), async (req, res) => {
     const { imageBase64, mediaType } = req.body;
     if (!imageBase64) return res.status(400).json({ error: 'No image provided' });
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: imageBase64 } },
-            { type: 'text', text: `Look at this image carefully. Try to identify the place using TWO methods:
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return res.status(500).json({ error: 'Gemini API key not configured' });
+
+    const prompt = `Look at this image carefully. Try to identify the place using TWO methods:
 1. TEXT: Read any visible text, signs, address, location tags, or captions in the image.
 2. VISUAL: If you recognize the place visually (famous landmark, restaurant, beach, etc.), identify it.
 
 Reply ONLY with JSON in this exact format:
-{"name":"Place Name","location":"City, Country","address":"full address if visible","method":"text"} 
+{"name":"Place Name","location":"City, Country","address":"full address if visible","method":"text"}
 - method should be "text" if you found it from text/signs in the image
 - method should be "visual" if you recognized it visually without text
 - method should be "both" if both methods confirmed it
-- If you cannot identify any place at all, reply: {"name":"","location":"","address":"","method":"none"}` }
-          ]
-        }]
-      })
-    });
+- If you cannot identify any place at all, reply: {"name":"","location":"","address":"","method":"none"}`;
 
-    const data = await response.json();
-    const text = data.content?.[0]?.text || '{}';
+    let text = null;
+    const models = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite'];
+    for (const model of models) {
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { inline_data: { mime_type: mediaType || 'image/jpeg', data: imageBase64 } },
+                { text: prompt }
+              ]
+            }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 300 }
+          })
+        });
+        const data = await response.json();
+        if (data.error) { console.log('Gemini scan', model, 'failed:', data.error.message); continue; }
+        text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (text) { console.log('✅ Gemini scan used:', model); break; }
+      } catch(e) { console.log('Gemini scan error:', e.message); }
+    }
+
+    if (!text) return res.status(500).json({ error: 'Could not analyze image' });
+
     const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
-    
+
     // If we got a location, geocode it to lat/lng
     if (parsed.name || parsed.location || parsed.address) {
       const searchQuery = parsed.address || parsed.name + ' ' + parsed.location;
@@ -81,6 +90,7 @@ Reply ONLY with JSON in this exact format:
     }
     
     res.json(parsed);
+
   } catch (err) {
     console.error('Scan error:', err);
     res.status(500).json({ error: 'Scan failed' });
