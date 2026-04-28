@@ -61,7 +61,7 @@ Reply ONLY with JSON in this exact format:
                 { text: prompt }
               ]
             }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 300 }
+            generationConfig: { temperature: 0.1, maxOutputTokens: 500 }
           })
         });
         const data = await response.json();
@@ -72,7 +72,7 @@ Reply ONLY with JSON in this exact format:
     }
 
     if (!text) return res.status(500).json({ error: 'Could not analyze image' });
-    console.log('Gemini scan raw response:', text.slice(0, 300));
+    console.log('Gemini scan raw response:', text.slice(0, 600));
 
     // Robust JSON extraction — handle markdown fences, trailing text, unterminated strings
     let parsed = null;
