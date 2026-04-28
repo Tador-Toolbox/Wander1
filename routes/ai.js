@@ -1064,37 +1064,68 @@ Return ONLY valid JSON:
 
     let weekendEvents = [];
     try {
-      const weekendText = await callAI(weekendPrompt);
+      // Ask for 4 candidates so we have replacements if some are closed
+      const weekendText = await callAI(weekendPrompt.replace('exactly 2', 'exactly 4'));
       const weekendParsed = extractJSON(weekendText);
       const raw = weekendParsed?.weekendEvents || [];
 
-      weekendEvents = await Promise.all(raw.slice(0,2).map(async ev => {
-        // Try to get a photo from Google Places
-        let photoUrl = '';
-        let mapsUrl = '';
-        let websiteUrl = '';
+      // Verify each candidate against Google Places — drop closed venues
+      async function verifyAndEnrich(ev) {
+        let photoUrl = '', mapsUrl = '', websiteUrl = '';
         let instagramHandle = ev.instagramHandle || '';
+        let verified = false;
+        let notFound = false;
+
         try {
-          const results = await searchGooglePlaces(ev.searchQuery || ev.name + ' ' + locationStr, mapsKey);
-          if (results[0]) {
-            const details = await getPlaceDetails(results[0].place_id, mapsKey);
-            if (details) {
-              photoUrl = getPhotoUrl(details.photos, mapsKey);
-              mapsUrl = details.url || '';
-              websiteUrl = details.website || '';
-              // Extract Instagram from website if not already found
-              if (!instagramHandle && websiteUrl.includes('instagram.com')) {
-                const match = websiteUrl.match(/instagram\.com\/([^/?#]+)/);
-                if (match) instagramHandle = match[1];
+          const query = ev.searchQuery || `${ev.name} ${locationStr}`;
+          const results = await searchGooglePlaces(query, mapsKey);
+
+          if (!results.length) {
+            console.log(`Weekend: "${ev.name}" not found in Places`);
+            notFound = true;
+          } else {
+            // Check business_status of top result
+            const topResult = results[0];
+            const checkUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${topResult.place_id}&fields=name,business_status,permanently_closed,formatted_address,rating,opening_hours,photos,url,website&key=${mapsKey}`;
+            const checkR = await fetch(checkUrl);
+            const checkD = await checkR.json();
+            const details = checkD.result;
+
+            if (!details) {
+              notFound = true;
+            } else if (details.business_status === 'CLOSED_PERMANENTLY' || details.permanently_closed) {
+              console.log(`Weekend: "${ev.name}" is CLOSED PERMANENTLY — dropping`);
+              return null; // drop this venue
+            } else {
+              // Verify name roughly matches (avoid wrong venue like "The Bloc" vs "The Block")
+              const placeName = (details.name || '').toLowerCase().replace(/[^a-z0-9]/g,'');
+              const searchName = ev.name.toLowerCase().replace(/[^a-z0-9]/g,'');
+              const nameMatch = placeName.includes(searchName.slice(0,6)) || searchName.includes(placeName.slice(0,6));
+
+              if (!nameMatch) {
+                console.log(`Weekend: "${ev.name}" name mismatch with Places result "${details.name}" — marking unverified`);
+                notFound = true;
+              } else {
+                verified = true;
+                photoUrl = getPhotoUrl(details.photos, mapsKey);
+                mapsUrl = details.url || '';
+                websiteUrl = details.website || '';
+                if (!instagramHandle && websiteUrl.includes('instagram.com')) {
+                  const match = websiteUrl.match(/instagram\.com\/([^/?#]+)/);
+                  if (match) instagramHandle = match[1];
+                }
               }
             }
           }
-        } catch {}
+        } catch(e) {
+          console.log(`Weekend Places check error for "${ev.name}":`, e.message);
+          notFound = true;
+        }
 
         return {
           name: ev.name,
           venueName: ev.venueName || ev.name,
-          date: ev.day, // "Friday" or "Saturday"
+          date: ev.day,
           time: ev.time || 'Night',
           price: ev.price || '',
           matchScore: Math.min(100, ev.matchScore || 80),
@@ -1105,10 +1136,22 @@ Return ONLY valid JSON:
           websiteUrl,
           instagramHandle,
           instagramUrl: instagramHandle ? `https://www.instagram.com/${instagramHandle}` : '',
-          openConfirmed: false,
+          openConfirmed: verified,
+          unverified: notFound,
           isWeekend: true
         };
-      }));
+      }
+
+      // Process candidates sequentially, collect up to 2 verified/unverified
+      const results = [];
+      for (const ev of raw.slice(0, 4)) {
+        if (results.length >= 2) break;
+        const result = await verifyAndEnrich(ev);
+        if (result !== null) results.push(result); // null = permanently closed, skip
+      }
+      weekendEvents = results;
+      console.log(`Weekend events: ${weekendEvents.length} after verification (dropped ${raw.length - weekendEvents.length - (raw.length - Math.min(raw.length,4))} closed)`);
+
     } catch(e) {
       console.error('Weekend events error:', e.message);
     }
