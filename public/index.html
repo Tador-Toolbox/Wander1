@@ -2168,17 +2168,32 @@ async function openEventDiscover(){
     const rankColors = ['rank-1','rank-2','rank-3'];
     const rankLabels = ['#1 Best Match','#2 Strong Match','#3 Solid Pick'];
 
-    body.innerHTML = cubeHtml + (data.events||[]).map((ev,i) => {
+    function renderEventCard(ev, i, isWeekend) {
       const pct = ev.matchScore||0;
       const isUrgent = ev.hoursUntil !== undefined && ev.hoursUntil <= 48;
       const isUnmissable = pct >= 95;
-      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((ev.venueName||ev.name)+' '+locationStr)}`;
+      const mapsUrl = ev.ticketUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((ev.venueName||ev.name)+' '+locationStr)}`;
+      const hasInsta = !!(ev.instagramUrl);
+      const hasWebsite = !!(ev.websiteUrl);
+
+      const instaBtn = `<a
+        class="ed-link ed-insta-btn ${hasInsta ? 'ed-insta-active' : 'ed-insta-disabled'}"
+        ${hasInsta ? `href="${esc(ev.instagramUrl)}" target="_blank" rel="noopener"` : 'aria-disabled="true"'}
+        style="display:flex;align-items:center;gap:5px;justify-content:center;background:${hasInsta ? 'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)' : '#222'};color:#fff;opacity:${hasInsta ? '1' : '0.45'};pointer-events:${hasInsta ? 'auto' : 'none'};border:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+        Instagram
+      </a>`;
 
       return `<div class="ed-card">
         <div class="ed-card-rank ${rankColors[i]||'rank-3'}"></div>
         <div class="ed-card-body">
-          <div style="font-size:10px;font-weight:800;color:var(--ink3);letter-spacing:.07em;margin-bottom:6px;">${rankLabels[i]||''}</div>
-          ${ev.photoUrl?`<img src="${esc(ev.photoUrl)}" style="width:100%;height:140px;object-fit:cover;display:block;margin:-16px -16px 12px;width:calc(100% + 32px);" onerror="this.style.display='none'">`:''}
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            ${isWeekend
+              ? `<span style="background:#1a1a2e;color:#a78bfa;font-size:10px;font-weight:800;padding:3px 8px;border-radius:20px;letter-spacing:.05em;">🗓 This ${esc(ev.date||'Weekend')}</span>`
+              : `<div style="font-size:10px;font-weight:800;color:var(--ink3);letter-spacing:.07em;">${rankLabels[i]||''}</div>`
+            }
+          </div>
+          ${ev.photoUrl?`<img src="${esc(ev.photoUrl)}" style="width:calc(100% + 32px);height:140px;object-fit:cover;display:block;margin:-16px -16px 12px;" onerror="this.style.display='none'">`:''}
           <div class="ed-card-header">
             <div class="ed-card-name">${esc(ev.name)}</div>
             <div class="ed-match">
@@ -2188,25 +2203,38 @@ async function openEventDiscover(){
           </div>
           <div class="ed-meta">
             ${ev.openConfirmed?'<span style="color:var(--mint);font-weight:700;">✓ Open today</span>':''}
+            ${isWeekend?`<span style="color:#a78bfa;font-weight:700;">📅 ${esc(ev.date||'Weekend')}</span>`:''}
             ${ev.time?`<span>🕐 ${esc(ev.time)}</span>`:''}
             ${ev.price?`<span>💰 ${esc(ev.price)}</span>`:''}
           </div>
           <div class="ed-tags">
             ${isUnmissable?`<span class="ed-tag timing-urgent">🔥 Unmissable</span>`:''}
-            ${isUrgent&&!isUnmissable?`<span class="ed-tag timing-urgent">⚡ Next 48h</span>`:''}
-            ${!isUrgent?`<span class="ed-tag timing-soon">📆 This week</span>`:''}
+            ${isUrgent&&!isUnmissable&&!isWeekend?`<span class="ed-tag timing-urgent">⚡ Next 48h</span>`:''}
             ${(ev.tags||[]).map(t=>`<span class="ed-tag">${esc(t)}</span>`).join('')}
           </div>
           <div class="ed-concierge">✦ ${esc(ev.conciergeNote)}</div>
-          <div class="ed-footer">
+          <div class="ed-footer" style="display:flex;gap:8px;flex-wrap:wrap;">
             <a class="ed-link primary" href="${mapsUrl}" target="_blank" rel="noopener">🗺 Find venue</a>
-            ${ev.ticketUrl?`<a class="ed-link" href="${esc(ev.ticketUrl)}" target="_blank" rel="noopener">🎟 Tickets</a>`:''}
+            ${hasWebsite?`<a class="ed-link" href="${esc(ev.websiteUrl)}" target="_blank" rel="noopener">🌐 Website</a>`:''}
+            ${instaBtn}
           </div>
         </div>
       </div>`;
-    }).join('') +
+    }
+
+    const todayHtml = (data.events||[]).map((ev,i) => renderEventCard(ev, i, false)).join('');
+    const weekendHtml = (data.weekendEvents||[]).length ? `
+      <div style="margin:20px 0 10px;display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+        <div style="font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.08em;white-space:nowrap;">🗓 THIS WEEKEND</div>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>
+      ${(data.weekendEvents||[]).map((ev,i) => renderEventCard(ev, i, true)).join('')}
+    ` : '';
+
+    body.innerHTML = cubeHtml + todayHtml + weekendHtml +
     `<div style="text-align:center;font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.6;">
-      Ranked by Claude against your Identity Cube · ${dateStr}
+      Ranked by AI against your Identity Cube · ${dateStr}
     </div>`;
 
   } catch(e) {
