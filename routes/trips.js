@@ -6,11 +6,23 @@ const crypto  = require('crypto');
 
 router.use(auth);
 
-// GET /api/trips
+// GET /api/trips — own trips + accepted shared trips
 router.get('/', async (req, res) => {
   try {
-    const trips = await Trip.find({ user: req.userId }).sort({ createdAt: -1 });
-    res.json(trips);
+    const [ownTrips, sharedTrips] = await Promise.all([
+      Trip.find({ user: req.userId }).sort({ createdAt: -1 }),
+      Trip.find({
+        'collaborators.user': req.userId,
+        'collaborators.status': 'accepted'
+      }).populate('user', 'firstName lastName handle').sort({ createdAt: -1 })
+    ]);
+    // Mark shared trips so frontend can distinguish them
+    const marked = sharedTrips.map(t => {
+      const obj = t.toObject();
+      obj.isShared = true;
+      return obj;
+    });
+    res.json([...ownTrips, ...marked]);
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
 
@@ -75,6 +87,66 @@ router.delete('/:id/share', async (req, res) => {
 });
 
 module.exports = router;
+
+/* ─────────────────────────────────────────
+   GET /api/trips/pending-invites
+   Get trips where current user has a pending invite
+───────────────────────────────────────── */
+router.get('/pending-invites', auth, async (req, res) => {
+  try {
+    const trips = await Trip.find({
+      'collaborators.user': req.userId,
+      'collaborators.status': 'pending'
+    }).populate('user', 'firstName lastName handle').lean();
+
+    const invites = trips.map(t => ({
+      tripId: t._id,
+      tripName: t.name,
+      tripEmoji: t.emoji,
+      invitedBy: t.user
+    }));
+    res.json(invites);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/* ─────────────────────────────────────────
+   POST /api/trips/:id/decline-invite
+───────────────────────────────────────── */
+router.post('/:id/decline-invite', auth, async (req, res) => {
+  try {
+    const trip = await Trip.findById(req.params.id);
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+    trip.collaborators = trip.collaborators.filter(
+      c => c.user.toString() !== req.userId.toString()
+    );
+    await trip.save();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/* ─────────────────────────────────────────
+   POST /api/trips/:id/leave
+   Member leaves a shared trip
+───────────────────────────────────────── */
+router.post('/:id/leave', auth, async (req, res) => {
+  try {
+    const trip = await Trip.findById(req.params.id);
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+    if (trip.user.toString() === req.userId.toString())
+      return res.status(400).json({ error: 'Owner cannot leave — delete the trip instead' });
+    trip.collaborators = trip.collaborators.filter(
+      c => c.user.toString() !== req.userId.toString()
+    );
+    await trip.save();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 /* ─────────────────────────────────────────
    POST /api/trips/:id/invite

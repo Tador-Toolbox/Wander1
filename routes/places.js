@@ -7,9 +7,32 @@ router.use(auth);
 // GET /api/places
 router.get('/', async (req, res) => {
   try {
+    if (req.query.trip && req.query.trip !== 'none') {
+      // For a specific trip — fetch all places from all members
+      const Trip = require('../models/Trip');
+      const trip = await Trip.findById(req.query.trip);
+      if (!trip) return res.json([]);
+
+      // Check user is owner or accepted collaborator
+      const isOwner = trip.user.toString() === req.userId.toString();
+      const isCollab = trip.collaborators.some(c =>
+        c.user.toString() === req.userId.toString() && c.status === 'accepted'
+      );
+      if (!isOwner && !isCollab) return res.json([]);
+
+      // Fetch ALL places for this trip regardless of who added them
+      const places = await Place.find({ trip: req.query.trip })
+        .populate('addedBy', 'firstName lastName handle avatar')
+        .sort({ createdAt: -1 });
+      return res.json(places);
+    }
+
+    // Default — own places only
     const filter = { user: req.userId };
-    if (req.query.trip) filter.trip = req.query.trip === 'none' ? null : req.query.trip;
-    const places = await Place.find(filter).sort({ createdAt: -1 });
+    if (req.query.trip === 'none') filter.trip = null;
+    const places = await Place.find(filter)
+      .populate('addedBy', 'firstName lastName handle avatar')
+      .sort({ createdAt: -1 });
     res.json(places);
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
@@ -20,7 +43,27 @@ router.post('/', async (req, res) => {
     const { name, location, placeId, notes, link, tags, lat, lng, trip, rating, isPublic, visibility, status } = req.body;
     if (!name || lat == null || lng == null)
       return res.status(400).json({ error: 'name, lat, lng are required' });
-    const place = await Place.create({ user: req.userId, trip: trip||null, name, location, placeId, notes, link, tags, lat, lng, rating: Number(rating)||0, isPublic: !!isPublic, visibility: visibility||'private', status: status||'none' });
+
+    // If adding to a shared trip, verify user is a member
+    if (trip) {
+      const Trip = require('../models/Trip');
+      const tripDoc = await Trip.findById(trip);
+      if (tripDoc) {
+        const isOwner = tripDoc.user.toString() === req.userId.toString();
+        const isCollab = tripDoc.collaborators.some(c =>
+          c.user.toString() === req.userId.toString() && c.status === 'accepted'
+        );
+        if (!isOwner && !isCollab) return res.status(403).json({ error: 'Not a member of this trip' });
+      }
+    }
+
+    const place = await Place.create({
+      user: req.userId,
+      addedBy: req.userId,
+      trip: trip||null, name, location, placeId, notes, link, tags, lat, lng,
+      rating: Number(rating)||0, isPublic: !!isPublic,
+      visibility: visibility||'private', status: status||'none'
+    });
     res.status(201).json(place);
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
