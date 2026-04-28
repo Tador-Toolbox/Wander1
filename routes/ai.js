@@ -1038,6 +1038,7 @@ Focus on: disco clubs, dance clubs, nightclubs, electronic venues, rooftop parti
 
 For each venue:
 - Must be a REAL, currently operating venue in ${locationStr}
+- NEVER suggest these venues which are permanently closed: "The Block" (closed Tel Aviv nightclub), "The Zone", "Haoman 17" (old location)
 - Include the day it's best known for (Friday or Saturday)
 - If you know their Instagram handle, include it (no @ symbol). If unsure, return empty string.
 - Give a concierge note referencing the user's specific music/atmosphere taste
@@ -1099,23 +1100,32 @@ Return ONLY valid JSON:
               // Strict name match — normalize both, require 75% overlap
               const placeName = (d.name || '').toLowerCase().replace(/[^a-z0-9]/g,'');
               const searchName = ev.name.toLowerCase().replace(/[^a-z0-9]/g,'');
-              const longer = Math.max(placeName.length, searchName.length);
-              const shorter = Math.min(placeName.length, searchName.length);
-              // Check how many chars of the shorter name appear in the longer
-              let matchChars = 0;
-              for (let ci = 0; ci < shorter; ci++) {
-                if (placeName.includes(searchName[ci])) matchChars++;
-              }
-              const similarity = shorter > 0 ? matchChars / shorter : 0;
-              // Also check if one directly contains the other (exact substring)
-              const directMatch = placeName.includes(searchName) || searchName.includes(placeName);
 
-              if (similarity >= 0.75 || directMatch) {
+              // Exact substring match required — one must fully contain the other
+              const directMatch = placeName === searchName ||
+                placeName.startsWith(searchName) || searchName.startsWith(placeName);
+
+              // Also accept if edit distance is very small (1-2 chars different)
+              // Simple check: same length ±1 and all but 1 char match
+              const lenDiff = Math.abs(placeName.length - searchName.length);
+              const minLen = Math.min(placeName.length, searchName.length);
+              let exactMatchCount = 0;
+              for (let ci = 0; ci < minLen; ci++) {
+                if (placeName[ci] === searchName[ci]) exactMatchCount++;
+              }
+              const closeMatch = lenDiff <= 1 && exactMatchCount >= minLen - 1;
+
+              // Reject if venue type is clearly wrong category
+              const placeTypesEarly = d.types || [];
+              const wrongCategory = ['gym','sports_complex','climbing','health','fitness_center',
+                'physiotherapist','beauty_salon','hair_care','store','shopping_mall'].some(t => placeTypesEarly.includes(t));
+
+              if ((directMatch || closeMatch) && !wrongCategory) {
                 details = d;
-                console.log(`Weekend: matched "${ev.name}" → "${d.name}" (similarity: ${(similarity*100).toFixed(0)}%)`);
+                console.log(`Weekend: matched "${ev.name}" → "${d.name}"`);
                 break;
               } else {
-                console.log(`Weekend: skipping "${d.name}" — too different from "${ev.name}" (similarity: ${(similarity*100).toFixed(0)}%)`);
+                console.log(`Weekend: skipping "${d.name}" — directMatch:${directMatch} closeMatch:${closeMatch} wrongCategory:${wrongCategory}`);
               }
             }
 
