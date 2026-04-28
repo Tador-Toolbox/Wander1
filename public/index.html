@@ -886,11 +886,19 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       </div>
       <span style="font-size:18px;color:rgba(255,255,255,.4);">›</span>
     </button>
-    <button onclick="openEventDiscover()" style="width:100%;padding:16px;border:none;border-radius:20px;background:linear-gradient(135deg,#1A1714,#2D2925);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:24px;box-shadow:0 6px 24px rgba(26,23,20,.18);">
+    <button onclick="openEventDiscover()" style="width:100%;padding:16px;border:none;border-radius:20px;background:linear-gradient(135deg,#1A1714,#2D2925);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:12px;box-shadow:0 6px 24px rgba(26,23,20,.18);">
       <span style="font-size:24px;">🎯</span>
       <div style="text-align:left;flex:1;">
         <div style="font-size:14px;font-weight:800;">AI Event Discover</div>
         <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;">Top 3 events ranked for your Identity Cube</div>
+      </div>
+      <span style="font-size:18px;color:rgba(255,255,255,.4);">›</span>
+    </button>
+    <button onclick="openNewTrip()" style="width:100%;padding:16px;border:none;border-radius:20px;background:linear-gradient(135deg,#0f3460,#1a5276);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:24px;box-shadow:0 6px 24px rgba(15,52,96,.25);">
+      <span style="font-size:24px;">✈️</span>
+      <div style="text-align:left;flex:1;">
+        <div style="font-size:14px;font-weight:800;">Plan a Trip</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;">Create a new trip and start saving places</div>
       </div>
       <span style="font-size:18px;color:rgba(255,255,255,.4);">›</span>
     </button>
@@ -1086,46 +1094,56 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
 <!-- OVERLAY: NEW TRIP -->
 <div class="overlay" id="newTripOverlay">
-  <div class="sheet">
-    <div class="drag-bar"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-      <div class="sheet-title" id="tripFormTitle" style="margin-bottom:0">✈️ New Trip</div>
-      <button onclick="closeOverlay('newTripOverlay')" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);">✕</button>
-    </div>
-    <div class="mf">
-      <label>Trip Name</label>
-      <input type="text" id="tripName" placeholder="e.g. Vietnam 2025, Paris Honeymoon…">
-      <div style="font-size:12px;color:var(--txt3);margin-top:6px;line-height:1.5;">💡 Include the city or country name (e.g. "Tokyo 2025" not just "Asia Trip") — this helps the AI give more accurate place suggestions.</div>
-    </div>
-    <div class="mf">
-      <label>Emoji</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="emojiPicker">
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="✈️">✈️</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🏖">🏖</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🗺">🗺</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🏔">🏔</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🌴">🌴</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🍜">🍜</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🎒">🎒</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="💑">💑</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="👨‍👩‍👧‍👦">👨‍👩‍👧‍👦</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🎉">🎉</span>
+  <div class="sheet" style="padding:0;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#0f3460,#1a5276);padding:24px 20px 20px;position:relative;">
+      <div class="drag-bar" style="background:rgba(255,255,255,.3);"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+        <div>
+          <div style="font-size:22px;font-weight:800;color:#fff;" id="tripFormTitle">✈️ New Trip</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:2px;">Where are you headed?</div>
+        </div>
+        <button onclick="closeOverlay('newTripOverlay')" style="background:rgba(255,255,255,.15);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button>
       </div>
     </div>
-    <div class="mf">
-      <label>Color</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="colorPicker">
-        <span style="width:32px;height:32px;border-radius:50%;background:#4a9eff;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#4a9eff"></span>
-        <span style="width:32px;height:32px;border-radius:50%;background:#ff6b47;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#ff6b47"></span>
-        <span style="width:32px;height:32px;border-radius:50%;background:#34c98a;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#34c98a"></span>
-        <span style="width:32px;height:32px;border-radius:50%;background:#9b6dff;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#9b6dff"></span>
-        <span style="width:32px;height:32px;border-radius:50%;background:#f5a623;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#f5a623"></span>
-        <span style="width:32px;height:32px;border-radius:50%;background:#ec4899;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#ec4899"></span>
+    <div style="padding:20px;">
+      <div class="mf">
+        <label>TRIP NAME</label>
+        <input type="text" id="tripName" placeholder="e.g. Vietnam 2025, Paris Honeymoon…" style="font-size:15px;font-weight:600;">
+        <div style="display:flex;align-items:flex-start;gap:6px;margin-top:8px;background:#f0f7ff;border-radius:10px;padding:8px 10px;">
+          <span style="font-size:14px;flex-shrink:0;">💡</span>
+          <div style="font-size:12px;color:#1a5276;line-height:1.5;">Include the city or country name — e.g. <strong>"Tokyo 2025"</strong> not just "Asia Trip". Helps AI suggest more accurate places.</div>
+        </div>
       </div>
-    </div>
-    <div class="act-row">
-      <button class="btn-cancel" onclick="closeOverlay('newTripOverlay')">Cancel</button>
-      <button class="btn-save" onclick="saveTrip()">Save Trip ✈️</button>
+      <div class="mf">
+        <label>PICK AN EMOJI</label>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;" id="emojiPicker">
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="✈️">✈️</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🏖">🏖</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🗺">🗺</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🏔">🏔</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🌴">🌴</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🍜">🍜</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🎒">🎒</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="💑">💑</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="👨‍👩‍👧‍👦">👨‍👩‍👧‍👦</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🎉">🎉</span>
+        </div>
+      </div>
+      <div class="mf">
+        <label>TRIP COLOR</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;" id="colorPicker">
+          <span style="width:36px;height:36px;border-radius:50%;background:#4a9eff;cursor:pointer;border:3px solid transparent;box-shadow:0 2px 8px rgba(74,158,255,.4);" onclick="pickColor(this)" data-c="#4a9eff"></span>
+          <span style="width:36px;height:36px;border-radius:50%;background:#ff6b47;cursor:pointer;border:3px solid transparent;box-shadow:0 2px 8px rgba(255,107,71,.4);" onclick="pickColor(this)" data-c="#ff6b47"></span>
+          <span style="width:36px;height:36px;border-radius:50%;background:#34c98a;cursor:pointer;border:3px solid transparent;box-shadow:0 2px 8px rgba(52,201,138,.4);" onclick="pickColor(this)" data-c="#34c98a"></span>
+          <span style="width:36px;height:36px;border-radius:50%;background:#9b6dff;cursor:pointer;border:3px solid transparent;box-shadow:0 2px 8px rgba(155,109,255,.4);" onclick="pickColor(this)" data-c="#9b6dff"></span>
+          <span style="width:36px;height:36px;border-radius:50%;background:#f5a623;cursor:pointer;border:3px solid transparent;box-shadow:0 2px 8px rgba(245,166,35,.4);" onclick="pickColor(this)" data-c="#f5a623"></span>
+          <span style="width:36px;height:36px;border-radius:50%;background:#ec4899;cursor:pointer;border:3px solid transparent;box-shadow:0 2px 8px rgba(236,72,153,.4);" onclick="pickColor(this)" data-c="#ec4899"></span>
+        </div>
+      </div>
+      <div class="act-row" style="margin-top:8px;">
+        <button class="btn-cancel" onclick="closeOverlay('newTripOverlay')">Cancel</button>
+        <button class="btn-save" onclick="saveTrip()" style="background:linear-gradient(135deg,#0f3460,#1a5276);">Save Trip ✈️</button>
+      </div>
     </div>
   </div>
 </div>
