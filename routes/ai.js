@@ -25,7 +25,7 @@ async function searchGooglePlaces(query, apiKey) {
 
 async function getPlaceDetails(placeId, apiKey) {
   try {
-    const fields = 'name,formatted_address,rating,opening_hours,photos,price_level,geometry,url';
+    const fields = 'name,formatted_address,rating,opening_hours,photos,price_level,geometry,url,website';
     const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${apiKey}`;
     const r = await fetch(url);
     const d = await r.json();
@@ -39,6 +39,22 @@ function isOpenToday(openingHours) {
   if (!openingHours.periods) return openingHours.open_now !== false;
   const today = new Date().getDay(); // 0=Sun..6=Sat
   return openingHours.periods.some(p => p.open?.day === today);
+}
+
+function isOpenOnWeekend(openingHours) {
+  if (!openingHours) return true;
+  if (!openingHours.periods) return true;
+  return openingHours.periods.some(p => p.open?.day === 5 || p.open?.day === 6);
+}
+
+function getNextWeekendDates() {
+  const now = new Date();
+  const day = now.getDay();
+  const daysToFri = day <= 5 ? 5 - day : 6;
+  const fri = new Date(now); fri.setDate(now.getDate() + daysToFri);
+  const sat = new Date(fri); sat.setDate(fri.getDate() + 1);
+  const fmt = d => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  return { friday: fmt(fri), saturday: fmt(sat), daysToFri };
 }
 
 function getPhotoUrl(photos, apiKey) {
@@ -847,7 +863,6 @@ router.post('/event-discover', auth, async (req, res) => {
   try {
     const { locationStr = 'Tel Aviv', timeLabel = 'evening', hour = 20, dayOfWeek = 'Saturday', dateStr = '' } = req.body;
     const mapsKey = process.env.GOOGLE_MAPS_API_KEY;
-    const geminiKey = process.env.GEMINI_API_KEY;
 
     // Load Identity Cube
     const User = require('../models/User');
@@ -858,22 +873,25 @@ router.post('/event-discover', auth, async (req, res) => {
     const { tags=[], summary='', musicGenres=[], eventGoal='', atmosphere='', soundVibe='', aestheticTags=[] } = profile;
 
     // ── PHASE 1: Google Places search ──
-    // Build smart queries based on Identity Cube
     const queries = [];
     if (atmosphere === 'Top-Shelf') queries.push(`rooftop bar ${locationStr}`, `luxury lounge ${locationStr}`);
     else if (atmosphere === 'Electric') queries.push(`nightclub ${locationStr}`, `live music venue ${locationStr}`);
     else if (atmosphere === 'Main Street') queries.push(`local bar ${locationStr}`, `underground venue ${locationStr}`);
     else queries.push(`bar ${locationStr}`, `restaurant ${locationStr}`);
 
+    // Music-based queries
     if (musicGenres.includes('Techno') || musicGenres.includes('Trance')) queries.push(`electronic music club ${locationStr}`);
     if (musicGenres.includes('Hip-Hop')) queries.push(`hip hop club ${locationStr}`);
     if (musicGenres.includes('Jazz')) queries.push(`jazz bar ${locationStr}`);
     if (tags.includes('fine-dining') || tags.includes('wagyu')) queries.push(`fine dining restaurant ${locationStr}`);
     if (tags.includes('coffee')) queries.push(`specialty coffee ${locationStr}`);
 
-    // Run up to 4 searches in parallel
+    // Always include disco/dance club search
+    queries.push(`disco club ${locationStr}`, `dance club ${locationStr}`);
+
+    // Run up to 5 searches in parallel
     const searchResults = await Promise.all(
-      queries.slice(0, 4).map(q => searchGooglePlaces(q, mapsKey))
+      queries.slice(0, 5).map(q => searchGooglePlaces(q, mapsKey))
     );
 
     // Flatten + deduplicate by place_id
@@ -884,7 +902,7 @@ router.post('/event-discover', auth, async (req, res) => {
       return true;
     });
 
-    // Get details for top 12 results
+    // Get details for top 12 results (includes website now)
     const detailResults = await Promise.all(
       allPlaces.slice(0, 12).map(p => getPlaceDetails(p.place_id, mapsKey))
     );
@@ -895,10 +913,10 @@ router.post('/event-discover', auth, async (req, res) => {
       .slice(0, 8);
 
     if (!openToday.length) {
-      return res.status(200).json({ events: [], message: 'No open venues found for today. Try a different time.' });
+      return res.status(200).json({ events: [], weekendEvents: [], message: 'No open venues found for today. Try a different time.' });
     }
 
-    // Build venue list for Gemini
+    // Build venue list — include website for Instagram lookup
     const venueList = openToday.map((p, i) => ({
       index: i,
       name: p.name,
@@ -906,14 +924,13 @@ router.post('/event-discover', auth, async (req, res) => {
       rating: p.rating,
       priceLevel: getPriceLabel(p.price_level),
       openToday: true,
+      website: p.website || '',
       photoUrl: getPhotoUrl(p.photos, mapsKey),
       mapsUrl: p.url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name+' '+locationStr)}`
     }));
 
-    // ── PHASE 2: Gemini scores + writes concierge notes ──
-    const now48h = new Date(Date.now() + 48*60*60*1000).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'});
-
-    const geminiPrompt = `You are an elite personal concierge AI. Score these venues against the user's Identity Cube and pick the TOP 3.
+    // ── PHASE 2: AI scores today's venues + finds Instagram handles ──
+    const scoringPrompt = `You are an elite personal concierge AI. Score these venues against the user's Identity Cube and pick the TOP 3.
 
 == IDENTITY CUBE ==
 Visual Aesthetic: ${[...aestheticTags,...tags].slice(0,8).join(', ')}
@@ -929,7 +946,6 @@ All venues below are confirmed OPEN today.
 
 == VENUES TO SCORE ==
 ${venueList.map(v=>'['+v.index+'] '+v.name+' | '+v.address+' | Rating: '+(v.rating||'?')+'/5 | '+v.priceLevel).join('\n')}
-')}
 
 == SCORING RULES ==
 +30pts music genre match
@@ -939,7 +955,7 @@ ${venueList.map(v=>'['+v.index+'] '+v.name+' | '+v.address+' | Rating: '+(v.rati
 +10pts aesthetic/tag match
 TIMING BOOST: Events in next 48h get 1.3x multiplier (max 100)
 
-Pick the TOP 3 venues. Write a personal concierge note for each referencing their specific profile.
+Pick the TOP 3 venues. For each venue, if you know their Instagram handle from your training knowledge, include it (without the @ symbol). If unsure, return empty string.
 
 Return ONLY valid JSON:
 {
@@ -949,29 +965,39 @@ Return ONLY valid JSON:
       "matchScore": 94,
       "hoursUntil": 4,
       "tags": ["rooftop", "electronic"],
-      "conciergeNote": "Personal note referencing their exact taste profile"
+      "conciergeNote": "Personal note referencing their exact taste profile",
+      "instagramHandle": "venuename"
     }
   ]
 }`;
 
-    const geminiText = geminiKey ? await callGemini(geminiPrompt) : null;
+    const aiText = await callAI(scoringPrompt);
     let scored = [];
-
-    if (geminiText) {
-      const parsed = extractJSON(geminiText);
+    if (aiText) {
+      const parsed = extractJSON(aiText);
       scored = parsed?.events || [];
     }
 
-    // If Gemini failed or no key, fall back to simple scoring
+    // Fallback simple scoring
     if (!scored.length) {
       scored = venueList.slice(0,3).map((v,i) => ({
-        venueIndex: v.index, matchScore: 80-i*5, hoursUntil: 6, tags: [], conciergeNote: `${v.name} matches your profile for a great ${timeLabel} out in ${locationStr}.`
+        venueIndex: v.index, matchScore: 80-i*5, hoursUntil: 6, tags: [],
+        conciergeNote: `${v.name} matches your profile for a great ${timeLabel} out in ${locationStr}.`,
+        instagramHandle: ''
       }));
     }
 
-    // Merge Gemini scores with Google Places data
+    // Merge scores with Places data
     const events = scored.slice(0,3).map(s => {
       const venue = venueList[s.venueIndex] || venueList[0];
+
+      // Detect Instagram from venue website if Places returned it
+      let instagramHandle = s.instagramHandle || '';
+      if (!instagramHandle && venue.website && venue.website.includes('instagram.com')) {
+        const match = venue.website.match(/instagram\.com\/([^/?#]+)/);
+        if (match) instagramHandle = match[1];
+      }
+
       return {
         name: venue.name,
         venueName: venue.name,
@@ -984,18 +1010,113 @@ Return ONLY valid JSON:
         conciergeNote: s.conciergeNote||'',
         photoUrl: venue.photoUrl,
         ticketUrl: venue.mapsUrl,
-        openConfirmed: true
+        websiteUrl: venue.website || '',
+        instagramHandle,
+        instagramUrl: instagramHandle ? `https://www.instagram.com/${instagramHandle}` : '',
+        openConfirmed: true,
+        isWeekend: false
       };
     }).sort((a,b) => b.matchScore - a.matchScore);
 
-    res.json({ events });
+    // ── PHASE 3: Weekend events via AI knowledge (2 results) ──
+    // Only fetch if today is Sun–Thu (weekend is coming)
+    // Always fetch so user always sees weekend suggestions
+    const weekendPrompt = `You are a nightlife expert for ${locationStr}.
+
+The user is looking for the BEST club/venue events happening this coming Friday or Saturday night in ${locationStr}.
+
+== USER TASTE PROFILE ==
+Summary: "${summary}"
+Music they love: ${musicGenres.join(', ')||'any'}
+Atmosphere: ${atmosphere||'any'}
+Tags: ${[...aestheticTags,...tags].slice(0,8).join(', ')}
+
+== TASK ==
+Suggest exactly 2 well-known venues/clubs in ${locationStr} that are famous for their Friday or Saturday nights.
+Prioritize Friday if the venue is known for it. Otherwise Saturday.
+Focus on: disco clubs, dance clubs, nightclubs, electronic venues, rooftop parties — match the user's taste.
+
+For each venue:
+- Must be a REAL, currently operating venue in ${locationStr}
+- Include the day it's best known for (Friday or Saturday)
+- If you know their Instagram handle, include it (no @ symbol). If unsure, return empty string.
+- Give a concierge note referencing the user's specific music/atmosphere taste
+- matchScore 0-100 vs their profile
+
+Return ONLY valid JSON:
+{
+  "weekendEvents": [
+    {
+      "name": "Venue Name",
+      "venueName": "Venue Name",
+      "address": "Address in ${locationStr}",
+      "day": "Friday",
+      "time": "11pm",
+      "price": "₪80 / Free before midnight",
+      "matchScore": 91,
+      "tags": ["disco", "dance", "electronic"],
+      "conciergeNote": "Personal note referencing their taste",
+      "instagramHandle": "venuehandle",
+      "searchQuery": "Venue Name ${locationStr}"
+    }
+  ]
+}`;
+
+    let weekendEvents = [];
+    try {
+      const weekendText = await callAI(weekendPrompt);
+      const weekendParsed = extractJSON(weekendText);
+      const raw = weekendParsed?.weekendEvents || [];
+
+      weekendEvents = await Promise.all(raw.slice(0,2).map(async ev => {
+        // Try to get a photo from Google Places
+        let photoUrl = '';
+        let mapsUrl = '';
+        let websiteUrl = '';
+        let instagramHandle = ev.instagramHandle || '';
+        try {
+          const results = await searchGooglePlaces(ev.searchQuery || ev.name + ' ' + locationStr, mapsKey);
+          if (results[0]) {
+            const details = await getPlaceDetails(results[0].place_id, mapsKey);
+            if (details) {
+              photoUrl = getPhotoUrl(details.photos, mapsKey);
+              mapsUrl = details.url || '';
+              websiteUrl = details.website || '';
+              // Extract Instagram from website if not already found
+              if (!instagramHandle && websiteUrl.includes('instagram.com')) {
+                const match = websiteUrl.match(/instagram\.com\/([^/?#]+)/);
+                if (match) instagramHandle = match[1];
+              }
+            }
+          }
+        } catch {}
+
+        return {
+          name: ev.name,
+          venueName: ev.venueName || ev.name,
+          date: ev.day, // "Friday" or "Saturday"
+          time: ev.time || 'Night',
+          price: ev.price || '',
+          matchScore: Math.min(100, ev.matchScore || 80),
+          tags: ev.tags || [],
+          conciergeNote: ev.conciergeNote || '',
+          photoUrl,
+          ticketUrl: mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.name+' '+locationStr)}`,
+          websiteUrl,
+          instagramHandle,
+          instagramUrl: instagramHandle ? `https://www.instagram.com/${instagramHandle}` : '',
+          openConfirmed: false,
+          isWeekend: true
+        };
+      }));
+    } catch(e) {
+      console.error('Weekend events error:', e.message);
+    }
+
+    res.json({ events, weekendEvents });
 
   } catch (err) {
-    console.error('Event discover (Gemini) error:', err.message);
-    // If Gemini key missing, return helpful error
-    if (err.message.includes('GEMINI_API_KEY')) {
-      return res.status(500).json({ error: 'Gemini API key not configured. Add GEMINI_API_KEY to environment variables.' });
-    }
+    console.error('Event discover error:', err.message);
     res.status(500).json({ error: 'Failed to discover events. Try again.' });
   }
 });
