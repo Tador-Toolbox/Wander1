@@ -992,10 +992,17 @@ Return ONLY valid JSON:
       const venue = venueList[s.venueIndex] || venueList[0];
 
       // Detect Instagram from venue website if Places returned it
-      let instagramHandle = s.instagramHandle || '';
-      if (!instagramHandle && venue.website && venue.website.includes('instagram.com')) {
-        const match = venue.website.match(/instagram\.com\/([^/?#]+)/);
+      let instagramHandle = '';
+      let websiteUrl = venue.website || '';
+
+      if (websiteUrl.includes('instagram.com')) {
+        // Website IS Instagram — extract handle from URL, don't use AI's guess
+        const match = websiteUrl.match(/instagram\.com\/([^/?#]+)/);
         if (match) instagramHandle = match[1];
+        websiteUrl = ''; // Don't show website button since it's just Instagram
+      } else if (s.instagramHandle) {
+        // Only use AI's Instagram guess if we don't have a real one from Places
+        instagramHandle = s.instagramHandle;
       }
 
       return {
@@ -1010,7 +1017,7 @@ Return ONLY valid JSON:
         conciergeNote: s.conciergeNote||'',
         photoUrl: venue.photoUrl,
         ticketUrl: venue.mapsUrl,
-        websiteUrl: venue.website || '',
+        websiteUrl,
         instagramHandle,
         instagramUrl: instagramHandle ? `https://www.instagram.com/${instagramHandle}` : '',
         openConfirmed: true,
@@ -1164,10 +1171,15 @@ Return ONLY valid JSON:
                 verified = true;
                 photoUrl = getPhotoUrl(details.photos, mapsKey);
                 mapsUrl = details.url || '';
-                websiteUrl = details.website || '';
-                if (!instagramHandle && websiteUrl.includes('instagram.com')) {
-                  const match = websiteUrl.match(/instagram\.com\/([^/?#]+)/);
-                  if (match) instagramHandle = match[1];
+                const rawWebsite = details.website || '';
+                if (rawWebsite.includes('instagram.com')) {
+                  // Website IS Instagram — use it as the Instagram URL, clear website
+                  const match = rawWebsite.match(/instagram\.com\/([^/?#]+)/);
+                  if (match) instagramHandle = match[1]; // override AI guess with real handle
+                  websiteUrl = ''; // hide website button
+                } else {
+                  websiteUrl = rawWebsite;
+                  // Only keep AI instagram guess if no real one found
                 }
               }
             }
