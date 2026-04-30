@@ -2171,7 +2171,7 @@ async function openEventDiscover(){
       navigator.geolocation.getCurrentPosition(resolve, reject, {timeout:8000});
     }).catch(()=>null);
 
-    let locationStr = 'Tel Aviv, Israel'; // default
+    let locationStr = null;
     let lat = null, lng = null;
     if(pos){
       lat = pos.coords.latitude;
@@ -2185,6 +2185,16 @@ async function openEventDiscover(){
         const country = res?.[0]?.address_components?.find(c=>c.types.includes('country'))?.long_name;
         if(city) locationStr = country ? `${city}, ${country}` : city;
       }catch{}
+    }
+
+    // If location not detected, ask the user
+    if(!locationStr){
+      locationStr = prompt('📍 Where are you? (e.g. Manila, Philippines)');
+      if(!locationStr || !locationStr.trim()){
+        body.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3);">Location needed to find events near you.</div>';
+        return;
+      }
+      locationStr = locationStr.trim();
     }
     step(3,[1,2]);
 
