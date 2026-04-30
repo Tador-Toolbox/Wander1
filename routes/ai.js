@@ -1041,8 +1041,9 @@ Prioritize Friday if the venue is known for it. Otherwise Saturday.
 Match the user's taste profile for both types.
 
 For each venue:
-- Must be a REAL, currently operating venue in ${locationStr}
-- NEVER suggest these venues which are permanently closed: "The Block" (closed Tel Aviv nightclub), "The Zone", "Haoman 17" (old location), "Pasaz" (closed Tel Aviv club)
+- Must be a REAL, currently operating venue in ${locationStr} as of 2025-2026
+- Rate your confidence (0-100) that this venue is STILL OPEN in 2025-2026. Only include venues where you are 80%+ confident they are currently operating. If unsure, skip and suggest a different venue.
+- NEVER suggest venues you know closed in recent years
 - Include the day it's best known for (Friday or Saturday)
 - If you know their Instagram handle, include it (no @ symbol). If unsure, return empty string.
 - Give a concierge note referencing the user's specific music/atmosphere taste
@@ -1062,7 +1063,8 @@ Return ONLY valid JSON:
       "tags": ["disco", "dance", "electronic"],
       "conciergeNote": "Personal note referencing their taste",
       "instagramHandle": "venuehandle",
-      "searchQuery": "Venue Name ${locationStr}"
+      "searchQuery": "Venue Name ${locationStr}",
+      "confidence": 90
     }
   ]
 }`;
@@ -1082,11 +1084,18 @@ Return ONLY valid JSON:
         let notFound = false;
 
         try {
-          // Include venue type in query to avoid wrong venue matches
-          const venueType = (ev.tags||[]).includes('climbing') ? '' :
-            (ev.tags||[]).some(t=>['club','nightclub','disco','dance','electronic','bar'].includes(t)) ? 'nightclub' : 'venue';
-          const query = `${ev.name} ${venueType} ${locationStr}`.trim();
-          const results = await searchGooglePlaces(query, mapsKey);
+          // Use quoted text search for exact venue name match
+          const venueType = (ev.tags||[]).some(t=>['club','nightclub','disco','dance','electronic','bar'].includes(t)) ? 'nightclub' : 'venue';
+          
+          // First try exact quoted search — forces Google to find THIS specific venue
+          const exactQuery = `"${ev.name}" ${locationStr}`;
+          let results = await searchGooglePlaces(exactQuery, mapsKey);
+          
+          // If no results with quotes, fall back to unquoted search
+          if (!results.length) {
+            const fallbackQuery = `${ev.name} ${venueType} ${locationStr}`.trim();
+            results = await searchGooglePlaces(fallbackQuery, mapsKey);
+          }
 
           if (!results.length) {
             console.log(`Weekend: "${ev.name}" not found in Places`);
@@ -1128,10 +1137,12 @@ Return ONLY valid JSON:
 
               if ((directMatch || closeMatch) && !wrongCategory) {
                 details = d;
-                console.log(`Weekend: matched "${ev.name}" → "${d.name}"`);
+                console.log(`Weekend: matched "${ev.name}" → "${d.name}" (types: ${placeTypesEarly.slice(0,3).join(',')})`);
                 break;
               } else {
-                console.log(`Weekend: skipping "${d.name}" — directMatch:${directMatch} closeMatch:${closeMatch} wrongCategory:${wrongCategory}`);
+                const reason = wrongCategory ? `wrong type (${placeTypesEarly.slice(0,3).join(',')})` :
+                  !directMatch && !closeMatch ? `name mismatch ("${d.name}" vs "${ev.name}")` : 'unknown';
+                console.log(`Weekend: skipping "${d.name}" — ${reason}`);
               }
             }
 
@@ -1186,9 +1197,13 @@ Return ONLY valid JSON:
         };
       }
 
+      // Filter out low confidence venues before verifying
+      const confident = raw.filter(ev => (ev.confidence || 100) >= 80);
+      console.log(`Weekend: ${confident.length}/${raw.length} candidates passed confidence filter`);
+
       // Process candidates sequentially, collect up to 2 verified/unverified
       const results = [];
-      for (const ev of raw.slice(0, 4)) {
+      for (const ev of confident.slice(0, 4)) {
         if (results.length >= 2) break;
         const result = await verifyAndEnrich(ev);
         if (result !== null) results.push(result); // null = permanently closed, skip
