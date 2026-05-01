@@ -2279,6 +2279,12 @@ async function openEventDiscover(){
             ${hasWebsite?`<a class="ed-link" href="${esc(ev.websiteUrl)}" target="_blank" rel="noopener">🌐 Website</a>`:''}
             ${instaBtn}
           </div>
+          ${isWeekend && ev.unverified ? `<div style="margin-top:8px;">
+            <button onclick="reportClosure('${esc(ev.name)}','${esc(ev.date||'')}',this)"
+              style="background:transparent;border:1px solid rgba(248,113,113,.4);border-radius:8px;padding:5px 10px;font-size:11px;color:#f87171;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">
+              🚫 Mark as permanently closed
+            </button>
+          </div>` : ''}
         </div>
       </div>`;
     }
@@ -4609,6 +4615,23 @@ async function checkPendingInvites(){
       document.body.appendChild(banner);
     });
   }catch{}
+}
+
+async function reportClosure(venueName, city, btn) {
+  if (!confirm(`Report "${venueName}" as permanently closed? This will be reviewed by the admin.`)) return;
+  try {
+    const r = await apiFetch('/api/report-closure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ venueName, city })
+    });
+    if (r.ok) {
+      btn.textContent = '✅ Reported — thank you!';
+      btn.disabled = true;
+      btn.style.color = 'var(--mint)';
+      btn.style.borderColor = 'var(--mint)';
+    }
+  } catch(e) { toast('Could not send report', 'err'); }
 }
 
 async function acceptTripInvite(tripId, bannerId){

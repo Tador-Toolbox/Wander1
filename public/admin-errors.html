@@ -96,13 +96,16 @@
     <div style="font-size:22px;">🌍</div>
     <h1>Wandr <span>Error Logs</span></h1>
     <div class="badge red" id="totalBadge">0 errors</div>
+    <div class="badge" id="reportsBadge" style="background:rgba(251,191,36,.15);border-color:#fbbf24;color:#fbbf24;">0 reports</div>
     <div style="margin-left:auto;display:flex;gap:8px;">
-      <button class="btn btn-ghost" onclick="loadErrors()">↻ Refresh</button>
-      <button class="btn btn-danger" onclick="clearLogs()">🗑 Clear All</button>
+      <button class="btn btn-ghost" id="tabErrors" onclick="showTab('errors')" style="color:#fff;">Error Logs</button>
+      <button class="btn btn-ghost" id="tabReports" onclick="showTab('reports')">Closure Reports</button>
+      <button class="btn btn-ghost" id="tabBlacklist" onclick="showTab('blacklist')">Blacklist</button>
+      <button class="btn btn-danger" onclick="clearLogs()">🗑 Clear Errors</button>
     </div>
   </div>
 
-  <div class="toolbar">
+  <div class="toolbar" id="toolbar">
     <input class="search" id="routeFilter" placeholder="Filter by route (e.g. /api/ai/event-discover)" oninput="debounceLoad()">
     <select id="levelFilter" onchange="loadErrors()">
       <option value="">All levels</option>
@@ -127,6 +130,29 @@
 
     <div id="logList" class="log-list">
       <div class="loading">Loading...</div>
+    </div>
+
+    <!-- Closure Reports Tab -->
+    <div id="reportsTab" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 style="font-size:16px;color:#e6edf3;">🚫 Pending Closure Reports</h2>
+        <button class="btn btn-ghost" onclick="loadReports()">↻ Refresh</button>
+      </div>
+      <div id="reportsList" class="log-list"><div class="loading">Loading...</div></div>
+    </div>
+
+    <!-- Blacklist Tab -->
+    <div id="blacklistTab" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 style="font-size:16px;color:#e6edf3;">🚷 Venue Blacklist</h2>
+        <div style="display:flex;gap:8px;">
+          <input id="blName" placeholder="Venue name" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:7px 10px;color:#e6edf3;font-size:13px;outline:none;">
+          <input id="blCity" placeholder="City (optional)" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:7px 10px;color:#e6edf3;font-size:13px;outline:none;width:140px;">
+          <button class="btn btn-primary" onclick="addToBlacklist()">+ Add</button>
+          <button class="btn btn-ghost" onclick="loadBlacklist()">↻ Refresh</button>
+        </div>
+      </div>
+      <div id="blacklistItems" class="log-list"><div class="loading">Loading...</div></div>
     </div>
 
     <div class="pagination" id="pagination" style="display:none;">
@@ -290,7 +316,119 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// Auto-load on start if pwd saved in session
+// ── TAB MANAGEMENT ──
+let currentTab = 'errors';
+function showTab(tab) {
+  currentTab = tab;
+  document.getElementById('tabErrors').style.color = tab === 'errors' ? '#fff' : '#8b949e';
+  document.getElementById('tabReports').style.color = tab === 'reports' ? '#fff' : '#8b949e';
+  document.getElementById('tabBlacklist').style.color = tab === 'blacklist' ? '#fff' : '#8b949e';
+  document.getElementById('logList').style.display = tab === 'errors' ? 'flex' : 'none';
+  document.getElementById('pagination').style.display = tab === 'errors' ? 'flex' : 'none';
+  document.getElementById('toolbar').style.display = tab === 'errors' ? 'flex' : 'none';
+  document.getElementById('statsRow').style.display = tab === 'errors' ? 'grid' : 'none';
+  document.getElementById('reportsTab').style.display = tab === 'reports' ? 'block' : 'none';
+  document.getElementById('blacklistTab').style.display = tab === 'blacklist' ? 'block' : 'none';
+  if (tab === 'reports') loadReports();
+  if (tab === 'blacklist') loadBlacklist();
+}
+
+// ── CLOSURE REPORTS ──
+async function loadReports() {
+  const r = await apiFetch('/api/admin/closure-reports');
+  if (!r.ok) return;
+  const reports = await r.json();
+  document.getElementById('reportsBadge').textContent = `${reports.filter(r=>r.status==='pending').length} reports`;
+  const list = document.getElementById('reportsList');
+  const pending = reports.filter(r => r.status === 'pending');
+  if (!pending.length) {
+    list.innerHTML = '<div class="empty"><div class="icon">✅</div><h3>No pending reports</h3><p>All closure reports have been reviewed.</p></div>';
+    return;
+  }
+  list.innerHTML = pending.map(r => `
+    <div class="log-item" id="report_${r._id}">
+      <div class="log-header" style="cursor:default;">
+        <span class="level-badge" style="background:rgba(251,191,36,.2);color:#fbbf24;">REPORT</span>
+        <div class="log-meta">
+          <div class="log-message">🚫 ${r.venueName}${r.city ? ' — ' + r.city : ''}</div>
+          <div class="log-details">
+            <span>🕐 ${new Date(r.createdAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+            ${r.reporterHandle ? `<span>👤 @${r.reporterHandle}</span>` : ''}
+          </div>
+        </div>
+        <div class="log-actions">
+          <button class="icon-btn" style="color:#2ea043;border-color:#238636;" onclick="approveReport('${r._id}','${r.venueName}')">✓ Blacklist</button>
+          <button class="icon-btn" onclick="dismissReport('${r._id}')">✕ Dismiss</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function approveReport(id, name) {
+  const r = await apiFetch(`/api/admin/closure-reports/${id}/blacklist`, { method: 'POST' });
+  if (r.ok) { showToast(`✅ "${name}" added to blacklist`); document.getElementById(`report_${id}`)?.remove(); loadBlacklist(); }
+}
+
+async function dismissReport(id) {
+  await apiFetch(`/api/admin/closure-reports/${id}/dismiss`, { method: 'POST' });
+  document.getElementById(`report_${id}`)?.remove();
+  showToast('Report dismissed');
+}
+
+// ── BLACKLIST ──
+async function loadBlacklist() {
+  const r = await apiFetch('/api/admin/blacklist');
+  if (!r.ok) return;
+  const list = await r.json();
+  const el = document.getElementById('blacklistItems');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty"><div class="icon">🚷</div><h3>Blacklist is empty</h3><p>No venues are blacklisted yet.</p></div>';
+    return;
+  }
+  el.innerHTML = list.map(v => `
+    <div class="log-item" id="bl_${v._id}">
+      <div class="log-header" style="cursor:default;">
+        <span class="level-badge" style="background:rgba(248,81,73,.2);color:#f85149;">BLOCKED</span>
+        <div class="log-meta">
+          <div class="log-message">${v.venueName}${v.city ? ' — ' + v.city : ''}</div>
+          <div class="log-details">
+            <span>📅 ${new Date(v.addedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</span>
+            <span>💬 ${v.reason}</span>
+          </div>
+        </div>
+        <div class="log-actions">
+          <button class="icon-btn" onclick="removeFromBlacklist('${v._id}','${v.venueName}')">🗑 Remove</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function addToBlacklist() {
+  const name = document.getElementById('blName').value.trim();
+  const city = document.getElementById('blCity').value.trim();
+  if (!name) return;
+  const r = await apiFetch('/api/admin/blacklist', {
+    method: 'POST',
+    body: JSON.stringify({ venueName: name, city })
+  });
+  if (r.ok) {
+    document.getElementById('blName').value = '';
+    document.getElementById('blCity').value = '';
+    showToast(`✅ "${name}" blacklisted`);
+    loadBlacklist();
+  }
+}
+
+async function removeFromBlacklist(id, name) {
+  if (!confirm(`Remove "${name}" from blacklist?`)) return;
+  await apiFetch(`/api/admin/blacklist/${id}`, { method: 'DELETE' });
+  document.getElementById(`bl_${id}`)?.remove();
+  showToast('Removed from blacklist');
+}
+
+// ── Auto-load on start if pwd saved in session
 const savedPwd = sessionStorage.getItem('wandr_admin_pwd');
 if (savedPwd) { adminPwd = savedPwd; loadErrors(); }
 document.getElementById('pwdInput').addEventListener('input', e => sessionStorage.setItem('wandr_admin_pwd', e.target.value));
