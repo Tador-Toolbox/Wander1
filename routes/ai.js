@@ -1211,6 +1211,49 @@ Return ONLY valid JSON:
           notFound = true;
         }
 
+        // If Places couldn't verify, use Gemini Search grounding to check for closure news
+        if (notFound && mapsKey) {
+          try {
+            const geminiKey = process.env.GEMINI_API_KEY;
+            if (geminiKey) {
+              const searchPrompt = `Search the web for: "${ev.name}" ${locationStr} nightclub closed permanently
+
+Look for news articles, social media posts, or announcements about this venue closing permanently. 
+
+Answer with ONLY one word:
+- "CLOSED" if you find clear evidence (news article, official announcement, or multiple sources) that this venue permanently closed
+- "OPEN" if you find evidence it is currently operating
+- "UNKNOWN" if you cannot find relevant information
+
+Do not explain. Just one word.`;
+
+              const searchRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: searchPrompt }] }],
+                  tools: [{ googleSearch: {} }],
+                  generationConfig: { temperature: 0, maxOutputTokens: 20 }
+                })
+              });
+              const searchData = await searchRes.json();
+              if (searchData.error) {
+                console.log(`Weekend: Gemini search API error for "${ev.name}":`, searchData.error.message);
+              } else {
+                const answer = searchData.candidates?.[0]?.content?.parts
+                  ?.map(p => p.text || '').join('').trim().toUpperCase() || '';
+                console.log(`Weekend: Gemini web search "${ev.name}" → "${answer}"`);
+                if (answer.includes('CLOSED')) {
+                  console.log(`Weekend: "${ev.name}" confirmed CLOSED by web search — dropping`);
+                  return null;
+                }
+              }
+            }
+          } catch(e) {
+            console.log(`Weekend: Gemini search error for "${ev.name}":`, e.message);
+          }
+        }
+
         return {
           name: ev.name,
           venueName: ev.venueName || ev.name,
