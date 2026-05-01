@@ -1233,7 +1233,7 @@ Do not explain. Just one word.`;
                 body: JSON.stringify({
                   contents: [{ parts: [{ text: searchPrompt }] }],
                   tools: [{ googleSearch: {} }],
-                  generationConfig: { temperature: 0, maxOutputTokens: 20 }
+                  generationConfig: { temperature: 0, maxOutputTokens: 1024 }
                 })
               });
               const searchData = await searchRes.json();
