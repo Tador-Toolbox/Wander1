@@ -4,6 +4,38 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 
+// ── Error logging helper ──
+async function logError(err, req = null, statusCode = 500, level = 'error') {
+  try {
+    const ErrorLog = require('./models/ErrorLog');
+    
+    // Sanitize body — remove sensitive fields
+    let body = '';
+    if (req && req.body) {
+      const sanitized = { ...req.body };
+      ['password','token','imageBase64','base64'].forEach(k => {
+        if (sanitized[k]) sanitized[k] = '[redacted]';
+      });
+      body = JSON.stringify(sanitized).slice(0, 500);
+    }
+
+    await ErrorLog.create({
+      route: req ? req.originalUrl || req.path || '' : '',
+      method: req ? req.method || '' : '',
+      statusCode,
+      message: err?.message || String(err),
+      stack: err?.stack || '',
+      userId: req?.userId || '',
+      body,
+      level
+    });
+  } catch (e) {
+    console.error('Failed to log error:', e.message);
+  }
+}
+
+global.logError = logError;
+
 const app = express();
 
 app.use(cors());
@@ -148,6 +180,18 @@ app.get('/index-new.html', (req, res) => {
 // SPA fallback - serves index.html for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ── Admin error log page ──
+app.get('/admin/errors', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin-errors.html'));
+});
+
+// ── Global error handler ──
+app.use(async (err, req, res, next) => {
+  console.error('Unhandled error:', err.message);
+  await logError(err, req, 500);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 const PORT = process.env.PORT || 3000;
