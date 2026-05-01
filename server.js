@@ -177,14 +177,14 @@ app.get('/index-new.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index-new.html'));
 });
 
+// ── Admin error log page (before SPA catch-all) ──
+app.get('/admin/errors', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin-errors.html'));
+});
+
 // SPA fallback - serves index.html for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// ── Admin error log page ──
-app.get('/admin/errors', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin-errors.html'));
 });
 
 // ── Global error handler ──
