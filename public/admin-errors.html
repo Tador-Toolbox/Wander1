@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wandr — Error Logs</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+
+  .header { background: #161b22; border-bottom: 1px solid #30363d; padding: 16px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+  .header h1 { font-size: 18px; font-weight: 700; color: #fff; }
+  .header h1 span { color: #f85149; }
+  .badge { background: #21262d; border: 1px solid #30363d; padding: 3px 10px; border-radius: 20px; font-size: 12px; color: #8b949e; }
+  .badge.red { background: rgba(248,81,73,.15); border-color: #f85149; color: #f85149; }
+
+  .toolbar { background: #161b22; border-bottom: 1px solid #30363d; padding: 12px 24px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .search { flex: 1; min-width: 200px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 8px 12px; color: #e6edf3; font-size: 13px; outline: none; }
+  .search:focus { border-color: #388bfd; }
+  select { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 8px 10px; color: #e6edf3; font-size: 13px; outline: none; cursor: pointer; }
+  .btn { padding: 8px 14px; border-radius: 8px; border: 1px solid #30363d; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .btn-primary { background: #238636; border-color: #238636; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .btn-danger { background: transparent; border-color: #f85149; color: #f85149; }
+  .btn-danger:hover { background: rgba(248,81,73,.15); }
+  .btn-ghost { background: transparent; color: #8b949e; }
+  .btn-ghost:hover { background: #21262d; color: #e6edf3; }
+
+  .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; gap: 16px; }
+  .login-box { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 32px; width: 320px; }
+  .login-box h2 { font-size: 16px; margin-bottom: 20px; color: #e6edf3; }
+  .login-box input { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 10px 12px; color: #e6edf3; font-size: 14px; outline: none; margin-bottom: 12px; }
+  .login-box input:focus { border-color: #388bfd; }
+  .login-box button { width: 100%; padding: 10px; background: #238636; border: none; border-radius: 8px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
+
+  .content { padding: 24px; max-width: 1400px; margin: 0 auto; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 16px; }
+  .stat-card .num { font-size: 28px; font-weight: 800; color: #e6edf3; }
+  .stat-card .lbl { font-size: 12px; color: #8b949e; margin-top: 4px; }
+  .stat-card.red .num { color: #f85149; }
+  .stat-card.yellow .num { color: #d29922; }
+  .stat-card.blue .num { color: #388bfd; }
+
+  .log-list { display: flex; flex-direction: column; gap: 8px; }
+  .log-item { background: #161b22; border: 1px solid #30363d; border-radius: 10px; overflow: hidden; transition: border-color .15s; }
+  .log-item:hover { border-color: #484f58; }
+  .log-item.expanded { border-color: #388bfd; }
+  .log-header { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; cursor: pointer; }
+  .level-badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: .04em; flex-shrink: 0; margin-top: 2px; }
+  .level-error { background: rgba(248,81,73,.2); color: #f85149; }
+  .level-warn { background: rgba(210,153,34,.2); color: #d29922; }
+  .level-info { background: rgba(56,139,253,.2); color: #388bfd; }
+  .log-meta { flex: 1; min-width: 0; }
+  .log-message { font-size: 13px; font-weight: 600; color: #e6edf3; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .log-details { font-size: 11px; color: #8b949e; display: flex; gap: 12px; flex-wrap: wrap; }
+  .log-details span { display: flex; align-items: center; gap: 4px; }
+  .log-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .icon-btn { background: transparent; border: 1px solid #30363d; border-radius: 6px; padding: 5px 8px; color: #8b949e; font-size: 12px; cursor: pointer; transition: all .15s; }
+  .icon-btn:hover { background: #21262d; color: #e6edf3; border-color: #484f58; }
+  .icon-btn.copied { background: rgba(35,134,54,.2); color: #2ea043; border-color: #238636; }
+
+  .log-body { border-top: 1px solid #30363d; padding: 16px; display: none; }
+  .log-item.expanded .log-body { display: block; }
+  .code-block { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px; color: #a5d6ff; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; margin-top: 8px; }
+  .field-label { font-size: 11px; font-weight: 700; color: #8b949e; letter-spacing: .06em; margin-bottom: 4px; margin-top: 12px; }
+  .field-label:first-child { margin-top: 0; }
+
+  .empty { text-align: center; padding: 80px 20px; color: #8b949e; }
+  .empty .icon { font-size: 48px; margin-bottom: 16px; }
+  .empty h3 { font-size: 18px; color: #e6edf3; margin-bottom: 8px; }
+
+  .pagination { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
+  .page-info { font-size: 13px; color: #8b949e; }
+
+  .loading { text-align: center; padding: 40px; color: #8b949e; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #238636; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 9999; opacity: 0; transition: opacity .3s; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-screen">
+  <div style="font-size:32px;margin-bottom:8px;">🌍</div>
+  <div class="login-box">
+    <h2>Wandr Admin — Error Logs</h2>
+    <input type="password" id="pwdInput" placeholder="Admin password" onkeydown="if(event.key==='Enter')login()">
+    <button onclick="login()">Sign In →</button>
+    <div id="loginErr" style="color:#f85149;font-size:12px;margin-top:8px;display:none;">Wrong password</div>
+  </div>
+</div>
+
+<div id="mainApp" style="display:none;">
+  <div class="header">
+    <div style="font-size:22px;">🌍</div>
+    <h1>Wandr <span>Error Logs</span></h1>
+    <div class="badge red" id="totalBadge">0 errors</div>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      <button class="btn btn-ghost" onclick="loadErrors()">↻ Refresh</button>
+      <button class="btn btn-danger" onclick="clearLogs()">🗑 Clear All</button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input class="search" id="routeFilter" placeholder="Filter by route (e.g. /api/ai/event-discover)" oninput="debounceLoad()">
+    <select id="levelFilter" onchange="loadErrors()">
+      <option value="">All levels</option>
+      <option value="error">Error</option>
+      <option value="warn">Warning</option>
+      <option value="info">Info</option>
+    </select>
+    <select id="limitSelect" onchange="loadErrors()">
+      <option value="50">50 per page</option>
+      <option value="100" selected>100 per page</option>
+      <option value="200">200 per page</option>
+    </select>
+  </div>
+
+  <div class="content">
+    <div class="stats" id="statsRow">
+      <div class="stat-card red"><div class="num" id="statErrors">—</div><div class="lbl">Errors</div></div>
+      <div class="stat-card yellow"><div class="num" id="statWarns">—</div><div class="lbl">Warnings</div></div>
+      <div class="stat-card blue"><div class="num" id="statTotal">—</div><div class="lbl">Total logs</div></div>
+      <div class="stat-card"><div class="num" id="statRoutes">—</div><div class="lbl">Unique routes</div></div>
+    </div>
+
+    <div id="logList" class="log-list">
+      <div class="loading">Loading...</div>
+    </div>
+
+    <div class="pagination" id="pagination" style="display:none;">
+      <div class="page-info" id="pageInfo"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" id="btnPrev" onclick="prevPage()">← Prev</button>
+        <button class="btn btn-ghost" id="btnNext" onclick="nextPage()">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let adminPwd = '';
+let currentSkip = 0;
+let currentTotal = 0;
+let debounceTimer = null;
+
+function login() {
+  const pwd = document.getElementById('pwdInput').value;
+  if (!pwd) return;
+  adminPwd = pwd;
+  document.getElementById('loginErr').style.display = 'none';
+  loadErrors();
+}
+
+function debounceLoad() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => { currentSkip = 0; loadErrors(); }, 400);
+}
+
+async function apiFetch(url, opts = {}) {
+  return fetch(url, {
+    ...opts,
+    headers: { 'x-admin-password': adminPwd, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  });
+}
+
+async function loadErrors() {
+  const route = document.getElementById('routeFilter').value;
+  const level = document.getElementById('levelFilter').value;
+  const limit = document.getElementById('limitSelect').value;
+
+  const params = new URLSearchParams({ limit, skip: currentSkip });
+  if (route) params.append('route', route);
+  if (level) params.append('level', level);
+
+  const r = await apiFetch(`/api/admin/errors?${params}`);
+  if (r.status === 401) {
+    document.getElementById('loginErr').style.display = 'block';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+
+  const data = await r.json();
+  currentTotal = data.total;
+
+  // Update stats
+  document.getElementById('totalBadge').textContent = `${data.total} logs`;
+  document.getElementById('statTotal').textContent = data.total;
+  document.getElementById('statErrors').textContent = data.errors.filter(e => e.level === 'error').length;
+  document.getElementById('statWarns').textContent = data.errors.filter(e => e.level === 'warn').length;
+  const routes = new Set(data.errors.map(e => e.route).filter(Boolean));
+  document.getElementById('statRoutes').textContent = routes.size;
+
+  renderLogs(data.errors, data.total, Number(limit));
+}
+
+function renderLogs(errors, total, limit) {
+  const list = document.getElementById('logList');
+
+  if (!errors.length) {
+    list.innerHTML = `<div class="empty"><div class="icon">✅</div><h3>No errors found</h3><p>Your app is running clean.</p></div>`;
+    document.getElementById('pagination').style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = errors.map(e => {
+    const d = new Date(e.timestamp);
+    const time = d.toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const levelClass = e.level === 'error' ? 'level-error' : e.level === 'warn' ? 'level-warn' : 'level-info';
+    const msg = (e.message || 'Unknown error').replace(/</g,'&lt;');
+    const stack = (e.stack || '').replace(/</g,'&lt;');
+    const body = (e.body || '').replace(/</g,'&lt;');
+
+    return `<div class="log-item" id="log_${e._id}">
+      <div class="log-header" onclick="toggleLog('${e._id}')">
+        <span class="level-badge ${levelClass}">${(e.level||'error').toUpperCase()}</span>
+        <div class="log-meta">
+          <div class="log-message" title="${msg}">${msg}</div>
+          <div class="log-details">
+            <span>🕐 ${time}</span>
+            ${e.route ? `<span>📍 ${e.method} ${e.route}</span>` : ''}
+            ${e.userId ? `<span>👤 ${e.userId.slice(-6)}</span>` : ''}
+          </div>
+        </div>
+        <div class="log-actions" onclick="event.stopPropagation()">
+          <button class="icon-btn" onclick="copyError('${e._id}','${encodeURIComponent(JSON.stringify({message:e.message,route:e.route,stack:e.stack,time:e.timestamp}))}')">📋 Copy</button>
+          <button class="icon-btn" onclick="deleteLog('${e._id}')">🗑</button>
+        </div>
+      </div>
+      <div class="log-body">
+        <div class="field-label">MESSAGE</div>
+        <div class="code-block">${msg}</div>
+        ${stack ? `<div class="field-label">STACK TRACE</div><div class="code-block">${stack}</div>` : ''}
+        ${body && body !== '{}' ? `<div class="field-label">REQUEST BODY</div><div class="code-block">${body}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Pagination
+  const pageInfo = document.getElementById('pageInfo');
+  const showing = Math.min(currentSkip + limit, total);
+  pageInfo.textContent = `Showing ${currentSkip + 1}–${showing} of ${total}`;
+  document.getElementById('btnPrev').disabled = currentSkip === 0;
+  document.getElementById('btnNext').disabled = showing >= total;
+  document.getElementById('pagination').style.display = 'flex';
+}
+
+function toggleLog(id) {
+  const el = document.getElementById(`log_${id}`);
+  el.classList.toggle('expanded');
+}
+
+function copyError(id, encoded) {
+  const data = JSON.parse(decodeURIComponent(encoded));
+  const text = `ERROR: ${data.message}\nROUTE: ${data.route}\nTIME: ${data.time}\n\nSTACK:\n${data.stack}`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector(`#log_${id} .icon-btn`);
+    if (btn) { btn.textContent = '✅ Copied'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = '📋 Copy'; btn.classList.remove('copied'); }, 2000); }
+  });
+}
+
+async function deleteLog(id) {
+  await apiFetch(`/api/admin/errors/${id}`, { method: 'DELETE' });
+  document.getElementById(`log_${id}`)?.remove();
+  showToast('Log deleted');
+}
+
+async function clearLogs() {
+  if (!confirm('Clear ALL error logs? This cannot be undone.')) return;
+  await apiFetch('/api/admin/errors', { method: 'DELETE' });
+  currentSkip = 0;
+  loadErrors();
+  showToast('All logs cleared');
+}
+
+function prevPage() { currentSkip = Math.max(0, currentSkip - Number(document.getElementById('limitSelect').value)); loadErrors(); }
+function nextPage() { currentSkip += Number(document.getElementById('limitSelect').value); loadErrors(); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Auto-load on start if pwd saved in session
+const savedPwd = sessionStorage.getItem('wandr_admin_pwd');
+if (savedPwd) { adminPwd = savedPwd; loadErrors(); }
+document.getElementById('pwdInput').addEventListener('input', e => sessionStorage.setItem('wandr_admin_pwd', e.target.value));
+</script>
+</body>
+</html>
