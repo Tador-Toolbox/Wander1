@@ -1165,9 +1165,11 @@ Return ONLY valid JSON:
               const nonNightlifeTypes = ['gym','sports_complex','climbing','health','fitness_center','stadium','amusement_park'];
               const isWrongType = nonNightlifeTypes.some(t => placeTypes.includes(t));
               // Also require at least one nightlife-related type — rejects office buildings, malls, etc.
-              const nightlifeTypes = ['night_club','bar','restaurant','food','lodging','tourist_attraction','point_of_interest'];
-              const hasNightlifeType = nightlifeTypes.some(t => placeTypes.includes(t));
-              const isPureCommercial = !hasNightlifeType && placeTypes.includes('establishment') && placeTypes.length <= 2;
+              // Must have at least bar or night_club to be considered a nightlife venue
+              const hasNightlifeType = ['night_club','bar'].some(t => placeTypes.includes(t));
+              // If no nightlife type but has restaurant/food, still allow (hybrid venues)
+              const hasHybridType = !hasNightlifeType && ['restaurant','food'].some(t => placeTypes.includes(t));
+              const isPureCommercial = !hasNightlifeType && !hasHybridType;
 
               if (isWrongType) {
                 console.log(`Weekend: "${ev.name}" matched wrong venue type (${placeTypes.slice(0,3).join(',')}) — marking unverified`);
@@ -1239,6 +1241,7 @@ Return ONLY valid JSON:
 
   } catch (err) {
     console.error('Event discover error:', err.message);
+    if (global.logError) await global.logError(err, req, 500);
     res.status(500).json({ error: 'Failed to discover events. Try again.' });
   }
 });
