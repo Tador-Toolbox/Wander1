@@ -1240,9 +1240,12 @@ Do not explain. Just one word.`;
               if (searchData.error) {
                 console.log(`Weekend: Gemini search API error for "${ev.name}":`, searchData.error.message);
               } else {
-                const answer = searchData.candidates?.[0]?.content?.parts
-                  ?.map(p => p.text || '').join('').trim().toUpperCase() || '';
-                console.log(`Weekend: Gemini web search "${ev.name}" → "${answer}"`);
+                // Log full response structure for debugging
+                const candidate = searchData.candidates?.[0];
+                const parts = candidate?.content?.parts || [];
+                console.log(`Weekend: Gemini raw parts count: ${parts.length}, finishReason: ${candidate?.finishReason}`);
+                const answer = parts.map(p => p.text || '').join('').trim().toUpperCase();
+                console.log(`Weekend: Gemini web search "${ev.name}" → "${answer.slice(0,100)}"`);
                 if (answer.includes('CLOSED')) {
                   console.log(`Weekend: "${ev.name}" confirmed CLOSED by web search — dropping`);
                   return null;
