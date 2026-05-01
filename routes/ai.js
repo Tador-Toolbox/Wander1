@@ -1164,8 +1164,16 @@ Return ONLY valid JSON:
               const placeTypes = details.types || [];
               const nonNightlifeTypes = ['gym','sports_complex','climbing','health','fitness_center','stadium','amusement_park'];
               const isWrongType = nonNightlifeTypes.some(t => placeTypes.includes(t));
+              // Also require at least one nightlife-related type — rejects office buildings, malls, etc.
+              const nightlifeTypes = ['night_club','bar','restaurant','food','lodging','tourist_attraction','point_of_interest'];
+              const hasNightlifeType = nightlifeTypes.some(t => placeTypes.includes(t));
+              const isPureCommercial = !hasNightlifeType && placeTypes.includes('establishment') && placeTypes.length <= 2;
+
               if (isWrongType) {
                 console.log(`Weekend: "${ev.name}" matched wrong venue type (${placeTypes.slice(0,3).join(',')}) — marking unverified`);
+                notFound = true;
+              } else if (isPureCommercial) {
+                console.log(`Weekend: "${ev.name}" matched but looks like commercial building (${placeTypes.join(',')}) — marking unverified`);
                 notFound = true;
               } else {
                 verified = true;
