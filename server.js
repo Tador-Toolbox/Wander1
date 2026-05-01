@@ -177,6 +177,32 @@ app.get('/index-new.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index-new.html'));
 });
 
+// ── User closure report (authenticated) ──
+app.post('/api/report-closure', require('./middleware/auth'), async (req, res) => {
+  try {
+    const ClosureReport = require('./models/ClosureReport');
+    const User = require('./models/User');
+    const { venueName, city } = req.body;
+    if (!venueName) return res.status(400).json({ error: 'venueName required' });
+
+    // Avoid duplicate reports for same venue from same user
+    const existing = await ClosureReport.findOne({ venueName, reportedBy: req.userId });
+    if (existing) return res.json({ ok: true, message: 'Already reported' });
+
+    const user = await User.findById(req.userId).select('handle');
+    await ClosureReport.create({
+      venueName,
+      city: city || '',
+      reportedBy: req.userId,
+      reporterHandle: user?.handle || ''
+    });
+    res.json({ ok: true });
+  } catch(err) {
+    console.error('Closure report error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ── Admin error log page (before SPA catch-all) ──
 app.get('/admin/errors', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin-errors.html'));
