@@ -1051,7 +1051,7 @@ For each venue:
 - Must be a REAL, currently operating venue in ${locationStr} as of 2025-2026
 - Rate your confidence (0-100) that this venue is STILL OPEN in 2025-2026. Only include venues where you are 80%+ confident they are currently operating. If unsure, skip and suggest a different venue.
 - NEVER suggest venues you know closed in recent years
-- NEVER suggest any of these venues which are confirmed permanently closed: ${blacklistStr}
+- NEVER suggest any of these venues which are confirmed permanently closed: __BLACKLIST__
 - Include the day it's best known for (Friday or Saturday)
 - If you know their Instagram handle, include it (no @ symbol). If unsure, return empty string.
 - Give a concierge note referencing the user's specific music/atmosphere taste
@@ -1089,7 +1089,7 @@ Return ONLY valid JSON:
         }
       } catch(e) { console.log('Blacklist load error:', e.message); }
 
-      const weekendPromptFinal = weekendPrompt.replace('${blacklistStr}', blacklistStr);
+      const weekendPromptFinal = weekendPrompt.replace('__BLACKLIST__', blacklistStr);
       // Ask for 4 candidates so we have replacements if some are closed
       const weekendText = await callAI(weekendPromptFinal);
       const weekendParsed = extractJSON(weekendText);
