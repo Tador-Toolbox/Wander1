@@ -1,7 +1,8 @@
-const router  = require('express').Router();
-const User    = require('../models/User');
-const Place   = require('../models/Place');
-const Trip    = require('../models/Trip');
+const router   = require('express').Router();
+const User     = require('../models/User');
+const Place    = require('../models/Place');
+const Trip     = require('../models/Trip');
+const ErrorLog = require('../models/ErrorLog');
 
 // Simple middleware — checks ADMIN_PASSWORD env var
 function adminAuth(req, res, next){
@@ -73,6 +74,64 @@ router.get('/stats', adminAuth, async (req, res) => {
     ]);
     res.json({ users, places, trips });
   } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/* ─────────────────────────────────────────
+   GET /api/admin/errors — list error logs
+───────────────────────────────────────── */
+router.get('/errors', adminAuth, async (req, res) => {
+  try {
+    const { level, route, limit = 100, skip = 0 } = req.query;
+    const filter = {};
+    if (level) filter.level = level;
+    if (route) filter.route = { $regex: route, $options: 'i' };
+
+    const [errors, total] = await Promise.all([
+      ErrorLog.find(filter)
+        .sort({ timestamp: -1 })
+        .limit(Number(limit))
+        .skip(Number(skip))
+        .lean(),
+      ErrorLog.countDocuments(filter)
+    ]);
+
+    res.json({ errors, total, limit: Number(limit), skip: Number(skip) });
+  } catch(err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/* DELETE /api/admin/errors — clear all logs */
+router.delete('/errors', adminAuth, async (req, res) => {
+  try {
+    const { before } = req.query;
+    const filter = before ? { timestamp: { $lt: new Date(before) } } : {};
+    const result = await ErrorLog.deleteMany(filter);
+    res.json({ deleted: result.deletedCount });
+  } catch(err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/* DELETE /api/admin/errors/:id — delete single log */
+router.delete('/errors/:id', adminAuth, async (req, res) => {
+  try {
+    await ErrorLog.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+  } catch(err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/* POST /api/admin/errors/log — manually log a frontend error */
+router.post('/errors/log', adminAuth, async (req, res) => {
+  try {
+    const { message, stack, route, level = 'error' } = req.body;
+    await ErrorLog.create({ message, stack, route, level, method: 'FRONTEND' });
+    res.json({ ok: true });
+  } catch(err) {
     res.status(500).json({ error: 'Server error' });
   }
 });
