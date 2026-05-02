@@ -870,7 +870,7 @@ router.post('/event-discover', auth, async (req, res) => {
     const profile = user?.aiProfile;
     if (!profile?.analyzedAt) return res.status(400).json({ error: 'Build your AI profile first.' });
 
-    const { tags=[], summary='', musicGenres=[], eventGoal='', atmosphere='', soundVibe='', aestheticTags=[] } = profile;
+    const { tags=[], summary='', musicGenres=[], eventGoal='', atmosphere='', soundVibe='', aestheticTags=[], crowdSize='' } = profile;
 
     // ── PHASE 1: Google Places search ──
     const queries = [];
@@ -939,6 +939,8 @@ Music: ${musicGenres.join(', ')||'any'}
 Mission/Goal: ${eventGoal||'not set'}
 Atmosphere: ${atmosphere||'any'}
 Sound Preference: ${soundVibe||'any'}
+Crowd Size Preference: ${crowdSize||'any'} (Intimate=<200, Mid-size=200-500, Big Room=500+)
+Crowd Size Preference: ${crowdSize||'any'}
 
 == CURRENT CONTEXT ==
 Location: ${locationStr} | Time: ${timeLabel} (${hour}:00) | Day: ${dayOfWeek} | Date: ${dateStr}
@@ -953,6 +955,7 @@ ${venueList.map(v=>'['+v.index+'] '+v.name+' | '+v.address+' | Rating: '+(v.rati
 +20pts mission match (Network=professional mixer, Vibe Out=social energy, Low-Key=music focused)
 +15pts sound preference match
 +10pts aesthetic/tag match
++15pts crowd size match (Intimate=small underground venues, Mid-size=classic clubs like Cappella/Emesh, Big Room=Haoman 17/large venues)
 TIMING BOOST: Events in next 48h get 1.3x multiplier (max 100)
 
 Pick the TOP 3 venues. For each venue, if you know their Instagram handle from your training knowledge, include it (without the @ symbol). If unsure, return empty string.
@@ -1072,7 +1075,8 @@ Return ONLY valid JSON:
       "conciergeNote": "Personal note referencing their taste",
       "instagramHandle": "venuehandle",
       "searchQuery": "Venue Name ${locationStr}",
-      "confidence": 90
+      "confidence": 90,
+      "estimatedCapacity": "Mid-size"
     }
   ]
 }`;
@@ -1537,7 +1541,7 @@ router.delete('/photo/:publicId', auth, async (req, res) => {
 ───────────────────────────────────────── */
 router.post('/preferences', auth, async (req, res) => {
   try {
-    const { music, goal, atmosphere, soundVibe } = req.body;
+    const { music, goal, atmosphere, soundVibe, crowdSize } = req.body;
     const User = require('../models/User');
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -1546,6 +1550,7 @@ router.post('/preferences', auth, async (req, res) => {
     if (goal)             user.aiProfile.eventGoal   = goal;
     if (atmosphere)       user.aiProfile.atmosphere  = atmosphere;
     if (soundVibe)        user.aiProfile.soundVibe   = soundVibe;
+    if (crowdSize)        user.aiProfile.crowdSize   = crowdSize;
 
     user.markModified('aiProfile');
     await user.save();
