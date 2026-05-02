@@ -101,6 +101,7 @@
       <button class="btn btn-ghost" id="tabErrors" onclick="showTab('errors')" style="color:#fff;">Error Logs</button>
       <button class="btn btn-ghost" id="tabReports" onclick="showTab('reports')">Closure Reports</button>
       <button class="btn btn-ghost" id="tabBlacklist" onclick="showTab('blacklist')">Blacklist</button>
+      <button class="btn btn-ghost" id="tabUsers" onclick="showTab('users')">👥 Users</button>
       <button class="btn btn-danger" onclick="clearLogs()">🗑 Clear Errors</button>
     </div>
   </div>
@@ -130,6 +131,18 @@
 
     <div id="logList" class="log-list">
       <div class="loading">Loading...</div>
+    </div>
+
+    <!-- Users Tab -->
+    <div id="usersTab" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 style="font-size:16px;color:#e6edf3;">👥 Users</h2>
+        <div style="display:flex;gap:8px;">
+          <input id="userSearch" placeholder="Search by email or name..." oninput="filterUsers()" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:7px 10px;color:#e6edf3;font-size:13px;outline:none;width:220px;">
+          <button class="btn btn-ghost" onclick="loadUsers()">↻ Refresh</button>
+        </div>
+      </div>
+      <div id="usersList" class="log-list"><div class="loading">Loading...</div></div>
     </div>
 
     <!-- Closure Reports Tab -->
@@ -323,14 +336,17 @@ function showTab(tab) {
   document.getElementById('tabErrors').style.color = tab === 'errors' ? '#fff' : '#8b949e';
   document.getElementById('tabReports').style.color = tab === 'reports' ? '#fff' : '#8b949e';
   document.getElementById('tabBlacklist').style.color = tab === 'blacklist' ? '#fff' : '#8b949e';
+  document.getElementById('tabUsers').style.color = tab === 'users' ? '#fff' : '#8b949e';
   document.getElementById('logList').style.display = tab === 'errors' ? 'flex' : 'none';
   document.getElementById('pagination').style.display = tab === 'errors' ? 'flex' : 'none';
   document.getElementById('toolbar').style.display = tab === 'errors' ? 'flex' : 'none';
   document.getElementById('statsRow').style.display = tab === 'errors' ? 'grid' : 'none';
   document.getElementById('reportsTab').style.display = tab === 'reports' ? 'block' : 'none';
   document.getElementById('blacklistTab').style.display = tab === 'blacklist' ? 'block' : 'none';
+  document.getElementById('usersTab').style.display = tab === 'users' ? 'block' : 'none';
   if (tab === 'reports') loadReports();
   if (tab === 'blacklist') loadBlacklist();
+  if (tab === 'users') loadUsers();
 }
 
 // ── CLOSURE REPORTS ──
@@ -426,6 +442,63 @@ async function removeFromBlacklist(id, name) {
   await apiFetch(`/api/admin/blacklist/${id}`, { method: 'DELETE' });
   document.getElementById(`bl_${id}`)?.remove();
   showToast('Removed from blacklist');
+}
+
+// ── USERS ──
+let _allUsers = [];
+async function loadUsers() {
+  const r = await apiFetch('/api/admin/users');
+  if (!r.ok) return;
+  _allUsers = await r.json();
+  renderUsers(_allUsers);
+}
+
+function filterUsers() {
+  const q = document.getElementById('userSearch').value.toLowerCase();
+  renderUsers(_allUsers.filter(u =>
+    (u.email||'').toLowerCase().includes(q) ||
+    (u.firstName||'').toLowerCase().includes(q) ||
+    (u.lastName||'').toLowerCase().includes(q) ||
+    (u.handle||'').toLowerCase().includes(q)
+  ));
+}
+
+function renderUsers(users) {
+  const el = document.getElementById('usersList');
+  if (!users.length) {
+    el.innerHTML = '<div class="empty"><div class="icon">👥</div><h3>No users found</h3></div>';
+    return;
+  }
+  el.innerHTML = users.map(u => `
+    <div class="log-item" id="user_${u._id}">
+      <div class="log-header" style="cursor:default;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#238636;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0;">
+          ${u.avatar ? `<img src="${u.avatar}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">` : (u.firstName||u.email||'?')[0].toUpperCase()}
+        </div>
+        <div class="log-meta">
+          <div class="log-message">${u.firstName||''} ${u.lastName||''} ${u.handle ? '<span style="color:#8b949e;font-weight:400;">@'+u.handle+'</span>' : ''}</div>
+          <div class="log-details">
+            <span>📧 ${u.email||'no email'}</span>
+            <span>📅 ${new Date(u.createdAt||Date.now()).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</span>
+            ${u.emailVerified ? '<span style="color:#2ea043;">✓ Verified</span>' : '<span style="color:#f85149;">✗ Unverified</span>'}
+          </div>
+        </div>
+        <div class="log-actions">
+          <button class="icon-btn" onclick="sendPasswordReset('${u._id}','${u.email||''}','${(u.firstName||'this user').replace(/'/g,'')}')" style="color:#388bfd;border-color:#388bfd;">
+            🔑 Reset Password
+          </button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function sendPasswordReset(userId, email, name) {
+  if (!confirm(`Send password reset email to ${name} (${email})?`)) return;
+  const r = await apiFetch(`/api/admin/users/${userId}/send-reset`, { method: 'POST' });
+  const data = await r.json();
+  if (r.ok) showToast(`✅ Reset link sent to ${email}`);
+  else showToast(`❌ ${data.error || 'Failed to send'}`, true);
 }
 
 // ── Auto-load on start if pwd saved in session
