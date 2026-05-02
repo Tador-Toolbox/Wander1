@@ -811,6 +811,55 @@ ${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:
       result.suggestions = verified;
     }
 
+    // ── Fetch climate data from Open-Meteo if visitMonth is provided ──
+    if (visitMonth && mapsKey) {
+      try {
+        // Geocode the trip destination to lat/lng
+        const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(tripName)}&key=${mapsKey}`);
+        const geoData = await geoRes.json();
+        const loc = geoData.results?.[0]?.geometry?.location;
+
+        if (loc) {
+          // Map month name to number
+          const monthMap = { january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12 };
+          const monthNum = monthMap[visitMonth.toLowerCase()] || parseInt(visitMonth);
+
+          if (monthNum >= 1 && monthNum <= 12) {
+            // Use last 3 years of historical data for that month
+            const year = new Date().getFullYear() - 1;
+            const pad = n => String(n).padStart(2, '0');
+            const startDate = `${year}-${pad(monthNum)}-01`;
+            const lastDay = new Date(year, monthNum, 0).getDate();
+            const endDate = `${year}-${pad(monthNum)}-${pad(lastDay)}`;
+
+            const weatherRes = await fetch(
+              `https://archive-api.open-meteo.com/v1/archive?latitude=${loc.lat}&longitude=${loc.lng}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
+            );
+            const weatherData = await weatherRes.json();
+
+            if (weatherData.daily) {
+              const maxTemps = weatherData.daily.temperature_2m_max.filter(t => t !== null);
+              const minTemps = weatherData.daily.temperature_2m_min.filter(t => t !== null);
+
+              if (maxTemps.length && minTemps.length) {
+                const avgMax = Math.round(maxTemps.reduce((a,b) => a+b, 0) / maxTemps.length);
+                const avgMin = Math.round(minTemps.reduce((a,b) => a+b, 0) / minTemps.length);
+                result.weather = {
+                  month: visitMonth,
+                  minC: avgMin,
+                  maxC: avgMax,
+                  label: `${avgMin}–${avgMax}°C`
+                };
+                console.log(`Weather for ${tripName} in ${visitMonth}: ${avgMin}–${avgMax}°C`);
+              }
+            }
+          }
+        }
+      } catch(e) {
+        console.log('Weather fetch error:', e.message);
+      }
+    }
+
     res.json(result);
   } catch (err) {
     console.error('Trip suggest error:', err);
