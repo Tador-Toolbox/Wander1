@@ -3095,7 +3095,7 @@ async function openTripSuggest(tripId, tripName){
     <button class="sm-close" onclick="document.getElementById('suggestModal').remove()">✕</button>
     <div class="sm-head">
       <div class="sm-title">✦ Suggestions for ${esc(tripName)}</div>
-      <div class="sm-sub">4 picks · 2 hidden gems · 1 Michelin · AI-powered, verify before you go${data.weather ? ` · 🌡️ ${data.weather.label} in ${data.weather.month}` : ''}</div>
+      <div class="sm-sub" id="suggestSubtitle">4 picks · 2 hidden gems · 1 Michelin · AI-powered, verify before you go</div>
     </div>
     <div class="sm-body">
       <div class="sm-seasonal">
@@ -3190,6 +3190,11 @@ async function runTripSuggest(tripId, tripName){
 
     const tasteLabel = (pd.profile.tags||[]).slice(0,4).join(', ');
     const monthLabel = visitMonth ? ` · ${visitMonth}` : '';
+    // Update subtitle with weather if available
+    if (data.weather) {
+      const sub = document.getElementById('suggestSubtitle');
+      if (sub) sub.textContent = `4 picks · 2 hidden gems · 1 Michelin · AI-powered · 🌡️ ${data.weather.label} in ${data.weather.month}`;
+    }
 
     // Render holidays section
     const holidaysHtml = (data.holidays && data.holidays.length) ? `
