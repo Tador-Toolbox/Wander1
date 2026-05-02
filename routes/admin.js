@@ -81,6 +81,45 @@ router.get('/stats', adminAuth, async (req, res) => {
 });
 
 /* ─────────────────────────────────────────
+   POST /api/admin/users/:id/send-reset
+   Send password reset email to a user
+───────────────────────────────────────── */
+router.post('/users/:id/send-reset', adminAuth, async (req, res) => {
+  try {
+    const crypto = require('crypto');
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.verifyToken = resetToken;
+    user.verifyExpires = new Date(Date.now() + 3600000); // 1 hour
+    await user.save();
+
+    const resetUrl = `${process.env.APP_URL || 'https://wander1.onrender.com'}/reset-password?token=${resetToken}`;
+
+    // Send via Resend (same as forgot-password route)
+    const { Resend } = require('resend');
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: 'Wandr <noreply@yovix.com>',
+      to: user.email,
+      subject: 'Reset your Wandr password',
+      html: `<p>Hi ${user.firstName || 'there'},</p>
+             <p>An admin has sent you a password reset link for your Wandr account.</p>
+             <p><a href="${resetUrl}" style="background:#1D9E75;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">Reset Password</a></p>
+             <p>This link expires in 1 hour.</p>
+             <p>If you did not request this, you can ignore this email.</p>`
+    });
+
+    console.log(`Admin sent password reset to ${user.email}`);
+    res.json({ ok: true, message: `Reset link sent to ${user.email}` });
+  } catch(err) {
+    console.error('Admin reset error:', err.message);
+    res.status(500).json({ error: 'Failed to send reset email: ' + err.message });
+  }
+});
+
+/* ─────────────────────────────────────────
    CLOSURE REPORTS
 ───────────────────────────────────────── */
 
