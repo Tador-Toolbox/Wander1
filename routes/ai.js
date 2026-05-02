@@ -816,21 +816,12 @@ ${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:
     if (visitMonth && mapsKey) {
       try {
         // Geocode the trip destination to lat/lng
-        // Add country hint from AI result if available, helps geocode small cities
-        const geoQuery = result.countryHint ? `${tripName}, ${result.countryHint}` : tripName;
-        const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(geoQuery)}&key=${mapsKey}`);
+        // Use Open-Meteo free geocoding — no API key needed
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(tripName)}&count=1&language=en&format=json`);
         const geoData = await geoRes.json();
-        const loc = geoData.results?.[0]?.geometry?.location;
-        console.log(`Weather geocode: ${geoQuery} → ${JSON.stringify(loc)} (status: ${geoData.status})`);
-
-        // If geocode failed, try with "city" appended
-        let finalLoc = loc;
-        if (!finalLoc) {
-          const geoRes2 = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(tripName + ' city')}&key=${mapsKey}`);
-          const geoData2 = await geoRes2.json();
-          finalLoc = geoData2.results?.[0]?.geometry?.location;
-          console.log(`Weather geocode retry: ${tripName} city → ${JSON.stringify(finalLoc)}`);
-        }
+        const geoResult = geoData.results?.[0];
+        let finalLoc = geoResult ? { lat: geoResult.latitude, lng: geoResult.longitude } : null;
+        console.log(`Weather geocode: ${tripName} → ${JSON.stringify(finalLoc)} (${geoResult?.name}, ${geoResult?.country})`);
 
         if (finalLoc) {
           const loc = finalLoc;
