@@ -727,7 +727,7 @@ Reply ONLY with valid JSON, no markdown, no extra text:
 
 For holidays: include 2-5 major festivals, public holidays, or culturally significant events happening in "${tripName}" during ${visitMonth || 'the visit period'}. If visitMonth is unknown, list the 3 most iconic annual events. If there are no notable events, return an empty array.
 
-${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:true. These are your 2 best restaurant picks for ' + tripName + ' that are highly regarded by locals. Must be REAL well-known restaurants. Match the user taste profile. No need for tabelogScore.' : ''}\`;
+${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:true. These are your 2 best restaurant picks for ' + tripName + ' that are highly regarded by locals. Must be REAL well-known restaurants. Match the user taste profile. No need for tabelogScore.' : ''}` ;
 
     let result = null;
     for (let attempt = 0; attempt < 2; attempt++) {
