@@ -939,7 +939,7 @@ Music: ${musicGenres.join(', ')||'any'}
 Mission/Goal: ${eventGoal||'not set'}
 Atmosphere: ${atmosphere||'any'}
 Sound Preference: ${soundVibe||'any'}
-Crowd Size Preference: ${crowdSize||'any'} (Intimate=<200, Mid-size=200-500, Big Room=500+)
+Crowd Size Preference: ${crowdSize||'any'} (Intimate=<200, Mid-size=200-500, Big Room=500+) — if multiple sizes listed, venue matches any of them
 Crowd Size Preference: ${crowdSize||'any'}
 
 == CURRENT CONTEXT ==
