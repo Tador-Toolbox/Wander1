@@ -812,12 +812,14 @@ ${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:
     }
 
     // ── Fetch climate data from Open-Meteo if visitMonth is provided ──
+    console.log(`Trip suggest received: visitMonth='${visitMonth}', tripName='${tripName}'`);
     if (visitMonth && mapsKey) {
       try {
         // Geocode the trip destination to lat/lng
         const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(tripName)}&key=${mapsKey}`);
         const geoData = await geoRes.json();
         const loc = geoData.results?.[0]?.geometry?.location;
+        console.log(`Weather geocode: ${tripName} → ${JSON.stringify(loc)}`);
 
         if (loc) {
           // Map month name to number
@@ -837,6 +839,7 @@ ${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:
             );
             const weatherData = await weatherRes.json();
 
+            console.log(`Weather Open-Meteo response keys: ${Object.keys(weatherData).join(',')}`);
             if (weatherData.daily) {
               const maxTemps = weatherData.daily.temperature_2m_max.filter(t => t !== null);
               const minTemps = weatherData.daily.temperature_2m_min.filter(t => t !== null);
