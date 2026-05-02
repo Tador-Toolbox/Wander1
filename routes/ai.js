@@ -816,12 +816,24 @@ ${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:
     if (visitMonth && mapsKey) {
       try {
         // Geocode the trip destination to lat/lng
-        const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(tripName)}&key=${mapsKey}`);
+        // Add country hint from AI result if available, helps geocode small cities
+        const geoQuery = result.countryHint ? `${tripName}, ${result.countryHint}` : tripName;
+        const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(geoQuery)}&key=${mapsKey}`);
         const geoData = await geoRes.json();
         const loc = geoData.results?.[0]?.geometry?.location;
-        console.log(`Weather geocode: ${tripName} → ${JSON.stringify(loc)}`);
+        console.log(`Weather geocode: ${geoQuery} → ${JSON.stringify(loc)} (status: ${geoData.status})`);
 
-        if (loc) {
+        // If geocode failed, try with "city" appended
+        let finalLoc = loc;
+        if (!finalLoc) {
+          const geoRes2 = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(tripName + ' city')}&key=${mapsKey}`);
+          const geoData2 = await geoRes2.json();
+          finalLoc = geoData2.results?.[0]?.geometry?.location;
+          console.log(`Weather geocode retry: ${tripName} city → ${JSON.stringify(finalLoc)}`);
+        }
+
+        if (finalLoc) {
+          const loc = finalLoc;
           // Map month name to number
           const monthMap = { january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12 };
           const monthNum = monthMap[visitMonth.toLowerCase()] || parseInt(visitMonth);
@@ -857,7 +869,7 @@ ${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:
               }
             }
           }
-        }
+        } // end finalLoc
       } catch(e) {
         console.log('Weather fetch error:', e.message);
       }
