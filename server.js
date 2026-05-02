@@ -196,6 +196,22 @@ app.post('/api/report-closure', require('./middleware/auth'), async (req, res) =
       reportedBy: req.userId,
       reporterHandle: user?.handle || ''
     });
+
+    // Also log to ErrorLog so it appears in admin error dashboard
+    const ErrorLog = require('./models/ErrorLog');
+    await ErrorLog.create({
+      level: 'info',
+      message: `User reported venue as permanently closed: "${venueName}"${city ? ' in ' + city : ''}`,
+      route: '/api/report-closure',
+      method: 'POST',
+      userId: req.userId,
+      body: JSON.stringify({ venueName, city, reportedBy: user?.handle || '' }),
+      stack: `Reported by @${user?.handle || req.userId} at ${new Date().toISOString()}`
+    });
+
+    // Console log so it appears in Render logs too
+    console.log(`🚫 CLOSURE REPORT: "${venueName}"${city ? ' in ' + city : ''} — reported by @${user?.handle || req.userId}`);
+
     res.json({ ok: true });
   } catch(err) {
     console.error('Closure report error:', err.message);
