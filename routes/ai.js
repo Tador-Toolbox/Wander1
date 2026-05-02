@@ -659,6 +659,10 @@ router.post('/trip-suggest', auth, async (req, res) => {
       ? `The user plans to visit in ${visitMonth}. Factor in seasonal availability, weather, and events. Avoid suggesting places that are closed or unpleasant in ${visitMonth}.`
       : '';
 
+    // Detect if destination is in Japan
+    const japanKeywords = ['japan','tokyo','osaka','kyoto','hiroshima','nara','sapporo','fukuoka','kobe','yokohama','nagoya','okinawa','hakone','nikko','kamakura','nagasaki','kanazawa'];
+    const isJapan = japanKeywords.some(k => tripName.toLowerCase().includes(k));
+
     const prompt = `You are a travel recommendation engine.
 
 The user is planning a trip to: "${tripName}"
@@ -707,7 +711,8 @@ Reply ONLY with valid JSON, no markdown, no extra text:
       "tags": ["coffee", "cozy", "local"],
       "isGem": false,
       "isMichelin": false,
-      "michelinDistinction": ""
+      "michelinDistinction": "",
+      "isTabelog": false
     }
   ],
   "holidays": [
@@ -720,7 +725,9 @@ Reply ONLY with valid JSON, no markdown, no extra text:
   ]
 }
 
-For holidays: include 2-5 major festivals, public holidays, or culturally significant events happening in "${tripName}" during ${visitMonth || 'the visit period'}. If visitMonth is unknown, list the 3 most iconic annual events. If there are no notable events, return an empty array.`;
+For holidays: include 2-5 major festivals, public holidays, or culturally significant events happening in "${tripName}" during ${visitMonth || 'the visit period'}. If visitMonth is unknown, list the 3 most iconic annual events. If there are no notable events, return an empty array.
+
+${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:true. These are your 2 best restaurant picks for ' + tripName + ' that are highly regarded by locals. Must be REAL well-known restaurants. Match the user taste profile. No need for tabelogScore.' : ''}\`;
 
     let result = null;
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -759,18 +766,48 @@ For holidays: include 2-5 major festivals, public holidays, or culturally signif
       const verified = [];
       for (const place of result.suggestions) {
         try {
-          const q = encodeURIComponent(place.name + ' ' + place.location);
-          const r = await fetch(`https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${q}&inputtype=textquery&fields=business_status,permanently_closed&key=${mapsKey}`);
-          const d = await r.json();
-          const c = d.candidates?.[0];
-          if (c?.business_status === 'CLOSED_PERMANENTLY' || c?.permanently_closed) {
-            console.log('Filtered closed:', place.name);
+          // Use quoted text search for better accuracy
+          const query = `"${place.name}" ${place.location}`;
+          const results = await searchGooglePlaces(query, mapsKey);
+
+          if (!results.length) {
+            // Not found in Places — try Gemini web search to check if closed
+            const geminiKey = process.env.GEMINI_API_KEY;
+            if (geminiKey) {
+              const searchRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: `Search: Is "${place.name}" in ${place.location} permanently closed? Answer CLOSED, OPEN, or UNKNOWN only.` }] }],
+                  tools: [{ googleSearch: {} }],
+                  generationConfig: { temperature: 0, maxOutputTokens: 50 }
+                })
+              });
+              const searchData = await searchRes.json();
+              const answer = (searchData.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim().toUpperCase();
+              if (answer.includes('CLOSED')) {
+                console.log(`Trip suggest: "${place.name}" confirmed CLOSED by web search — filtering`);
+                continue;
+              }
+            }
+            verified.push(place);
             continue;
           }
+
+          // Check business_status of top result
+          const detailRes = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${results[0].place_id}&fields=name,business_status,permanently_closed&key=${mapsKey}`);
+          const detailData = await detailRes.json();
+          const detail = detailData.result;
+
+          if (detail?.business_status === 'CLOSED_PERMANENTLY' || detail?.permanently_closed) {
+            console.log(`Trip suggest: "${place.name}" is CLOSED_PERMANENTLY — filtering`);
+            continue;
+          }
+
           verified.push(place);
         } catch { verified.push(place); }
       }
-      console.log(`Verified: ${verified.length}/${result.suggestions.length} open`);
+      console.log(`Trip suggest verified: ${verified.length}/${result.suggestions.length} open`);
       result.suggestions = verified;
     }
 
