@@ -897,37 +897,50 @@ router.post('/right-now', auth, async (req, res) => {
         ? `User coordinates: ${lat.toFixed(3)}, ${lng.toFixed(3)}`
         : 'Location unknown — give general ideas';
 
-    const prompt = `You are a spontaneous activity advisor. Give exactly 2 ideas for what this person should do RIGHT NOW.
+    const prompt = `You are a spontaneous activity advisor. Give exactly 3 ideas for what this person should do RIGHT NOW.
 
 Current time: ${timeLabel} (hour: ${hour}:00)
 ${locationContext}
 ${tasteContext}
 
+Structure your 3 ideas as:
+1. FOOD/DRINK — a restaurant, bar, café, or nightlife spot matching their taste
+2. EXPERIENCE — an activity like karting, escape room, cooking class, cinema, bowling, skydiving, axe throwing, karaoke, arcade, laser tag, rooftop bar with a view — something exciting and out of the ordinary
+3. OUTDOOR/CHILL — a park, beach, viewpoint, night walk, or relaxing spot appropriate for the time
+
 Rules:
-- Ideas must be appropriate for ${timeLabel} (e.g. don't suggest coffee at midnight, don't suggest bars at 8am)
-- Suggest ACTIVITIES or TYPES of places — NOT specific venue names (e.g. "late-night ramen" not "Hakone Ramen")
-- Must match their taste profile
-- If location is known, ideas should be relevant to that city/country
-- One idea can be indoor, one outdoor (adjust based on time)
-- Make them feel spontaneous and exciting
-- searchQuery should be a GENERIC Google Maps search like "ramen near me" or "rooftop bar Tel Aviv" — never a specific venue name
+- All ideas must be appropriate for ${timeLabel} (don't suggest morning coffee at midnight, don't suggest clubs at 8am)
+- Suggest ACTIVITY TYPES — NOT specific venue names (e.g. "karting" not "TopSpeed Kart")
+- The EXPERIENCE idea should feel exciting and spontaneous — pick something genuinely fun
+- Match their taste profile throughout
+- searchQuery must be a GENERIC Google Maps search — never a specific venue name
 
 Reply ONLY with valid JSON, no markdown:
 {
   "ideas": [
     {
-      "emoji": "☕",
+      "emoji": "🍜",
       "title": "Short catchy title (4-6 words)",
       "description": "2 sentences — what to do and why it's great right now",
       "why": "One sentence: why this matches their taste",
-      "searchQuery": "generic Google Maps search query (e.g. 'late night ramen Tel Aviv')"
+      "searchQuery": "generic Google Maps search (e.g. 'late night ramen Tel Aviv')",
+      "type": "food"
     },
     {
-      "emoji": "🍜",
-      "title": "Second idea title",
+      "emoji": "🏎",
+      "title": "Exciting activity title",
       "description": "2 sentences description",
       "why": "Why it matches their taste",
-      "searchQuery": "generic Google Maps search query"
+      "searchQuery": "generic Google Maps search (e.g. 'escape room Tel Aviv')",
+      "type": "experience"
+    },
+    {
+      "emoji": "🌙",
+      "title": "Chill outdoor idea",
+      "description": "2 sentences description",
+      "why": "Why it matches their taste",
+      "searchQuery": "generic Google Maps search",
+      "type": "outdoor"
     }
   ]
 }`;
