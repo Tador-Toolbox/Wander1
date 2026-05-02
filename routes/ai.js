@@ -1240,15 +1240,62 @@ Do not explain. Just one word.`;
               if (searchData.error) {
                 console.log(`Weekend: Gemini search API error for "${ev.name}":`, searchData.error.message);
               } else {
-                // Log full response structure for debugging
                 const candidate = searchData.candidates?.[0];
                 const parts = candidate?.content?.parts || [];
                 console.log(`Weekend: Gemini raw parts count: ${parts.length}, finishReason: ${candidate?.finishReason}`);
                 const answer = parts.map(p => p.text || '').join('').trim().toUpperCase();
                 console.log(`Weekend: Gemini web search "${ev.name}" → "${answer.slice(0,100)}"`);
+
                 if (answer.includes('CLOSED')) {
                   console.log(`Weekend: "${ev.name}" confirmed CLOSED by web search — dropping`);
                   return null;
+                }
+
+                if (answer.includes('OPEN')) {
+                  // Gemini says OPEN — try to get the real venue from Places using the search
+                  // to fix name mismatches like "Jimmy's Bar" → "JIMMYWHO? Bar & Lounge"
+                  try {
+                    const reCheckQuery = `"${ev.name}" ${locationStr}`;
+                    const reResults = await searchGooglePlaces(reCheckQuery, mapsKey);
+                    if (reResults.length) {
+                      const reDetails = await getPlaceDetails(reResults[0].place_id, mapsKey);
+                      if (reDetails) {
+                        const reTypes = reDetails.types || [];
+                        const hasNightlife = ['night_club','bar'].some(t => reTypes.includes(t));
+                        const hasFood = ['restaurant','food'].some(t => reTypes.includes(t));
+                        const isCommercial = !hasNightlife && !hasFood;
+
+                        if (isCommercial) {
+                          console.log(`Weekend: "${ev.name}" Gemini says OPEN but Places type is commercial (${reTypes.slice(0,3).join(',')}) — marking unverified`);
+                          notFound = true;
+                        } else if (reDetails.business_status === 'CLOSED_PERMANENTLY') {
+                          console.log(`Weekend: "${ev.name}" Gemini says OPEN but Places says CLOSED_PERMANENTLY — dropping`);
+                          return null;
+                        } else {
+                          // Use the real Places data — fixes name/photo/links
+                          verified = true;
+                          notFound = false;
+                          photoUrl = getPhotoUrl(reDetails.photos, mapsKey) || photoUrl;
+                          mapsUrl = reDetails.url || mapsUrl;
+                          const rawWeb = reDetails.website || '';
+                          if (rawWeb.includes('instagram.com')) {
+                            const match = rawWeb.match(/instagram\.com\/([^/?#]+)/);
+                            if (match) instagramHandle = match[1];
+                            websiteUrl = '';
+                          } else {
+                            websiteUrl = rawWeb || websiteUrl;
+                          }
+                          // Use real name from Places if significantly different
+                          const realName = reDetails.name || ev.name;
+                          console.log(`Weekend: "${ev.name}" → confirmed OPEN, using Places name "${realName}"`);
+                          ev.name = realName;
+                          ev.venueName = realName;
+                        }
+                      }
+                    }
+                  } catch(e2) {
+                    console.log(`Weekend: re-check error for "${ev.name}":`, e2.message);
+                  }
                 }
               }
             }
