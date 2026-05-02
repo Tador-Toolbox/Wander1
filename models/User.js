@@ -25,7 +25,8 @@ const UserSchema = new mongoose.Schema({
     musicGenres:  { type: [String], default: [] },
     eventGoal:    { type: String, default: '' },
     atmosphere:   { type: String, default: '' },
-    soundVibe:    { type: String, default: '' }
+    soundVibe:    { type: String, default: '' },
+    crowdSize:    { type: String, default: '' }
   },
   aiPhotos: [{
     url:        { type: String },
