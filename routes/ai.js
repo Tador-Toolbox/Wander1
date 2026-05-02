@@ -969,7 +969,8 @@ Return ONLY valid JSON:
       "hoursUntil": 4,
       "tags": ["rooftop", "electronic"],
       "conciergeNote": "Personal note referencing their exact taste profile",
-      "instagramHandle": "venuename"
+      "instagramHandle": "venuename",
+      "estimatedCapacity": 400
     }
   ]
 }`;
@@ -1023,6 +1024,7 @@ Return ONLY valid JSON:
         websiteUrl,
         instagramHandle,
         instagramUrl: instagramHandle ? `https://www.instagram.com/${instagramHandle}` : '',
+        estimatedCapacity: s.estimatedCapacity || null,
         openConfirmed: true,
         isWeekend: false
       };
@@ -1076,7 +1078,7 @@ Return ONLY valid JSON:
       "instagramHandle": "venuehandle",
       "searchQuery": "Venue Name ${locationStr}",
       "confidence": 90,
-      "estimatedCapacity": "Mid-size"
+      "estimatedCapacity": 400
     }
   ]
 }`;
@@ -1322,6 +1324,7 @@ Do not explain. Just one word.`;
           websiteUrl,
           instagramHandle,
           instagramUrl: instagramHandle ? `https://www.instagram.com/${instagramHandle}` : '',
+          estimatedCapacity: ev.estimatedCapacity || null,
           openConfirmed: verified,
           unverified: notFound,
           isWeekend: true
