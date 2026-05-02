@@ -905,11 +905,12 @@ ${tasteContext}
 
 Rules:
 - Ideas must be appropriate for ${timeLabel} (e.g. don't suggest coffee at midnight, don't suggest bars at 8am)
-- Must be specific and actionable — not vague like "go for a walk"
+- Suggest ACTIVITIES or TYPES of places — NOT specific venue names (e.g. "late-night ramen" not "Hakone Ramen")
 - Must match their taste profile
 - If location is known, ideas should be relevant to that city/country
 - One idea can be indoor, one outdoor (adjust based on time)
-- Make them feel spontaneous and exciting, not boring
+- Make them feel spontaneous and exciting
+- searchQuery should be a GENERIC Google Maps search like "ramen near me" or "rooftop bar Tel Aviv" — never a specific venue name
 
 Reply ONLY with valid JSON, no markdown:
 {
@@ -917,16 +918,16 @@ Reply ONLY with valid JSON, no markdown:
     {
       "emoji": "☕",
       "title": "Short catchy title (4-6 words)",
-      "description": "2 sentences — what to do and why it's great right now at this time",
+      "description": "2 sentences — what to do and why it's great right now",
       "why": "One sentence: why this matches their taste",
-      "searchQuery": "Google Maps search query to find this type of place nearby (e.g. 'specialty coffee Tel Aviv')"
+      "searchQuery": "generic Google Maps search query (e.g. 'late night ramen Tel Aviv')"
     },
     {
       "emoji": "🍜",
       "title": "Second idea title",
       "description": "2 sentences description",
       "why": "Why it matches their taste",
-      "searchQuery": "Google Maps search query"
+      "searchQuery": "generic Google Maps search query"
     }
   ]
 }`;
