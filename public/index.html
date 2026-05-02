@@ -828,6 +828,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <span class="splash-globe">🌍</span>
     <span class="splash-title">Wandr</span>
     <p class="splash-sub">your world, your way, your AI ✦</p>
+    <div id="splashStep" style="font-size:13px;color:var(--txt3);margin-top:8px;margin-bottom:16px;min-height:20px;transition:opacity .3s;">Loading your world…</div>
     <div class="splash-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
   </div>
 </div>
@@ -1815,7 +1816,8 @@ async function runOnboarding(){
     // Small pause then enter app
     setTimeout(()=>{
       showScreen('mapScreen');
-      initApp();
+      startSplashAnimation();
+    initApp();
     }, 600);
 
   }catch(e){
@@ -1900,7 +1902,7 @@ async function doAuth(){
     }
     token=data.token;localStorage.setItem('wandr_token',token);if(data.user){localStorage.setItem('wandr_user',JSON.stringify(data.user));currentUser=data.user;}
     const needsOnboarding = await checkAndShowOnboarding();
-    if(!needsOnboarding){ showScreen('mapScreen'); await initApp(); }
+    if(!needsOnboarding){ showScreen('mapScreen'); startSplashAnimation(); await initApp(); stopSplashAnimation(); }
   }catch{showAuthErr('Network error – is the server running?');}
   finally{btn.disabled=false;btn.textContent=isReg?'Create Account 🌍':'Sign In 🚀';}
 }
@@ -1944,8 +1946,7 @@ function logout(){
 }
 
 async function initApp(){
-  await loadPlaces();
-  await loadTrips();
+  await Promise.all([loadTrips(), loadPlaces()]);
   await loadMapsKey();
   // Load fresh profile from server
   try{const r=await apiFetch('/api/auth/me');if(r.ok){currentUser=await r.json();localStorage.setItem('wandr_user',JSON.stringify(currentUser));}}catch{}
@@ -2071,6 +2072,35 @@ async function apiFetch(path,opts={}){
   if(res.status===401){logout();throw new Error('Unauthorized');}
   return res;
 }
+// Splash loading steps
+const splashSteps = [
+  'Loading your world…',
+  'Fetching your trips…',
+  'Placing your pins…',
+  'Almost ready ✦'
+];
+let _splashIdx = 0;
+let _splashInterval = null;
+
+function startSplashAnimation() {
+  const el = document.getElementById('splashStep');
+  if (!el) return;
+  _splashInterval = setInterval(() => {
+    _splashIdx = (_splashIdx + 1) % splashSteps.length;
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.textContent = splashSteps[_splashIdx];
+      el.style.opacity = '1';
+    }, 150);
+  }, 1200);
+}
+
+function stopSplashAnimation() {
+  clearInterval(_splashInterval);
+  const el = document.getElementById('splashStep');
+  if (el) { el.style.opacity = '0'; }
+}
+
 async function loadPlaces(){
   try{
     // Load own places
