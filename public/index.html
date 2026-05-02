@@ -184,6 +184,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans'
 .suggest-card.michelin .sc-tag{background:#fff0f0;border-color:#bf0000;color:#8b0000;}
 .suggest-card.michelin .sc-maps-link{color:#bf0000;}
 .suggest-card.michelin .sc-add{background:linear-gradient(135deg,#bf0000,#8b0000);}
+.suggest-card.tabelog{border-color:#534AB7;background:linear-gradient(to bottom right,#fff,#f8f7ff);}
+.suggest-card.tabelog:hover{border-color:#3C3489;box-shadow:0 4px 16px rgba(83,74,183,.12);}
+.suggest-card.tabelog .sc-tag{background:#f0eeff;border-color:#534AB7;color:#3C3489;}
+.suggest-card.tabelog .sc-add{background:linear-gradient(135deg,#534AB7,#3C3489);}
+.sc-tabelog-badge{display:inline-block;background:#534AB7;color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:.04em;}
 .suggest-card.gem:hover{border-color:#e8890a;}
 .sc-gem-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#f5a623,#e8890a);color:#fff;border-radius:10px;padding:3px 10px;font-size:10px;font-weight:800;margin-bottom:8px;letter-spacing:.03em;}
 .sc-maps-link{display:inline-flex;align-items:center;gap:4px;color:#1D9E75;font-size:11px;font-weight:700;text-decoration:none;margin-bottom:8px;}
@@ -3090,7 +3095,7 @@ async function openTripSuggest(tripId, tripName){
     <button class="sm-close" onclick="document.getElementById('suggestModal').remove()">✕</button>
     <div class="sm-head">
       <div class="sm-title">✦ Suggestions for ${esc(tripName)}</div>
-      <div class="sm-sub">4 picks · 2 hidden gems · 1 Michelin · AI-powered, verify before you go</div>
+      <div class="sm-sub">4 picks · 2 hidden gems · 1 Michelin · AI-powered, verify before you go${data.weather ? ` · 🌡️ ${data.weather.label} in ${data.weather.month}` : ''}</div>
     </div>
     <div class="sm-body">
       <div class="sm-seasonal">
@@ -3157,17 +3162,19 @@ async function runTripSuggest(tripId, tripName){
     window._currentSuggestions = data.suggestions;
     window._currentSuggestTripId = tripId;
 
-    const normalPlaces  = data.suggestions.filter(s => !s.isGem && !s.isMichelin);
+    const normalPlaces  = data.suggestions.filter(s => !s.isGem && !s.isMichelin && !s.isTabelog);
     const gemPlaces     = data.suggestions.filter(s => s.isGem);
     const michelinPlace = data.suggestions.find(s => s.isMichelin) || null;
+    const tabelogPlaces = data.suggestions.filter(s => s.isTabelog);
 
     const michelinEmoji={'Bib Gourmand':'🍽','1 Star':'⭐','2 Stars':'⭐⭐','3 Stars':'⭐⭐⭐'};
     const renderCard = (s, i) => {
       const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name+' '+s.location)}`;
-      const cardClass = s.isMichelin?'michelin':s.isGem?'gem':'';
+      const cardClass = s.isMichelin?'michelin':s.isGem?'gem':s.isTabelog?'tabelog':'';
       const badge = s.isMichelin
         ?`<div class="sc-michelin-badge">${michelinEmoji[s.michelinDistinction]||'🔴'} Michelin ${esc(s.michelinDistinction||'')}</div>`
-        :s.isGem?`<div class="sc-gem-badge">💎 Hidden Gem</div>`:'';
+        :s.isGem?`<div class="sc-gem-badge">💎 Hidden Gem</div>`
+        :s.isTabelog?`<div class="sc-tabelog-badge">✦ Suggested by Wandr AI</div>`:'';
       return `<div class="suggest-card${cardClass?' '+cardClass:''}" id="scard_${i}">
         <div class="sc-body">
           ${badge}
@@ -3206,7 +3213,8 @@ async function runTripSuggest(tripId, tripName){
       ${data.suggestions.filter(s=>!s.isGem&&!s.isMichelin).map((s,i)=>renderCard(s,data.suggestions.indexOf(s))).join('')}
       ${gemPlaces.length?`<div style="font-size:11px;font-weight:800;color:#e8890a;letter-spacing:.06em;margin:16px 0 8px;">💎 HIDDEN GEMS</div>`:''}
       ${gemPlaces.map(s=>renderCard(s,data.suggestions.indexOf(s))).join('')}
-      ${michelinPlace?`<div style="font-size:11px;font-weight:800;color:#bf0000;letter-spacing:.06em;margin:16px 0 8px;">🔴 MICHELIN GUIDE</div>${renderCard(michelinPlace,data.suggestions.indexOf(michelinPlace))}`:''}`;
+      ${michelinPlace?`<div style="font-size:11px;font-weight:800;color:#bf0000;letter-spacing:.06em;margin:16px 0 8px;">🔴 MICHELIN GUIDE</div>${renderCard(michelinPlace,data.suggestions.indexOf(michelinPlace))}`:''} 
+      ${tabelogPlaces.length?`<div style="font-size:11px;font-weight:800;color:#534AB7;letter-spacing:.06em;margin:16px 0 8px;">✦ WANDR AI JAPAN PICKS</div>${tabelogPlaces.map(s=>renderCard(s,data.suggestions.indexOf(s))).join('')}`:''}`;
 
   } catch(e) {
     body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--coral);font-size:14px;">Error: ${esc(e.message)}</div>`;
