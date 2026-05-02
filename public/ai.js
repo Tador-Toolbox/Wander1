@@ -812,14 +812,19 @@ ${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:
     }
 
     // ── Fetch climate data from Open-Meteo if visitMonth is provided ──
+    console.log(`Trip suggest received: visitMonth='${visitMonth}', tripName='${tripName}'`);
     if (visitMonth && mapsKey) {
       try {
         // Geocode the trip destination to lat/lng
-        const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(tripName)}&key=${mapsKey}`);
+        // Use Open-Meteo free geocoding — no API key needed
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(tripName)}&count=1&language=en&format=json`);
         const geoData = await geoRes.json();
-        const loc = geoData.results?.[0]?.geometry?.location;
+        const geoResult = geoData.results?.[0];
+        let finalLoc = geoResult ? { lat: geoResult.latitude, lng: geoResult.longitude } : null;
+        console.log(`Weather geocode: ${tripName} → ${JSON.stringify(finalLoc)} (${geoResult?.name}, ${geoResult?.country})`);
 
-        if (loc) {
+        if (finalLoc) {
+          const loc = finalLoc;
           // Map month name to number
           const monthMap = { january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12 };
           const monthNum = monthMap[visitMonth.toLowerCase()] || parseInt(visitMonth);
@@ -837,6 +842,7 @@ ${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:
             );
             const weatherData = await weatherRes.json();
 
+            console.log(`Weather Open-Meteo response keys: ${Object.keys(weatherData).join(',')}`);
             if (weatherData.daily) {
               const maxTemps = weatherData.daily.temperature_2m_max.filter(t => t !== null);
               const minTemps = weatherData.daily.temperature_2m_min.filter(t => t !== null);
@@ -854,7 +860,7 @@ ${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:
               }
             }
           }
-        }
+        } // end finalLoc
       } catch(e) {
         console.log('Weather fetch error:', e.message);
       }
@@ -891,36 +897,50 @@ router.post('/right-now', auth, async (req, res) => {
         ? `User coordinates: ${lat.toFixed(3)}, ${lng.toFixed(3)}`
         : 'Location unknown — give general ideas';
 
-    const prompt = `You are a spontaneous activity advisor. Give exactly 2 ideas for what this person should do RIGHT NOW.
+    const prompt = `You are a spontaneous activity advisor. Give exactly 3 ideas for what this person should do RIGHT NOW.
 
 Current time: ${timeLabel} (hour: ${hour}:00)
 ${locationContext}
 ${tasteContext}
 
+Structure your 3 ideas as:
+1. FOOD/DRINK — a restaurant, bar, café, or nightlife spot matching their taste
+2. EXPERIENCE — an activity like karting, escape room, cooking class, cinema, bowling, skydiving, axe throwing, karaoke, arcade, laser tag, rooftop bar with a view — something exciting and out of the ordinary
+3. OUTDOOR/CHILL — a park, beach, viewpoint, night walk, or relaxing spot appropriate for the time
+
 Rules:
-- Ideas must be appropriate for ${timeLabel} (e.g. don't suggest coffee at midnight, don't suggest bars at 8am)
-- Must be specific and actionable — not vague like "go for a walk"
-- Must match their taste profile
-- If location is known, ideas should be relevant to that city/country
-- One idea can be indoor, one outdoor (adjust based on time)
-- Make them feel spontaneous and exciting, not boring
+- All ideas must be appropriate for ${timeLabel} (don't suggest morning coffee at midnight, don't suggest clubs at 8am)
+- Suggest ACTIVITY TYPES — NOT specific venue names (e.g. "karting" not "TopSpeed Kart")
+- The EXPERIENCE idea should feel exciting and spontaneous — pick something genuinely fun
+- Match their taste profile throughout
+- searchQuery must be a GENERIC Google Maps search — never a specific venue name
 
 Reply ONLY with valid JSON, no markdown:
 {
   "ideas": [
     {
-      "emoji": "☕",
+      "emoji": "🍜",
       "title": "Short catchy title (4-6 words)",
-      "description": "2 sentences — what to do and why it's great right now at this time",
+      "description": "2 sentences — what to do and why it's great right now",
       "why": "One sentence: why this matches their taste",
-      "searchQuery": "Google Maps search query to find this type of place nearby (e.g. 'specialty coffee Tel Aviv')"
+      "searchQuery": "generic Google Maps search (e.g. 'late night ramen Tel Aviv')",
+      "type": "food"
     },
     {
-      "emoji": "🍜",
-      "title": "Second idea title",
+      "emoji": "🏎",
+      "title": "Exciting activity title",
       "description": "2 sentences description",
       "why": "Why it matches their taste",
-      "searchQuery": "Google Maps search query"
+      "searchQuery": "generic Google Maps search (e.g. 'escape room Tel Aviv')",
+      "type": "experience"
+    },
+    {
+      "emoji": "🌙",
+      "title": "Chill outdoor idea",
+      "description": "2 sentences description",
+      "why": "Why it matches their taste",
+      "searchQuery": "generic Google Maps search",
+      "type": "outdoor"
     }
   ]
 }`;
