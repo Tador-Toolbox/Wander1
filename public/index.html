@@ -1635,6 +1635,16 @@ function obToggleChip(el){
   el.classList.toggle('sel');
 }
 
+function obToggleChipMax(el, max) {
+  const group = el.dataset.group;
+  const selected = document.querySelectorAll(`.ob-chip[data-group="${group}"].sel`);
+  if (!el.classList.contains('sel') && selected.length >= max) {
+    // Deselect oldest (first selected) to make room
+    selected[0].classList.remove('sel');
+  }
+  el.classList.toggle('sel');
+}
+
 function obSelectRadio(el){
   const group = el.dataset.group;
   document.querySelectorAll(`.ob-radio[data-group="${group}"]`).forEach(r => r.classList.remove('sel'));
@@ -1646,8 +1656,9 @@ function obGetAnswers(){
   const goal = document.querySelector('.ob-radio[data-group="goal"].sel')?.dataset.val || '';
   const atmosphere = document.querySelector('.ob-radio[data-group="atmosphere"].sel')?.dataset.val || '';
   const soundVibe = document.querySelector('.ob-radio[data-group="soundVibe"].sel')?.dataset.val || '';
-  const crowdSize = document.querySelector('.ob-radio[data-group="crowdSize"].sel')?.dataset.val || '';
-  return { music, goal, atmosphere, soundVibe, crowdSize };
+  const crowdSizes = [...document.querySelectorAll('.ob-chip[data-group="crowdSize"].sel')].map(el=>el.dataset.val);
+  const crowdSize = crowdSizes.join(','); // e.g. "Intimate,Mid-size"
+  return { music, goal, atmosphere, soundVibe, crowdSize, crowdSizes };
 }
 
 function obRemoveFile(idx){
@@ -3780,9 +3791,9 @@ function renderAazPrefs(existingProfile){
     '<div class="ob-radio-group" style="margin-bottom:16px;">' +
     sounds.map(o=>'<div class="ob-radio'+(existingProfile?.soundVibe===o.v?' sel':'')+'" data-group="soundVibe" data-val="'+o.v+'" onclick="obSelectRadio(this)"><div class="or-label">'+o.l+'</div><div class="or-sub">'+o.s+'</div></div>').join('') +
     '</div>' +
-    '<div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:8px;">👥 HOW PACKED DO YOU LIKE IT?</div>' +
-    '<div class="ob-radio-group" style="margin-bottom:16px;">' +
-    [{v:"Intimate",l:"🔒 Intimate",s:"Under 200. Tight, personal, you feel the energy."},{v:"Mid-size",l:"🎵 Mid-size",s:"200-500. Classic club energy, not overwhelming."},{v:"Big Room",l:"🏟 Big Room",s:"500+. Large floor, big production, festival energy."},{v:"No Preference",l:"🤷 No Preference",s:"Size doesn't matter, vibe does."}].map(o=>'<div class="ob-radio'+(existingProfile?.crowdSize===o.v?' sel':'')+'" data-group="crowdSize" data-val="'+o.v+'" onclick="obSelectRadio(this)"><div class="or-label">'+o.l+'</div><div class="or-sub">'+o.s+'</div></div>').join('') +
+    '<div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:8px;">👥 HOW PACKED DO YOU LIKE IT? <span style="font-weight:400;color:var(--ink3);font-size:10px;">(pick up to 2)</span></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;">' +
+    [{v:"Intimate",l:"🔒 Intimate"},{v:"Mid-size",l:"🎵 Mid-size"},{v:"Big Room",l:"🏟 Big Room"},{v:"No Preference",l:"🤷 Any size"}].map(o=>'<div class="ob-chip'+((existingProfile?.crowdSizes||[]).includes(o.v)||(existingProfile?.crowdSize===o.v)?' sel':'')+'" data-group="crowdSize" data-val="'+o.v+'" onclick="obToggleChipMax(this,2)">'+o.l+'</div>').join('') +
     '</div>' +
     '<button class="aaz-btn" style="margin-bottom:8px;" onclick="savePreferencesOnly()">💾 Save Preferences</button>';
 }
@@ -4282,7 +4293,7 @@ function renderProfileSheetAICard(){
     }
     if(resetBtn)resetBtn.style.display='block';
     const musicRow = p.musicGenres?.length ? `<div style="margin-top:8px;"><div style="font-size:10px;font-weight:700;color:#764ba2;margin-bottom:4px;">🎵 MUSIC</div><div style="display:flex;flex-wrap:wrap;gap:4px;">${p.musicGenres.map(g=>`<span style="background:#f0edff;border:1px solid #764ba2;color:#764ba2;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;">${esc(g)}</span>`).join('')}</div></div>` : '';
-    const prefsRow = [p.eventGoal, p.atmosphere, p.soundVibe, p.crowdSize].filter(Boolean).length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">${[p.eventGoal&&`🎯 ${esc(p.eventGoal)}`,p.atmosphere&&`🏛 ${esc(p.atmosphere)}`,p.soundVibe&&`🔊 ${esc(p.soundVibe)}`,p.crowdSize&&`👥 ${esc(p.crowdSize)}`].filter(Boolean).map(s=>`<span style="background:var(--bg);border:1px solid var(--border2);color:var(--ink2);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600;">${s}</span>`).join('')}</div>` : '';
+    const prefsRow = [p.eventGoal, p.atmosphere, p.soundVibe, p.crowdSize].filter(Boolean).length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">${[p.eventGoal&&`🎯 ${esc(p.eventGoal)}`,p.atmosphere&&`🏛 ${esc(p.atmosphere)}`,p.soundVibe&&`🔊 ${esc(p.soundVibe)}`,p.crowdSize&&`👥 ${esc(p.crowdSize.replace(/,/g,' · '))}`].filter(Boolean).map(s=>`<span style="background:var(--bg);border:1px solid var(--border2);color:var(--ink2);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600;">${s}</span>`).join('')}</div>` : '';
     card.innerHTML=`
       <div style="background:linear-gradient(135deg,#f8f5ff,#f0f4ff);border-radius:14px;padding:13px;">
         <div style="font-size:13px;color:var(--txt);font-style:italic;line-height:1.5;margin-bottom:10px;">"${esc(p.summary)}"</div>
