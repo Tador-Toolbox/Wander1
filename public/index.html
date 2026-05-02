@@ -2268,6 +2268,7 @@ async function openEventDiscover(){
             ${isWeekend?`<span style="color:#a78bfa;font-weight:700;">📅 ${esc(ev.date||'Weekend')}</span>`:''}
             ${ev.time?`<span>🕐 ${esc(ev.time)}</span>`:''}
             ${ev.price?`<span>💰 ${esc(ev.price)}</span>`:''}
+            ${ev.estimatedCapacity?`<span>👥 ~${ev.estimatedCapacity} people</span>`:''}
           </div>
           <div class="ed-tags">
             ${isUnmissable?`<span class="ed-tag timing-urgent">🔥 Unmissable</span>`:''}
