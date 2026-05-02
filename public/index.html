@@ -1946,6 +1946,13 @@ function logout(){
 }
 
 async function initApp(){
+  // Show cached data instantly if available
+  const cachedTrips = localStorage.getItem('wandr_trips_cache');
+  const cachedPlaces = localStorage.getItem('wandr_places_cache');
+  if (cachedTrips) { try { trips = JSON.parse(cachedTrips); renderTrips(); populateTripSelect(); } catch {} }
+  if (cachedPlaces) { try { places = JSON.parse(cachedPlaces); refreshMarkers(); updateCount(); } catch {} }
+
+  // Then fetch fresh data in parallel
   await Promise.all([loadTrips(), loadPlaces()]);
   await loadMapsKey();
   // Load fresh profile from server
@@ -2085,8 +2092,11 @@ let _splashInterval = null;
 function startSplashAnimation() {
   const el = document.getElementById('splashStep');
   if (!el) return;
+  el.textContent = splashSteps[0];
+  el.style.opacity = '1';
   _splashInterval = setInterval(() => {
-    _splashIdx = (_splashIdx + 1) % splashSteps.length;
+    if (_splashIdx >= splashSteps.length - 1) return; // Hold on last step, don't loop
+    _splashIdx++;
     el.style.opacity = '0';
     setTimeout(() => {
       el.textContent = splashSteps[_splashIdx];
@@ -2106,6 +2116,7 @@ async function loadPlaces(){
     // Load own places
     const res=await apiFetch('/api/places');
     places=await res.json();
+    try { localStorage.setItem('wandr_places_cache', JSON.stringify(places)); } catch {}
 
     // Also load places from shared (MUTUAL) trips
     const sharedTrips=trips.filter(t=>t.isShared);
@@ -2974,7 +2985,7 @@ function renderList(){
 function focusPlace(id){const p=places.find(x=>x._id===id);if(!p)return;showMap();if(gmap){gmap.panTo({lat:p.lat,lng:p.lng});gmap.setZoom(13);setTimeout(()=>{if(window._m[id])openIW(p,window._m[id]);},500);}}
 function setChip(el){document.querySelectorAll('.chips-row .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');activeTag=el.dataset.t;renderList();}
 async function loadTrips(){
-  try{const r=await apiFetch('/api/trips');trips=await r.json();populateTripSelect();}
+  try{const r=await apiFetch('/api/trips');trips=await r.json();try{localStorage.setItem('wandr_trips_cache',JSON.stringify(trips));}catch{}populateTripSelect();renderTrips();}
   catch(e){if(e.message!=='Unauthorized')console.error('trips load failed');}
 }
 
