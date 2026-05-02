@@ -3098,12 +3098,21 @@ async function openTripSuggest(tripId, tripName){
       <div class="sm-sub" id="suggestSubtitle">4 picks · 2 hidden gems · 1 Michelin · AI-powered, verify before you go</div>
     </div>
     <div class="sm-body">
-      <div class="sm-seasonal">
-        <label>🗓 Visiting in</label>
-        <select id="visitMonth">
+      <div class="sm-seasonal" style="flex-direction:column;align-items:stretch;gap:8px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <label>🗓 Visiting in</label>
+          <select id="visitMonth" style="flex:1;">
           <option value="">— Not sure yet —</option>
           ${months.map((m,i)=>`<option value="${m}" ${i===curMonth?'selected':''}>${m}</option>`).join('')}
-        </select>
+          </select>
+        </div>
+        <div id="weatherDisplay" style="display:none;background:rgba(255,255,255,.6);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:18px;">🌡️</span>
+          <div>
+            <div id="weatherLabel" style="font-size:15px;font-weight:800;color:var(--sky-dark);"></div>
+            <div id="weatherSub" style="font-size:11px;color:var(--txt3);margin-top:1px;">Average temperature</div>
+          </div>
+        </div>
       </div>
       <div id="suggestBody">
         <div style="text-align:center;padding:12px 0 4px;">
@@ -3190,10 +3199,16 @@ async function runTripSuggest(tripId, tripName){
 
     const tasteLabel = (pd.profile.tags||[]).slice(0,4).join(', ');
     const monthLabel = visitMonth ? ` · ${visitMonth}` : '';
-    // Update subtitle with weather if available
+    // Show weather in the seasonal box
     if (data.weather) {
-      const sub = document.getElementById('suggestSubtitle');
-      if (sub) sub.textContent = `4 picks · 2 hidden gems · 1 Michelin · AI-powered · 🌡️ ${data.weather.label} in ${data.weather.month}`;
+      const wd = document.getElementById('weatherDisplay');
+      const wl = document.getElementById('weatherLabel');
+      const ws = document.getElementById('weatherSub');
+      if (wd && wl) {
+        wl.textContent = `${data.weather.label}`;
+        if (ws) ws.textContent = `Typical temperature in ${data.weather.month}`;
+        wd.style.display = 'flex';
+      }
     }
 
     // Render holidays section
