@@ -4,10 +4,11 @@ const Post   = require('../models/Post');
 const Place  = require('../models/Place');
 const User   = require('../models/User');
 
-// GET /api/posts — social feed (all users, newest first)
+// GET /api/posts — social feed (last 24 hours only)
 router.get('/', auth, async (req, res) => {
   try {
-    const posts = await Post.find()
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours ago
+    const posts = await Post.find({ createdAt: { $gte: since } })
       .sort({ createdAt: -1 })
       .limit(100);
     res.json(posts);
