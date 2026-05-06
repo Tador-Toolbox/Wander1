@@ -268,6 +268,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans'
 .rn-idea::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
 .rn-idea.idea-0::before{background:linear-gradient(90deg,#667eea,#764ba2);}
 .rn-idea.idea-1::before{background:linear-gradient(90deg,#1A6B4A,#2d9e75);}
+.rn-idea.idea-2::before{background:linear-gradient(90deg,#b45309,#d97706);}
+.rn-type-badge{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;letter-spacing:.05em;margin-bottom:8px;}
+.rn-type-food{background:#f0fdf4;color:#166534;}
+.rn-type-experience{background:#eff6ff;color:#1d4ed8;}
+.rn-type-outdoor{background:#fff7ed;color:#92400e;}
 .rn-idea .ri-emoji{font-size:32px;margin-bottom:10px;}
 .rn-idea .ri-title{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:5px;}
 .rn-idea .ri-desc{font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:10px;}
@@ -2449,14 +2454,18 @@ async function openRightNow(){
 
     body.innerHTML = `
       <div style="font-size:12px;color:var(--ink3);margin-bottom:14px;">📍 ${esc(locationStr)} · ${timeLabel}</div>
-      ${data.ideas.map((idea, i) => `
-        <div class="rn-idea idea-${i}">
+      ${data.ideas.map((idea, i) => {
+        const typeMeta = {food:{label:'🍽 FOOD & DRINK',cls:'rn-type-food'},experience:{label:'⚡ EXPERIENCE',cls:'rn-type-experience'},outdoor:{label:'🌿 OUTDOOR',cls:'rn-type-outdoor'}};
+        const meta = typeMeta[idea.type] || typeMeta.food;
+        return `<div class="rn-idea idea-${i}">
+          <div class="rn-type-badge ${meta.cls}">${meta.label}</div>
           <div class="ri-emoji">${idea.emoji}</div>
           <div class="ri-title">${esc(idea.title)}</div>
           <div class="ri-desc">${esc(idea.description)}</div>
           <div class="ri-why">${esc(idea.why)}</div>
           ${idea.searchQuery ? `<a class="ri-maps" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(idea.searchQuery)}" target="_blank" rel="noopener">🗺 Find nearby ↗</a>` : ''}
-        </div>`).join('')}`;
+        </div>`;
+      }).join('')}`;
   } catch(e) {
     const body = document.getElementById('rnBody');
     if(body) body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--coral);">
@@ -2549,7 +2558,7 @@ function renderFeed(){
   const feed=document.getElementById('socialFeed');
   const count=document.getElementById('feedCount');
   if(!socialPosts.length){
-    feed.innerHTML=`<div class="no-posts"><div class="ni">🌐</div><p>No posts yet.<br>Add a place and press <strong>Social It!</strong> to be the first.</p></div>`;
+    feed.innerHTML=`<div class="no-posts"><div class="ni">🌐</div><p>No posts in the last 24 hours.<br>Add a place and press <strong>Social It!</strong> to share with Wandr.</p></div>`;
     if(count) count.textContent='';
     return;
   }
@@ -2563,7 +2572,10 @@ function renderFeed(){
     const avatarContent=p.authorAvatar?`<img src="${esc(p.authorAvatar)}" style="width:100%;height:100%;object-fit:cover;">`:(p.authorName?p.authorName[0].toUpperCase():'?');
     const ismine=p.user===userId||p.user===(currentUser&&currentUser._id);
     const timeAgo=formatTimeAgo(p.createdAt);
-    return `<div class="post-card">
+    const hoursLeft = Math.max(0, Math.ceil((new Date(p.createdAt).getTime() + 24*60*60*1000 - Date.now()) / (60*60*1000)));
+    const expiryBar = hoursLeft <= 6 ? `<div style="height:2px;background:linear-gradient(90deg,#f87171,#fca5a5);border-radius:1px;width:${(hoursLeft/24*100)}%;margin-bottom:8px;" title="${hoursLeft}h left"></div>` : '';
+    const expiryLabel = hoursLeft <= 6 ? `<span style="font-size:10px;color:#f87171;font-weight:700;">⏱ ${hoursLeft}h left</span>` : `<span style="font-size:10px;color:var(--txt3);">⏱ ${timeAgo}</span>`;
+    return `<div class="post-card">${expiryBar}
       <div class="post-header">
         <div class="post-avatar" onclick="openUserProfile('${p.user}')" style="cursor:pointer;">${avatarContent}</div>
         <div class="post-author">
@@ -2571,7 +2583,7 @@ function renderFeed(){
           ${p.authorHandle?`<div class="post-author-handle">@${esc(p.authorHandle)}</div>`:''}
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <div class="post-time">${timeAgo}</div>
+          <div class="post-time">${expiryLabel}</div>
           ${ismine?`<button class="post-del-btn" onclick="deletePost('${p._id}')">✕</button>`:''}
         </div>
       </div>
