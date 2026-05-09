@@ -3247,7 +3247,9 @@ async function runTripSuggest(tripId, tripName){
 
     const michelinEmoji={'Bib Gourmand':'🍽','1 Star':'⭐','2 Stars':'⭐⭐','3 Stars':'⭐⭐⭐'};
     const renderCard = (s, i) => {
-      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name+' '+s.location)}`;
+      // Use just name + first part of location (city) for better Google Maps results
+      const mapsCity = (s.location||'').split(',')[0].trim();
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name + (mapsCity ? ' ' + mapsCity : ''))}`; 
       const cardClass = s.isMichelin?'michelin':s.isGem?'gem':s.isTabelog?'tabelog':'';
       const badge = s.isMichelin
         ?`<div class="sc-michelin-badge">${michelinEmoji[s.michelinDistinction]||'🔴'} Michelin ${esc(s.michelinDistinction||'')}</div>`
