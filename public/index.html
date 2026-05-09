@@ -3374,7 +3374,8 @@ async function addSuggestionToTrip(idx, tripId){
         trip: tripId,
         status: 'tobe',
         isPublic: false,
-        visibility: 'private'
+        visibility: 'private',
+        source: s.isGem ? 'hidden-gem' : s.isMichelin ? 'michelin' : s.isTabelog ? 'ai-japan-pick' : 'ai-suggest'
       })
     });
     if(!res.ok) throw new Error();
