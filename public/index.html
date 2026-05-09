@@ -2161,6 +2161,7 @@ function removeMarker(id){if(window._m[id]){window._m[id].setMap(null);delete wi
 function openIW(place,marker){
   const cover=place.coverPhoto?`<img src="${esc(place.coverPhoto)}" style="width:100%;height:140px;object-fit:cover;display:block;border-radius:16px 16px 0 0;" loading="lazy" onerror="this.style.display='none'">`: '';
   const stars=place.rating?starsHtml(place.rating):'';
+  const sourceBadge=place.source==='hidden-gem'?'<span style="background:linear-gradient(135deg,#f5a623,#e8890a);color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">💎 Hidden Gem</span>':place.source==='michelin'?'<span style="background:#bf0000;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">🔴 Michelin</span>':place.source==='ai-japan-pick'?'<span style="background:#534AB7;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">✦ Wandr AI Pick</span>':\'\';
   const statusBadge=place.status==='been'?'<span style="background:var(--mint-light);color:var(--mint);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">✅ Been There</span>':place.status==='tobe'?'<span style="background:var(--sky-light);color:var(--sky);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">🗺️ To Be There</span>':'';
   infoWin.setContent(`<div class="map-popup" onclick="openPlaceInfo('${place._id}')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(74,158,255,.15);">${cover}<div style="padding:12px 14px 12px">${statusBadge?statusBadge+'<br style=margin:3px>':''}<div class="mp-name">${esc(place.name)}</div>${place.location?`<div class="mp-loc">📍 ${esc(place.location)}</div>`:''  }${place.notes?`<div class="mp-notes" style="margin-top:6px">${esc(place.notes.substring(0,80)+(place.notes.length>80?'…':''))}</div>`:''  }${stars?`<div class="mp-stars" style="margin-top:6px">${stars}</div>`:''}<div style="margin-top:10px;padding:8px;background:var(--sky-light);border-radius:10px;text-align:center;font-size:12px;font-weight:800;color:var(--sky);">👆 Tap for full details</div></div></div>`);
   infoWin.open(gmap,marker);
@@ -2597,6 +2598,7 @@ function renderFeed(){
         ${p.notes?`<div class="post-notes">${esc(p.notes)}</div>`:''}
         <div class="post-footer">
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            ${sourceBadge}
             ${statusBadge}
             ${stars?`<div>${stars}</div>`:''}
             ${tags?`<div class="post-tags">${tags}</div>`:''}
