@@ -817,11 +817,21 @@ ${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:
       try {
         // Geocode the trip destination to lat/lng
         // Use Open-Meteo free geocoding — no API key needed
-        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(tripName)}&count=1&language=en&format=json`);
+        const cleanTripName = tripName.replace(/\s*,\s*/g, ', ').trim(); // fix 'Malia , Crete' → 'Malia, Crete'
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanTripName)}&count=1&language=en&format=json`);
         const geoData = await geoRes.json();
         const geoResult = geoData.results?.[0];
         let finalLoc = geoResult ? { lat: geoResult.latitude, lng: geoResult.longitude } : null;
-        console.log(`Weather geocode: ${tripName} → ${JSON.stringify(finalLoc)} (${geoResult?.name}, ${geoResult?.country})`);
+        // If not found, try just the first part (city name before comma)
+        if (!finalLoc && cleanTripName.includes(',')) {
+          const cityOnly = cleanTripName.split(',')[0].trim();
+          const geoRes2 = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityOnly)}&count=1&language=en&format=json`);
+          const geoData2 = await geoRes2.json();
+          const geoResult2 = geoData2.results?.[0];
+          finalLoc = geoResult2 ? { lat: geoResult2.latitude, lng: geoResult2.longitude } : null;
+          console.log(`Weather geocode retry with "${cityOnly}": ${JSON.stringify(finalLoc)}`);
+        }
+        console.log(`Weather geocode: ${cleanTripName} → ${JSON.stringify(finalLoc)} (${geoResult?.name}, ${geoResult?.country})`);
 
         if (finalLoc) {
           const loc = finalLoc;
