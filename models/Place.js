@@ -12,13 +12,13 @@ const PlaceSchema = new mongoose.Schema({
   lat:       { type: Number, required: true },
   lng:       { type: Number, required: true },
   status:    { type: String, enum: ['none','tobe','been'], default: 'none' },
+  source:    { type: String, default: '' }, // 'hidden-gem','michelin','ai-suggest','ai-japan-pick'
   rating:    { type: Number, min: 0, max: 5, default: 0 },
   isPublic:  { type: Boolean, default: false },
   visibility:{ type: String, enum: ['private','public','both'], default: 'private' },
   coverPhoto:{ type: String, default: '' },
   photos:    { type: [String], default: [] },
-  photoLikes:[ { url: String, user: { type: require('mongoose').Schema.Types.ObjectId, ref: 'User' } } ],
-  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
+  photoLikes:[ { url: String, user: { type: require('mongoose').Schema.Types.ObjectId, ref: 'User' } } ]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Place', PlaceSchema);
