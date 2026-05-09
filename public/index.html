@@ -2171,7 +2171,18 @@ function pi(t){return(t&&t[0])?PICO[t[0]]||'📍':'📍';}
 function mkIcon(tags){const c=pc(tags),e=pi(tags);return{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="44" height="54" viewBox="0 0 44 54"><filter id="sh"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,.18)"/></filter><path d="M22 0C9.85 0 0 9.85 0 22c0 16.5 22 32 22 32S44 38.5 44 22C44 9.85 34.15 0 22 0z" fill="${c}" filter="url(#sh)"/><circle cx="22" cy="22" r="13" fill="rgba(255,255,255,.3)"/><text x="22" y="28" text-anchor="middle" font-size="16">${e}</text></svg>`),scaledSize:new google.maps.Size(44,54),anchor:new google.maps.Point(22,54)};}
 
 window._m={};
-function addMarker(place){if(!gmap)return;const m=new google.maps.Marker({position:{lat:place.lat,lng:place.lng},map:gmap,icon:mkIcon(place.tags),title:place.name});m.addListener('click',()=>openIW(place,m));window._m[place._id]=m;}
+function mkIconColor(color,emoji){return{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="44" height="54" viewBox="0 0 44 54"><filter id="sh"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,.18)"/></filter><path d="M22 0C9.85 0 0 9.85 0 22c0 16.5 22 32 22 32S44 38.5 44 22C44 9.85 34.15 0 22 0z" fill="${color}" filter="url(#sh)"/><circle cx="22" cy="22" r="13" fill="rgba(255,255,255,.3)"/><text x="22" y="28" text-anchor="middle" font-size="16">${emoji}</text></svg>`),scaledSize:new google.maps.Size(44,54),anchor:new google.maps.Point(22,54)};}
+function addMarker(place){
+  if(!gmap)return;
+  let icon;
+  if(place.source==='hidden-gem') icon=mkIconColor('#f5a623','💎');
+  else if(place.source==='michelin') icon=mkIconColor('#bf0000','🔴');
+  else if(place.source==='ai-japan-pick') icon=mkIconColor('#534AB7','✦');
+  else icon=mkIcon(place.tags);
+  const m=new google.maps.Marker({position:{lat:place.lat,lng:place.lng},map:gmap,icon,title:place.name});
+  m.addListener('click',()=>openIW(place,m));
+  window._m[place._id]=m;
+}
 function removeMarker(id){if(window._m[id]){window._m[id].setMap(null);delete window._m[id];}}
 function openIW(place,marker){
   const cover=place.coverPhoto?`<img src="${esc(place.coverPhoto)}" style="width:100%;height:140px;object-fit:cover;display:block;border-radius:16px 16px 0 0;" loading="lazy" onerror="this.style.display='none'">`: '';
