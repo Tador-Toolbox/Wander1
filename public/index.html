@@ -2773,7 +2773,7 @@ function openAddresSearch(){
     });
   }
 }
-function openFull(pre={}){window._pendingCoverFile=null; // cleared when form opens fresh
+function openFull(pre={}){window._pendingCoverFile=null; window._googlePhotoSet=false; // cleared when form opens fresh
   editId=null;selTags=pre.tags?[...pre.tags]:[];pendingCoords=null;
   document.getElementById('addTitle').textContent='✍️ Add Place';
   document.getElementById('pName').value=pre.name||'';
@@ -2910,7 +2910,8 @@ async function scanImage(input){
   const file=input.files[0];
   if(!file)return;
   // Store a copy of the file blob so it survives input.value='' reset
-  resizeImageFile(file).then(r=>window._pendingCoverFile=r);
+  // Store uploaded file as fallback — will be replaced if Google photo is found
+  resizeImageFile(file).then(r=>{ if(!window._googlePhotoSet) window._pendingCoverFile=r; });
   const content=document.getElementById('uploadContent');
   const loading=document.getElementById('scanLoading');
   const result=document.getElementById('igResult');
@@ -3007,12 +3008,13 @@ async function scanImage(input){
       result.style.borderColor='var(--sky-mid)';
       result.style.color='var(--sky)';
       // Use Google Places photo as cover if available (better quality than screenshot)
+      window._googlePhotoSet = false;
       if(parsed.googlePhotoUrl) {
-        // Fetch the Google photo and set as pending cover
         try {
           const photoRes = await fetch(parsed.googlePhotoUrl);
           const blob = await photoRes.blob();
           window._pendingCoverFile = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
+          window._googlePhotoSet = true; // Prevent uploaded file from overwriting
           showCoverPreview(parsed.googlePhotoUrl);
           console.log('Using Google Places photo as cover');
         } catch(e) {
