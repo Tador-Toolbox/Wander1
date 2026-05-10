@@ -120,18 +120,34 @@ Reply ONLY with JSON in this exact format:
     }
     if (!parsed) return res.status(200).json({ name: '', location: '', address: '', method: 'none' });
 
-    // If we got a location, geocode it to lat/lng
+    // If we got a location, geocode it and fetch Google Places photo
     if (parsed.name || parsed.location || parsed.address) {
+      const mapsKey = process.env.GOOGLE_MAPS_API_KEY;
       const searchQuery = parsed.address || parsed.name + ' ' + parsed.location;
+
+      // 1. Geocode for lat/lng
       try {
-        const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${process.env.GOOGLE_MAPS_API_KEY}`);
+        const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${mapsKey}`);
         const geoData = await geoRes.json();
         if (geoData.results && geoData.results[0]) {
           parsed.lat = geoData.results[0].geometry.location.lat;
           parsed.lng = geoData.results[0].geometry.location.lng;
           parsed.formattedAddress = geoData.results[0].formatted_address;
         }
-      } catch(e) { /* geocode failed, frontend will handle */ }
+      } catch(e) { console.log('Geocode failed:', e.message); }
+
+      // 2. Search Google Places for photo
+      try {
+        const placesRes = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent('"' + parsed.name + '" ' + parsed.location)}&key=${mapsKey}`);
+        const placesData = await placesRes.json();
+        const place = placesData.results?.[0];
+        if (place?.photos?.[0]?.photo_reference) {
+          const photoRef = place.photos[0].photo_reference;
+          parsed.googlePhotoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${mapsKey}`;
+          parsed.googlePlaceId = place.place_id;
+          console.log(`AI Scan: Found Google Places photo for "${parsed.name}"`);
+        }
+      } catch(e) { console.log('Places photo fetch failed:', e.message); }
     }
     
     res.json(parsed);
