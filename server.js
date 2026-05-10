@@ -146,7 +146,7 @@ Reply ONLY with JSON in this exact format:
         const place = placesData.results?.[0];
         if (place?.photos?.[0]?.photo_reference) {
           const photoRef = place.photos[0].photo_reference;
-          parsed.googlePhotoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${mapsKey}`;
+          parsed.googlePhotoUrl = `/api/proxy/google-photo?ref=${encodeURIComponent(photoRef)}`; // proxied through our server
           parsed.googlePlaceId = place.place_id;
           console.log(`AI Scan: ✅ Found Google Places photo for "${parsed.name}" (${place.name})`);
         } else {
@@ -196,6 +196,24 @@ app.get('/reset-password', (req, res) => {
 // Serve index-new.html directly (new design preview)
 app.get('/index-new.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index-new.html'));
+});
+
+// ── Google Places photo proxy (avoids CORS) ──
+app.get('/api/proxy/google-photo', require('./middleware/auth'), async (req, res) => {
+  try {
+    const { ref } = req.query;
+    if (!ref) return res.status(400).json({ error: 'No photo reference' });
+    const mapsKey = process.env.GOOGLE_MAPS_API_KEY;
+    const photoRes = await fetch(`https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${encodeURIComponent(ref)}&key=${mapsKey}`);
+    if (!photoRes.ok) return res.status(500).json({ error: 'Photo fetch failed' });
+    const buffer = await photoRes.arrayBuffer();
+    const contentType = photoRes.headers.get('content-type') || 'image/jpeg';
+    res.set('Content-Type', contentType);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(Buffer.from(buffer));
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ── User closure report (authenticated) ──
