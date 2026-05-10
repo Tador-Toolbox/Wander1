@@ -1369,6 +1369,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <button class="btn-save" id="btnSave" onclick="savePlace()">Save 📍</button>
     </div>
     <button id="btnSocialIt" onclick="socialIt()" style="display:none;width:100%;margin-top:10px;padding:14px;border-radius:16px;border:2px solid var(--purple);background:rgba(155,109,255,.1);color:var(--purple);font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:var(--tr);">🌐 Social It!</button>
+    <button id="btnDonePlace" onclick="closeOverlay('addOverlay')" style="display:none;width:100%;margin-top:8px;padding:14px;border-radius:16px;border:none;background:#1a1a1a;color:#fff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;">✓ Done</button>
   </div>
 </div>
 
@@ -2081,6 +2082,7 @@ function openFullFromDrop(lat,lng){
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='none';
   document.getElementById('btnSocialIt').style.display='none';
+  document.getElementById('btnDonePlace').style.display='none';
   document.getElementById('coverPhotoSection').style.display='block';
   document.getElementById('gallerySection').style.display='none';
   showCoverPreview('');
@@ -2784,6 +2786,7 @@ function openFull(pre={}){window._pendingCoverFile=null; // cleared when form op
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='none';
   document.getElementById('btnSocialIt').style.display='none';
+  document.getElementById('btnDonePlace').style.display='none';
   document.getElementById('coverPhotoSection').style.display='block';
   document.getElementById('gallerySection').style.display='none';
   showCoverPreview('');
@@ -2843,6 +2846,7 @@ async function savePlace(){
       editId=created._id;
       document.getElementById('btnDelete').style.display='block';
       document.getElementById('btnSocialIt').style.display='block';
+      document.getElementById('btnDonePlace').style.display='block';
       document.getElementById('addTitle').textContent='✏️ Edit Place';
       document.getElementById('gallerySection').style.display='block';
     }
