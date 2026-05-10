@@ -198,6 +198,51 @@ app.get('/index-new.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index-new.html'));
 });
 
+// ── Auto-fetch Google Places photo for a saved place ──
+app.post('/api/places/:id/fetch-google-photo', require('./middleware/auth'), async (req, res) => {
+  try {
+    const Place = require('./models/Place');
+    const cloudinary = require('cloudinary').v2;
+    const { name, location } = req.body;
+    const mapsKey = process.env.GOOGLE_MAPS_API_KEY;
+
+    // Find the place and verify ownership
+    const place = await Place.findOne({ _id: req.params.id, user: req.userId });
+    if (!place) return res.status(404).json({ error: 'Place not found' });
+    if (place.coverPhoto) return res.json({ coverPhoto: place.coverPhoto }); // already has one
+
+    // Search Google Places
+    const query = '"' + name + '" ' + (location || '');
+    const placesRes = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${mapsKey}`);
+    const placesData = await placesRes.json();
+    const gPlace = placesData.results?.[0];
+    const photoRef = gPlace?.photos?.[0]?.photo_reference;
+    if (!photoRef) return res.json({ coverPhoto: null });
+
+    // Fetch photo and upload to Cloudinary
+    const photoRes = await fetch(`https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${mapsKey}`);
+    if (!photoRes.ok) return res.json({ coverPhoto: null });
+
+    const buffer = Buffer.from(await photoRes.arrayBuffer());
+    const uploadResult = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'wandr/covers', resource_type: 'image' },
+        (err, result) => err ? reject(err) : resolve(result)
+      );
+      stream.end(buffer);
+    });
+
+    // Save to place
+    place.coverPhoto = uploadResult.secure_url;
+    await place.save();
+    console.log(`Auto cover photo saved for "${name}": ${uploadResult.secure_url}`);
+    res.json({ coverPhoto: uploadResult.secure_url });
+  } catch(e) {
+    console.error('Auto photo error:', e.message);
+    res.json({ coverPhoto: null });
+  }
+});
+
 // ── Google Places photo proxy (avoids CORS) ──
 app.get('/api/proxy/google-photo', require('./middleware/auth'), async (req, res) => {
   try {
