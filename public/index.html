@@ -3006,7 +3006,21 @@ async function scanImage(input){
       result.style.background='var(--sky-light)';
       result.style.borderColor='var(--sky-mid)';
       result.style.color='var(--sky)';
-      result.innerHTML=`✅ <strong>${parsed.name||''}</strong>${document.getElementById('pLocation').value?'<br><small style="font-weight:600;opacity:.8">📍 '+document.getElementById('pLocation').value+'</small>':''}<br><small style="font-weight:600;opacity:.65;font-size:10px;">${methodLabel} · ${foundCoords?'📍 Pinned on map!':'⚠️ Could not pin — try typing location manually'} · 📷 Will be saved as cover</small>`;
+      // Use Google Places photo as cover if available (better quality than screenshot)
+      if(parsed.googlePhotoUrl) {
+        // Fetch the Google photo and set as pending cover
+        try {
+          const photoRes = await fetch(parsed.googlePhotoUrl);
+          const blob = await photoRes.blob();
+          window._pendingCoverFile = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
+          showCoverPreview(parsed.googlePhotoUrl);
+          console.log('Using Google Places photo as cover');
+        } catch(e) {
+          console.log('Could not fetch Google photo, using uploaded image');
+        }
+      }
+
+      result.innerHTML=`✅ <strong>${parsed.name||''}</strong>${document.getElementById('pLocation').value?'<br><small style="font-weight:600;opacity:.8">📍 '+document.getElementById('pLocation').value+'</small>':''}<br><small style="font-weight:600;opacity:.65;font-size:10px;">${methodLabel} · ${foundCoords?'📍 Pinned on map!':'⚠️ Could not pin — try typing location manually'} · ${parsed.googlePhotoUrl ? '🖼 Using Google photo as cover' : '📷 Will be saved as cover'}</small>`;
     } else {
       result.style.background='var(--amber-light)';
       result.style.borderColor='rgba(245,166,35,.4)';
