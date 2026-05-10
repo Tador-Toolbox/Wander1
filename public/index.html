@@ -3011,14 +3011,17 @@ async function scanImage(input){
       window._googlePhotoSet = false;
       if(parsed.googlePhotoUrl) {
         try {
-          const photoRes = await fetch(parsed.googlePhotoUrl);
+          // Fetch via our proxy (avoids CORS with Google's API)
+          const photoRes = await apiFetch(parsed.googlePhotoUrl);
           const blob = await photoRes.blob();
           window._pendingCoverFile = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
-          window._googlePhotoSet = true; // Prevent uploaded file from overwriting
-          showCoverPreview(parsed.googlePhotoUrl);
-          console.log('Using Google Places photo as cover');
+          window._googlePhotoSet = true;
+          // Show preview using object URL
+          const previewUrl = URL.createObjectURL(blob);
+          showCoverPreview(previewUrl);
+          console.log('✅ Using Google Places photo as cover');
         } catch(e) {
-          console.log('Could not fetch Google photo, using uploaded image');
+          console.log('Could not fetch Google photo, using uploaded image:', e.message);
         }
       }
 
