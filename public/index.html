@@ -3409,6 +3409,21 @@ async function addSuggestionToTrip(idx, tripId){
     renderTrips();
     if(btn){ btn.textContent = '✓ Added!'; btn.style.background = 'var(--mint)'; }
     toast(`📍 "${s.name}" added to trip!`, 'ok');
+
+    // Auto-fetch Google Places photo as cover
+    if(p._id) {
+      try {
+        const photoRes = await apiFetch(`/api/places/${p._id}/fetch-google-photo`, { method: 'POST', body: JSON.stringify({ name: s.name, location: s.location }) });
+        if(photoRes.ok) {
+          const photoData = await photoRes.json();
+          if(photoData.coverPhoto) {
+            const place = places.find(x => x._id === p._id);
+            if(place) place.coverPhoto = photoData.coverPhoto;
+            console.log(`✅ Auto cover photo set for "${s.name}"`);
+          }
+        }
+      } catch(e) { console.log('Auto photo fetch failed:', e.message); }
+    }
   } catch {
     if(btn) btn.disabled = false;
     toast('Could not add place', 'err');
