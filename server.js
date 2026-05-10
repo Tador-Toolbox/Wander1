@@ -138,14 +138,19 @@ Reply ONLY with JSON in this exact format:
 
       // 2. Search Google Places for photo
       try {
-        const placesRes = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent('"' + parsed.name + '" ' + parsed.location)}&key=${mapsKey}`);
+        const placesQuery = '"' + parsed.name + '" ' + (parsed.location || '');
+        console.log(`AI Scan: Searching Places for photo: ${placesQuery}`);
+        const placesRes = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(placesQuery)}&key=${mapsKey}`);
         const placesData = await placesRes.json();
+        console.log(`AI Scan: Places search status: ${placesData.status}, results: ${placesData.results?.length || 0}`);
         const place = placesData.results?.[0];
         if (place?.photos?.[0]?.photo_reference) {
           const photoRef = place.photos[0].photo_reference;
           parsed.googlePhotoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${mapsKey}`;
           parsed.googlePlaceId = place.place_id;
-          console.log(`AI Scan: Found Google Places photo for "${parsed.name}"`);
+          console.log(`AI Scan: ✅ Found Google Places photo for "${parsed.name}" (${place.name})`);
+        } else {
+          console.log(`AI Scan: No photo found for "${parsed.name}" — place: ${place?.name || 'not found'}`);
         }
       } catch(e) { console.log('Places photo fetch failed:', e.message); }
     }
