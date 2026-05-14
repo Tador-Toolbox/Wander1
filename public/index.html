@@ -454,6 +454,9 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .chip[data-t="Shopping"].on{border-color:var(--tag-shopping);color:var(--tag-shopping);background:rgba(0,188,212,.08);}
 .chip[data-t="Night Club"].on{border-color:var(--tag-nightclub);color:var(--tag-nightclub);background:rgba(106,13,173,.08);}
 .chip[data-t="Bar"].on{border-color:var(--tag-bar);color:var(--tag-bar);background:rgba(230,126,34,.08);}
+.chip[data-t="Meat"].on{border-color:#c0392b;color:#c0392b;background:rgba(192,57,43,.08);}
+.chip[data-t="Italian"].on{border-color:#27ae60;color:#27ae60;background:rgba(39,174,96,.08);}
+.chip[data-t="Fish"].on{border-color:#2980b9;color:#2980b9;background:rgba(41,128,185,.08);}
 .places-list{flex:1;overflow-y:auto;padding:0 18px 24px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .pcard{background:#fff;border:2px solid var(--border);border-radius:24px;padding:16px;margin-bottom:10px;cursor:pointer;transition:var(--tr);box-shadow:0 2px 12px rgba(0,0,0,.04);animation:riseUp .3s cubic-bezier(.34,1.56,.64,1);}
 .pcard:hover{border-color:var(--sky-mid);transform:translateY(-2px);box-shadow:0 8px 24px rgba(74,158,255,.15);}
@@ -504,6 +507,9 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .topt[data-t="Shopping"].sel{background:rgba(0,188,212,.1);border-color:var(--tag-shopping);color:var(--tag-shopping);}
 .topt[data-t="Night Club"].sel{background:rgba(106,13,173,.1);border-color:var(--tag-nightclub);color:var(--tag-nightclub);}
 .topt[data-t="Bar"].sel{background:rgba(230,126,34,.1);border-color:var(--tag-bar);color:var(--tag-bar);}
+.topt[data-t="Meat"].sel{background:rgba(192,57,43,.1);border-color:#c0392b;color:#c0392b;}
+.topt[data-t="Italian"].sel{background:rgba(39,174,96,.1);border-color:#27ae60;color:#27ae60;}
+.topt[data-t="Fish"].sel{background:rgba(41,128,185,.1);border-color:#2980b9;color:#2980b9;}
 .sheet-divider{height:2px;background:var(--border);border-radius:1px;margin:18px -22px 18px;}
 .sec-lbl{font-size:10px;font-weight:800;color:var(--txt2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:9px;}
 .ig-row{display:flex;gap:7px;margin-bottom:6px;}
@@ -1351,6 +1357,9 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div class="topt" data-t="Shopping" onclick="toggleTag(this)">🛍 Shopping</div>
         <div class="topt" data-t="Night Club" onclick="toggleTag(this)">🎵 Night Club</div>
         <div class="topt" data-t="Bar" onclick="toggleTag(this)">🍸 Bar</div>
+        <div class="topt" data-t="Meat" onclick="toggleTag(this)">🥩 Meat</div>
+        <div class="topt" data-t="Italian" onclick="toggleTag(this)">🍝 Italian</div>
+        <div class="topt" data-t="Fish" onclick="toggleTag(this)">🐟 Fish</div>
       </div>
     </div>
     <div class="mf">
@@ -2166,8 +2175,8 @@ async function loadPlaces(){
   }catch(e){if(e.message!=='Unauthorized')toast('Failed to load places','err');}
 }
 
-const PCOL={Food:'#ff6b47',Beach:'#4a9eff',Nightlife:'#9b6dff',Nature:'#34c98a',Culture:'#f5a623',Coffee:'#a0522d',Beauty:'#e91e8c',Shopping:'#00bcd4','Night Club':'#6a0dad',Bar:'#e67e22'};
-const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸'};
+const PCOL={Food:'#ff6b47',Beach:'#4a9eff',Nightlife:'#9b6dff',Nature:'#34c98a',Culture:'#f5a623',Coffee:'#a0522d',Beauty:'#e91e8c',Shopping:'#00bcd4','Night Club':'#6a0dad',Bar:'#e67e22',Meat:'#c0392b',Italian:'#27ae60',Fish:'#2980b9'};
+const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸',Meat:'🥩',Italian:'🍝',Fish:'🐟'};
 function pc(t){return(t&&t[0])?PCOL[t[0]]||'#4a9eff':'#4a9eff';}
 function pi(t){return(t&&t[0])?PICO[t[0]]||'📍':'📍';}
 function mkIcon(tags){const c=pc(tags),e=pi(tags);return{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="44" height="54" viewBox="0 0 44 54"><filter id="sh"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,.18)"/></filter><path d="M22 0C9.85 0 0 9.85 0 22c0 16.5 22 32 22 32S44 38.5 44 22C44 9.85 34.15 0 22 0z" fill="${c}" filter="url(#sh)"/><circle cx="22" cy="22" r="13" fill="rgba(255,255,255,.3)"/><text x="22" y="28" text-anchor="middle" font-size="16">${e}</text></svg>`),scaledSize:new google.maps.Size(44,54),anchor:new google.maps.Point(22,54)};}
@@ -2530,7 +2539,7 @@ async function showAIScreen(){
   const allTags=places.flatMap(p=>p.tags||[]);
   const freq=allTags.reduce((a,t)=>{a[t]=(a[t]||0)+1;return a;},{});
   const topTag=Object.entries(freq).sort((a,b)=>b[1]-a[1])[0]?.[0];
-  const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸'};
+  const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸',Meat:'🥩',Italian:'🍝',Fish:'🐟'};
   if(topTag){
     const ti=document.getElementById('aiTopCatIcon');if(ti)ti.textContent=PICO[topTag]||'📍';
     const tl=document.getElementById('aiTopCatLabel');if(tl)tl.textContent=topTag;
@@ -3162,7 +3171,7 @@ function renderTrips(){
     const count=places.filter(p=>p.trip===t._id).length;
     // Build emoji pills from top 3 places
     const tripPlaces=places.filter(p=>p.trip===t._id);
-    const PICO_MAP={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸'};
+    const PICO_MAP={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸',Meat:'🥩',Italian:'🍝',Fish:'🐟'};
     const topTags=[...new Set(tripPlaces.flatMap(p=>p.tags||[]))].slice(0,3);
     const pills=topTags.map(tag=>`<div style="background:rgba(255,255,255,.2);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.25);border-radius:9px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:15px;">${PICO_MAP[tag]||'📍'}</div>`).join('');
     const extraCount=count-topTags.length;
@@ -5206,9 +5215,14 @@ function openPlaceInfo(id){
   const navBtns=document.getElementById('piNavBtns');
   if(p.lat&&p.lng){
     document.getElementById('piWaze').href=`https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`;
-    // Build Google Maps URL — prefer name search so Google shows correct business page
-    const gmapsQuery = p.name + (p.location ? ' ' + p.location : '') + (p.address ? ' ' + p.address : '');
-    document.getElementById('piGmaps').href=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(gmapsQuery)}`;
+    // Use coordinates for navigation — more accurate, especially for GPS-shared locations
+    if(p.placeId) {
+      // Has a Google Place ID — use it for direct business page
+      document.getElementById('piGmaps').href=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name)}&query_place_id=${p.placeId}`;
+    } else {
+      // No Place ID (e.g. GPS-shared location) — navigate by exact coordinates
+      document.getElementById('piGmaps').href=`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
+    }
     navBtns.style.display='block';
   } else { navBtns.style.display='none'; }
 
