@@ -28,6 +28,7 @@
 html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;color:var(--txt);}
 
 .screen{display:none;flex-direction:column;width:100%;height:100vh;overflow:hidden;position:relative;}
+#aiScreen{height:100vh;overflow-y:scroll!important;-webkit-overflow-scrolling:touch;}
 .screen.active{display:flex;}
 
 /* ── SPLASH ── */
@@ -63,11 +64,25 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans'
 .ob-upload-label{font-size:14px;font-weight:800;color:var(--txt);margin-bottom:4px;}
 .ob-upload-hint{font-size:12px;color:var(--txt3);}
 .ob-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 24px;max-width:400px;margin:0 auto 8px;width:100%;}
-.ob-thumb{width:100%;aspect-ratio:1;border-radius:10px;object-fit:cover;border:2px solid var(--border);}
+.ob-thumb-wrap{position:relative;}
+.ob-thumb{width:100%;aspect-ratio:1;border-radius:10px;object-fit:cover;border:2px solid var(--border);display:block;}
+.ob-thumb-del{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;}
+.ob-thumb-del:hover{background:var(--coral);}
 .ob-count{font-size:12px;color:var(--txt3);text-align:center;margin-bottom:16px;}
 .ob-analyze-btn{width:calc(100% - 48px);max-width:400px;padding:15px;border:none;border-radius:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(102,126,234,.35);transition:all .2s;margin:0 auto;display:block;}
 .ob-analyze-btn:disabled{opacity:.45;cursor:not-allowed;}
 .ob-analyze-btn:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(102,126,234,.45);}
+.ob-section{margin:20px 0 0;}
+.ob-section-title{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:4px;}
+.ob-section-sub{font-size:11px;color:var(--ink3);margin-bottom:12px;line-height:1.4;}
+.ob-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px;}
+.ob-chip{padding:8px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--ink2);cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.ob-chip.sel{background:var(--ink);color:#fff;border-color:var(--ink);}
+.ob-radio-group{display:flex;flex-direction:column;gap:8px;}
+.ob-radio{border:1.5px solid var(--border2);border-radius:14px;padding:12px 14px;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.ob-radio.sel{border-color:var(--ink);background:rgba(26,23,20,.04);}
+.ob-radio .or-label{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px;}
+.ob-radio .or-sub{font-size:11px;color:var(--ink3);line-height:1.4;}
 .ob-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;}
 .ob-loading .obl-icon{font-size:44px;animation:spin 1.5s linear infinite;display:inline-block;margin-bottom:20px;}
 .ob-loading .obl-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--txt);margin-bottom:8px;}
@@ -93,6 +108,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans'
 .fg label{display:block;font-size:10px;font-weight:800;color:var(--txt2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px;}
 .fg input{width:100%;padding:13px 16px;background:var(--bg);border:2px solid var(--border);border-radius:16px;color:var(--txt);font-family:'Nunito',sans-serif;font-size:15px;font-weight:600;outline:none;transition:var(--tr);}
 .fg input:focus{border-color:var(--sky);box-shadow:0 0 0 4px var(--sky-glow);background:#fff;}
+.pwd-wrap{position:relative;}
+.pwd-wrap input{padding-right:44px;width:100%;}
+.pwd-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink3);padding:4px;display:flex;align-items:center;justify-content:center;transition:color .15s;}
+.pwd-eye:hover{color:var(--ink);}
 .auth-error{background:var(--coral-light);border:2px solid rgba(255,107,71,.3);border-radius:12px;padding:10px 14px;font-size:12px;font-weight:700;color:var(--coral);margin-bottom:10px;display:none;}
 .btn-primary{width:100%;padding:15px;background:linear-gradient(135deg,var(--sky),var(--sky-dark));border:none;border-radius:18px;color:#fff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;transition:var(--tr);margin-top:6px;box-shadow:0 8px 24px rgba(74,158,255,.4);letter-spacing:.3px;}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(74,158,255,.45);}
@@ -165,6 +184,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans'
 .suggest-card.michelin .sc-tag{background:#fff0f0;border-color:#bf0000;color:#8b0000;}
 .suggest-card.michelin .sc-maps-link{color:#bf0000;}
 .suggest-card.michelin .sc-add{background:linear-gradient(135deg,#bf0000,#8b0000);}
+.suggest-card.tabelog{border-color:#534AB7;background:linear-gradient(to bottom right,#fff,#f8f7ff);}
+.suggest-card.tabelog:hover{border-color:#3C3489;box-shadow:0 4px 16px rgba(83,74,183,.12);}
+.suggest-card.tabelog .sc-tag{background:#f0eeff;border-color:#534AB7;color:#3C3489;}
+.suggest-card.tabelog .sc-add{background:linear-gradient(135deg,#534AB7,#3C3489);}
+.sc-tabelog-badge{display:inline-block;background:#534AB7;color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;margin-bottom:8px;letter-spacing:.04em;}
 .suggest-card.gem:hover{border-color:#e8890a;}
 .sc-gem-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#f5a623,#e8890a);color:#fff;border-radius:10px;padding:3px 10px;font-size:10px;font-weight:800;margin-bottom:8px;letter-spacing:.03em;}
 .sc-maps-link{display:inline-flex;align-items:center;gap:4px;color:#1D9E75;font-size:11px;font-weight:700;text-decoration:none;margin-bottom:8px;}
@@ -188,6 +212,76 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans'
 .holiday-item .hi-note{font-size:11px;color:var(--txt2);line-height:1.4;margin-top:3px;}
 .trip-btn.story:hover{background:#f5a623;color:#fff;}
 /* Trip Plan Modal */
+/* Event Discover Modal */
+#eventDiscoverModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;z-index:9999;backdrop-filter:blur(8px);}
+#eventDiscoverModal .ed-sheet{background:var(--bg);border-radius:28px 28px 0 0;width:100%;max-width:520px;max-height:92vh;display:flex;flex-direction:column;}
+#eventDiscoverModal .ed-head{padding:22px 20px 16px;border-bottom:1px solid var(--border);flex-shrink:0;position:relative;}
+#eventDiscoverModal .ed-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--ink);}
+#eventDiscoverModal .ed-sub{font-size:12px;color:var(--ink3);margin-top:3px;}
+#eventDiscoverModal .ed-close{position:absolute;top:18px;right:18px;background:var(--border);border:none;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;color:var(--ink2);}
+#eventDiscoverModal .ed-body{overflow-y:auto;padding:18px 18px 36px;flex:1;-webkit-overflow-scrolling:touch;}
+/* Event card */
+.ed-card{background:var(--card);border:1.5px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:14px;}
+.ed-card-rank{height:4px;width:100%;}
+.ed-card-rank.rank-1{background:linear-gradient(90deg,#C9A84C,#f5d88a);}
+.ed-card-rank.rank-2{background:linear-gradient(90deg,#2B7FBF,#4a9eff);}
+.ed-card-rank.rank-3{background:linear-gradient(90deg,#1A6B4A,#34c98a);}
+.ed-card-body{padding:16px;}
+.ed-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
+.ed-card-name{font-size:15px;font-weight:800;color:var(--ink);flex:1;padding-right:10px;}
+.ed-match{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+.ed-match-pct{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--ink);}
+.ed-match-lbl{font-size:9px;font-weight:700;color:var(--ink3);letter-spacing:.06em;}
+.ed-meta{font-size:11px;color:var(--ink3);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:8px;}
+.ed-meta span{display:flex;align-items:center;gap:3px;}
+.ed-concierge{background:linear-gradient(135deg,#f8f5ff,#eeedfb);border-radius:12px;padding:11px 13px;margin-bottom:10px;font-size:12px;color:var(--ink2);line-height:1.6;font-style:italic;border-left:3px solid var(--purple);}
+.ed-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+.ed-tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:8px;background:var(--sky-light);color:var(--sky);}
+.ed-tag.timing-urgent{background:#fff3cd;color:#856404;}
+.ed-tag.timing-soon{background:var(--mint-light);color:var(--mint);}
+.ed-footer{display:flex;gap:8px;}
+.ed-link{flex:1;padding:9px;border-radius:12px;border:1.5px solid var(--border2);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:4px;}
+.ed-link.primary{background:var(--ink);color:#fff;border-color:var(--ink);}
+/* Loading states */
+.ed-loading{text-align:center;padding:44px 20px;}
+.ed-loading .el-icon{font-size:40px;margin-bottom:14px;}
+.ed-loading .el-steps{margin-top:16px;display:flex;flex-direction:column;gap:6px;}
+.ed-loading .el-step{font-size:12px;color:var(--ink3);padding:6px 12px;border-radius:10px;background:var(--card);border:1px solid var(--border);transition:all .3s;}
+.ed-loading .el-step.active{color:var(--ink);border-color:var(--sky);background:var(--sky-light);font-weight:700;}
+.ed-loading .el-step.done{color:var(--mint);border-color:var(--mint);background:var(--mint-light);}
+/* Identity cube pill */
+.ed-cube{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.ed-cube-label{font-size:10px;font-weight:800;color:var(--ink3);letter-spacing:.07em;width:100%;margin-bottom:4px;}
+.ed-cube-pill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:8px;background:var(--ink);color:#fff;}
+.ed-cube-pill.music{background:#5B4FCF;}
+.ed-cube-pill.goal{background:#1A6B4A;}
+.ed-cube-pill.vibe{background:#1A5F9A;}
+/* Right Now Modal */
+#rightNowModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:9999;backdrop-filter:blur(6px);}
+#rightNowModal .rn-sheet{background:var(--bg);border-radius:28px 28px 0 0;width:100%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;}
+#rightNowModal .rn-head{padding:22px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;}
+#rightNowModal .rn-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--ink);}
+#rightNowModal .rn-sub{font-size:12px;color:var(--ink3);margin-top:3px;}
+#rightNowModal .rn-close{background:var(--border);border:none;width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;color:var(--ink2);flex-shrink:0;margin-top:2px;}
+#rightNowModal .rn-body{overflow-y:auto;padding:18px 18px 36px;flex:1;}
+.rn-idea{background:var(--card);border:1.5px solid var(--border);border-radius:20px;padding:18px;margin-bottom:12px;position:relative;overflow:hidden;}
+.rn-idea::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.rn-idea.idea-0::before{background:linear-gradient(90deg,#667eea,#764ba2);}
+.rn-idea.idea-1::before{background:linear-gradient(90deg,#1A6B4A,#2d9e75);}
+.rn-idea.idea-2::before{background:linear-gradient(90deg,#b45309,#d97706);}
+.rn-type-badge{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;letter-spacing:.05em;margin-bottom:8px;}
+.rn-type-food{background:#f0fdf4;color:#166534;}
+.rn-type-experience{background:#eff6ff;color:#1d4ed8;}
+.rn-type-outdoor{background:#fff7ed;color:#92400e;}
+.rn-idea .ri-emoji{font-size:32px;margin-bottom:10px;}
+.rn-idea .ri-title{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:5px;}
+.rn-idea .ri-desc{font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:10px;}
+.rn-idea .ri-why{font-size:11px;color:var(--ink3);font-style:italic;}
+.rn-idea .ri-maps{display:inline-flex;align-items:center;gap:4px;color:var(--mint);font-size:11px;font-weight:700;text-decoration:none;margin-top:8px;}
+.rn-loading{text-align:center;padding:40px 20px;}
+.rn-loading .rl-icon{font-size:36px;animation:spin 1.5s linear infinite;display:inline-block;margin-bottom:12px;}
+.rn-loading p{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px;}
+.rn-loading small{font-size:12px;color:var(--ink3);}
 /* AI Agent Modal */
 #aiAgentModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:9999;backdrop-filter:blur(4px);}
 #aiAgentModal .aam-sheet{background:#fff;border-radius:28px 28px 0 0;width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;}
@@ -360,6 +454,12 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .chip[data-t="Shopping"].on{border-color:var(--tag-shopping);color:var(--tag-shopping);background:rgba(0,188,212,.08);}
 .chip[data-t="Night Club"].on{border-color:var(--tag-nightclub);color:var(--tag-nightclub);background:rgba(106,13,173,.08);}
 .chip[data-t="Bar"].on{border-color:var(--tag-bar);color:var(--tag-bar);background:rgba(230,126,34,.08);}
+.chip[data-t="Meat"].on{border-color:#c0392b;color:#c0392b;background:rgba(192,57,43,.08);}
+.chip[data-t="Italian"].on{border-color:#27ae60;color:#27ae60;background:rgba(39,174,96,.08);}
+.chip[data-t="Fish"].on{border-color:#2980b9;color:#2980b9;background:rgba(41,128,185,.08);}
+.chip[data-t="Photo Spot"].on{border-color:#e1306c;color:#e1306c;background:rgba(225,48,108,.08);}
+.chip[data-t="Fun"].on{border-color:#ffc700;color:#c99700;background:rgba(255,199,0,.08);}
+.chip[data-t="Hotel"].on{border-color:#5e548e;color:#5e548e;background:rgba(94,84,142,.08);}
 .places-list{flex:1;overflow-y:auto;padding:0 18px 24px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
 .pcard{background:#fff;border:2px solid var(--border);border-radius:24px;padding:16px;margin-bottom:10px;cursor:pointer;transition:var(--tr);box-shadow:0 2px 12px rgba(0,0,0,.04);animation:riseUp .3s cubic-bezier(.34,1.56,.64,1);}
 .pcard:hover{border-color:var(--sky-mid);transform:translateY(-2px);box-shadow:0 8px 24px rgba(74,158,255,.15);}
@@ -410,6 +510,12 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .topt[data-t="Shopping"].sel{background:rgba(0,188,212,.1);border-color:var(--tag-shopping);color:var(--tag-shopping);}
 .topt[data-t="Night Club"].sel{background:rgba(106,13,173,.1);border-color:var(--tag-nightclub);color:var(--tag-nightclub);}
 .topt[data-t="Bar"].sel{background:rgba(230,126,34,.1);border-color:var(--tag-bar);color:var(--tag-bar);}
+.topt[data-t="Meat"].sel{background:rgba(192,57,43,.1);border-color:#c0392b;color:#c0392b;}
+.topt[data-t="Italian"].sel{background:rgba(39,174,96,.1);border-color:#27ae60;color:#27ae60;}
+.topt[data-t="Fish"].sel{background:rgba(41,128,185,.1);border-color:#2980b9;color:#2980b9;}
+.topt[data-t="Photo Spot"].sel{background:rgba(225,48,108,.1);border-color:#e1306c;color:#e1306c;}
+.topt[data-t="Fun"].sel{background:rgba(255,199,0,.1);border-color:#ffc700;color:#c99700;}
+.topt[data-t="Hotel"].sel{background:rgba(94,84,142,.1);border-color:#5e548e;color:#5e548e;}
 .sheet-divider{height:2px;background:var(--border);border-radius:1px;margin:18px -22px 18px;}
 .sec-lbl{font-size:10px;font-weight:800;color:var(--txt2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:9px;}
 .ig-row{display:flex;gap:7px;margin-bottom:6px;}
@@ -541,7 +647,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
 
 /* ── SEARCH VIEW ── */
-#searchView{display:none;position:fixed;top:0;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));background:var(--bg);flex-direction:column;z-index:2;}
+#searchView{display:none;position:fixed;top:108px;left:0;right:0;bottom:calc(68px + env(safe-area-inset-bottom));background:var(--bg);flex-direction:column;z-index:2;overflow:hidden;}
 .search-view-top{padding:14px 18px;flex-shrink:0;}
 .search-view-input{width:100%;padding:13px 16px 13px 44px;background:#fff;border:2px solid var(--border);border-radius:16px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:var(--txt);outline:none;transition:var(--tr);box-sizing:border-box;}
 .search-view-input:focus{border-color:var(--sky);}
@@ -556,7 +662,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .user-row-follow{padding:6px 14px;border-radius:20px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;border:2px solid var(--sky);background:var(--sky);color:#fff;transition:var(--tr);}
 .user-row-follow.following{background:#fff;color:var(--sky);}
 /* ── MESSAGES ── */
-#messagesView{display:none;position:fixed;top:0;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));background:var(--bg);flex-direction:column;z-index:2;}
+#messagesView{display:none;position:fixed;top:108px;left:0;right:0;bottom:calc(68px + env(safe-area-inset-bottom));background:var(--bg);flex-direction:column;z-index:2;overflow:hidden;}
 #chatView{display:none;position:fixed;top:0;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));background:var(--bg);flex-direction:column;z-index:3;}
 .msg-header{background:#fff;border-bottom:1.5px solid var(--border);padding:14px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
 .msg-back{background:none;border:none;font-size:20px;cursor:pointer;color:var(--txt2);padding:0 4px;}
@@ -589,7 +695,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 #userProfileView{display:none;position:fixed;top:0;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));background:var(--bg);flex-direction:column;overflow:hidden;z-index:2;}
 .up-header{background:#fff;border-bottom:1.5px solid var(--border);flex-shrink:0;}
 .up-top{display:flex;align-items:flex-start;gap:16px;padding:20px 18px 14px;}
-.up-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--sky),var(--sky-dark));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;overflow:hidden;flex-shrink:0;border:3px solid var(--border);}
+.up-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--sky),var(--sky-dark));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;overflow:hidden;flex-shrink:0;border:3px solid var(--border);margin-top:6px;}
 .up-avatar img{width:100%;height:100%;object-fit:cover;}
 .up-info{flex:1;}
 .up-name{font-size:18px;font-weight:800;color:var(--txt);}
@@ -711,11 +817,14 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .bnav-center-btn:active{transform:scale(.95);}
 /* Active indicator */
 .bnav-btn.on::after{
-  content:'';position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);
-  width:20px;height:3px;border-radius:3px;
+  content:'';position:absolute;bottom:0px;left:50%;transform:translateX(-50%);
+  width:24px;height:3px;border-radius:3px;
   background:var(--ink);
 }
-.bnav-btn::after{content:'';position:absolute;bottom:-2px;width:0;height:3px;}
+.bnav-btn::after{content:'';position:absolute;bottom:0px;width:0;height:3px;}
+/* Toggle bar active state */
+.map-toggle-btn{flex:1;padding:6px 4px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid var(--border2);background:var(--bg);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.map-toggle-btn.active{background:var(--ink)!important;color:#fff!important;border-color:var(--ink)!important;}
 
 /* Adjust app content for bottom nav */
 .app-content{flex:1;position:relative;overflow:hidden;padding-bottom:0;}
@@ -735,7 +844,8 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
   <div class="splash-content">
     <span class="splash-globe">🌍</span>
     <span class="splash-title">Wandr</span>
-    <p class="splash-sub">your personal travel map ✈️</p>
+    <p class="splash-sub">your world, your way, your AI ✦</p>
+    <div id="splashStep" style="font-size:13px;color:var(--txt3);margin-top:8px;margin-bottom:16px;min-height:20px;transition:opacity .3s;">Loading your world…</div>
     <div class="splash-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
   </div>
 </div>
@@ -755,7 +865,14 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <div class="fg"><label>Handle</label><div style="position:relative"><span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--txt3);font-weight:700;">@</span><input type="text" id="authHandle" placeholder="johndoe" autocomplete="username" style="padding-left:28px;"></div></div>
     </div>
     <div class="fg"><label>Email</label><input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email"></div>
-    <div class="fg"><label>Password</label><input type="password" id="authPass" placeholder="••••••••" autocomplete="current-password"></div>
+    <div class="fg"><label>Password</label>
+      <div class="pwd-wrap">
+        <input type="password" id="authPass" placeholder="••••••••" autocomplete="current-password">
+        <button type="button" class="pwd-eye" onclick="togglePwd('authPass',this)" tabindex="-1">
+          <svg id="eyeIcon_authPass" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
     <div class="auth-error" id="authErr"></div>
     <button class="btn-primary" id="authBtn" onclick="doAuth()">Sign In 🚀</button>
     <div class="switch-mode" id="switchMode">Don't have an account? <span onclick="toggleMode()">Create one →</span></div>
@@ -766,16 +883,48 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 </div>
 
 <!-- AI IDENTITY SCREEN -->
-<div id="aiScreen" class="screen" style="overflow-y:auto;-webkit-overflow-scrolling:touch;">
-  <div style="background:linear-gradient(160deg,#1A1714 0%,#2D2925 55%,var(--bg) 100%);padding:56px 22px 28px;flex-shrink:0;">
+<div id="aiScreen" class="screen" style="overflow:hidden;">
+  <div style="height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:80px;">
+  <div style="background:linear-gradient(160deg,#1A1714 0%,#2D2925 55%,var(--bg) 100%);padding:52px 22px 24px;">
     <div style="font-size:12px;color:rgba(255,255,255,.4);font-weight:500;margin-bottom:6px;" id="aiGreeting">Good day ✦</div>
     <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:20px;">Here's how AI<br>sees <span style="color:#C9A84C;">you</span></div>
     <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:18px;">
       <div style="font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.1em;margin-bottom:10px;font-weight:600;">YOUR PERSONALITY</div>
       <div style="font-size:13px;color:rgba(255,255,255,.85);line-height:1.7;font-style:italic;" id="aiSummaryText">Build your AI profile to see your personality summary.</div>
     </div>
+    <button onclick="openAIAgent()" style="margin-top:14px;width:100%;padding:12px;border:1.5px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(255,255,255,.08);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:rgba(255,255,255,.8);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;backdrop-filter:blur(4px);">
+      📸 Update my AI profile
+    </button>
+
+
   </div>
   <div style="padding:22px 22px 100px;">
+
+
+    <button onclick="openRightNow()" style="width:100%;padding:16px;border:none;border-radius:20px;background:linear-gradient(135deg,#1A1714,#2D2925);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:12px;box-shadow:0 6px 24px rgba(26,23,20,.18);">
+      <span style="font-size:24px;">⚡</span>
+      <div style="text-align:left;flex:1;">
+        <div style="font-size:14px;font-weight:800;">What should I do right now?</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;">2 ideas based on your taste + location + time</div>
+      </div>
+      <span style="font-size:18px;color:rgba(255,255,255,.4);">›</span>
+    </button>
+    <button onclick="openEventDiscover()" style="width:100%;padding:16px;border:none;border-radius:20px;background:linear-gradient(135deg,#1A1714,#2D2925);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:12px;box-shadow:0 6px 24px rgba(26,23,20,.18);">
+      <span style="font-size:24px;">🎯</span>
+      <div style="text-align:left;flex:1;">
+        <div style="font-size:14px;font-weight:800;">AI Event Discover</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;">Top 3 events ranked for your Identity Cube</div>
+      </div>
+      <span style="font-size:18px;color:rgba(255,255,255,.4);">›</span>
+    </button>
+    <button onclick="openNewTrip()" style="width:100%;padding:16px;border:none;border-radius:20px;background:linear-gradient(135deg,#1A1714,#2D2925);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:24px;box-shadow:0 6px 24px rgba(26,23,20,.18);">
+      <span style="font-size:24px;">✈️</span>
+      <div style="text-align:left;flex:1;">
+        <div style="font-size:14px;font-weight:800;">Plan a Trip</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;">Create a new trip and start saving places</div>
+      </div>
+      <span style="font-size:18px;color:rgba(255,255,255,.4);">›</span>
+    </button>
     <div style="font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.08em;margin-bottom:12px;">TASTE TAGS</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;" id="aiTagsContainer">
       <div style="background:var(--border);border-radius:10px;padding:7px 14px;font-size:12px;color:var(--ink3);">No tags yet</div>
@@ -801,9 +950,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div style="font-size:12px;color:var(--ink);margin-top:2px;" id="aiStyleLabel">—</div>
       </div>
     </div>
-    <button onclick="openAIAgent()" style="width:100%;padding:14px;border:2px dashed var(--border2);border-radius:16px;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-      📸 Update my AI profile
-    </button>
+  </div>
   </div>
 </div>
 
@@ -816,14 +963,9 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 <div id="mapScreen" class="screen">
   <div class="app-header">
     <div class="h-logo" onclick="showMap()" style="cursor:pointer;">Wandr <span class="h-dot">·</span></div>
-    <button id="btnAIAgent" onclick="openAIAgent()" title="AI Agent" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:22px;padding:7px 14px;display:flex;align-items:center;gap:6px;cursor:pointer;box-shadow:0 4px 14px rgba(102,126,234,.35);transition:all .2s;">
-      <span style="font-size:13px;">✦</span>
-      <span style="font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;color:#fff;letter-spacing:.02em;">AI Agent</span>
-    </button>
+
     <div style="display:flex;align-items:center;gap:8px;">
-      <button onclick="showMyProfile()" title="My Profile" style="background:none;border:none;cursor:pointer;padding:0;position:relative;">
-        <div id="headerMyProfile" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--mint),var(--sky));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;overflow:hidden;border:2px solid var(--mint);flex-shrink:0;">🗺️</div>
-      </button>
+
       <button id="profileBtn" onclick="openProfile()" title="Edit Profile" style="background:none;border:none;cursor:pointer;padding:0;">
         <div id="headerAvatar" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--sky),var(--sky-dark));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;overflow:hidden;border:2px solid var(--border);flex-shrink:0;">?</div>
       </button>
@@ -842,7 +984,6 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
       <span>Map</span>
     </button>
-    <button class="bnav-center-btn" onclick="toggleFab()">＋</button>
     <button class="bnav-btn" id="btnTrips" onclick="showTrips()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5c-1.5-1.5-3.5-1.5-5 0L11 6 2.8 4.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L6 10l-2 3c-.3.4-.2 1 .2 1.3l.8.5c.4.3 1 .2 1.3-.2L8 12l4 4-1.3 3.2c-.1.4 0 .9.3 1.2l.5.4c.4.3.9.3 1.3 0l.5-.3c.4-.3.6-.7.5-1.3z"/></svg>
       <span>Trips</span>
@@ -860,10 +1001,10 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
   <!-- Map/List/Social toggle bar -->
   <div id="mapViewToggle" style="position:fixed;top:60px;left:0;right:0;z-index:199;background:rgba(250,248,244,.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;gap:6px;">
-    <button onclick="showMap()" id="toggleMap" style="flex:1;padding:7px;border-radius:10px;background:var(--ink);color:#fff;border:none;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">🗺 Map</button>
-    <button onclick="showList()" id="toggleSocial" style="flex:1;padding:7px;border-radius:10px;background:var(--bg);color:var(--ink2);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">🌐 Social</button>
-    <button onclick="showSearch()" id="toggleSearch" style="flex:1;padding:7px;border-radius:10px;background:var(--bg);color:var(--ink2);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">🔍 Search</button>
-    <button onclick="showMessages()" id="toggleMessages" style="flex:1;padding:7px;border-radius:10px;background:var(--bg);color:var(--ink2);border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;position:relative;">💬 <span id="msgBadge" style="display:none;position:absolute;top:2px;right:6px;width:7px;height:7px;background:var(--coral);border-radius:50%;"></span>Chat</button>
+    <button onclick="showMap()" id="toggleMap" class="map-toggle-btn active">🗺 Map</button>
+    <button onclick="showList()" id="toggleSocial" class="map-toggle-btn">🌐 Feed</button>
+    <button onclick="showSearch()" id="toggleSearch" class="map-toggle-btn">🔍 Search</button>
+    <button onclick="showMessages()" id="toggleMessages" class="map-toggle-btn" style="position:relative;">💬 Messages<span id="msgBadge" style="display:none;position:absolute;top:2px;right:6px;width:7px;height:7px;background:var(--coral);border-radius:50%;"></span></button>
   </div>
 
   <div class="app-content">
@@ -975,45 +1116,56 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
 <!-- OVERLAY: NEW TRIP -->
 <div class="overlay" id="newTripOverlay">
-  <div class="sheet">
-    <div class="drag-bar"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-      <div class="sheet-title" id="tripFormTitle" style="margin-bottom:0">✈️ New Trip</div>
-      <button onclick="closeOverlay('newTripOverlay')" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);">✕</button>
-    </div>
-    <div class="mf">
-      <label>Trip Name</label>
-      <input type="text" id="tripName" placeholder="e.g. Vietnam 2025, Paris Honeymoon…">
-    </div>
-    <div class="mf">
-      <label>Emoji</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="emojiPicker">
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="✈️">✈️</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🏖">🏖</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🗺">🗺</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🏔">🏔</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🌴">🌴</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🍜">🍜</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🎒">🎒</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="💑">💑</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="👨‍👩‍👧‍👦">👨‍👩‍👧‍👦</span>
-        <span style="font-size:24px;cursor:pointer;padding:6px;border-radius:10px;border:2px solid transparent;" onclick="pickEmoji(this)" data-e="🎉">🎉</span>
+  <div class="sheet" style="padding:0;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#0f3460,#1a5276);padding:24px 20px 20px;position:relative;">
+      <div class="drag-bar" style="background:rgba(255,255,255,.3);"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+        <div>
+          <div style="font-size:22px;font-weight:800;color:#fff;" id="tripFormTitle">✈️ New Trip</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:2px;">Where are you headed?</div>
+        </div>
+        <button onclick="closeOverlay('newTripOverlay')" style="background:rgba(255,255,255,.15);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;">✕</button>
       </div>
     </div>
-    <div class="mf">
-      <label>Color</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="colorPicker">
-        <span style="width:32px;height:32px;border-radius:50%;background:#4a9eff;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#4a9eff"></span>
-        <span style="width:32px;height:32px;border-radius:50%;background:#ff6b47;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#ff6b47"></span>
-        <span style="width:32px;height:32px;border-radius:50%;background:#34c98a;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#34c98a"></span>
-        <span style="width:32px;height:32px;border-radius:50%;background:#9b6dff;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#9b6dff"></span>
-        <span style="width:32px;height:32px;border-radius:50%;background:#f5a623;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#f5a623"></span>
-        <span style="width:32px;height:32px;border-radius:50%;background:#ec4899;cursor:pointer;border:3px solid transparent;" onclick="pickColor(this)" data-c="#ec4899"></span>
+    <div style="padding:20px;">
+      <div class="mf">
+        <label>TRIP NAME</label>
+        <input type="text" id="tripName" placeholder="e.g. Vietnam 2025, Paris Honeymoon…" style="font-size:15px;font-weight:600;">
+        <div style="display:flex;align-items:flex-start;gap:6px;margin-top:8px;background:#f0f7ff;border-radius:10px;padding:8px 10px;">
+          <span style="font-size:14px;flex-shrink:0;">💡</span>
+          <div style="font-size:12px;color:#1a5276;line-height:1.5;">Include the city or country name — e.g. <strong>"Tokyo 2025"</strong> not just "Asia Trip". Helps AI suggest more accurate places.</div>
+        </div>
       </div>
-    </div>
-    <div class="act-row">
-      <button class="btn-cancel" onclick="closeOverlay('newTripOverlay')">Cancel</button>
-      <button class="btn-save" onclick="saveTrip()">Save Trip ✈️</button>
+      <div class="mf">
+        <label>PICK AN EMOJI</label>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;" id="emojiPicker">
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="✈️">✈️</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🏖">🏖</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🗺">🗺</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🏔">🏔</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🌴">🌴</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🍜">🍜</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🎒">🎒</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="💑">💑</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="👨‍👩‍👧‍👦">👨‍👩‍👧‍👦</span>
+          <span style="font-size:26px;cursor:pointer;padding:8px;border-radius:12px;border:2px solid transparent;text-align:center;background:var(--bg2);" onclick="pickEmoji(this)" data-e="🎉">🎉</span>
+        </div>
+      </div>
+      <div class="mf">
+        <label>TRIP COLOR</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;" id="colorPicker">
+          <span style="width:36px;height:36px;border-radius:50%;background:#4a9eff;cursor:pointer;border:3px solid transparent;box-shadow:0 2px 8px rgba(74,158,255,.4);" onclick="pickColor(this)" data-c="#4a9eff"></span>
+          <span style="width:36px;height:36px;border-radius:50%;background:#ff6b47;cursor:pointer;border:3px solid transparent;box-shadow:0 2px 8px rgba(255,107,71,.4);" onclick="pickColor(this)" data-c="#ff6b47"></span>
+          <span style="width:36px;height:36px;border-radius:50%;background:#34c98a;cursor:pointer;border:3px solid transparent;box-shadow:0 2px 8px rgba(52,201,138,.4);" onclick="pickColor(this)" data-c="#34c98a"></span>
+          <span style="width:36px;height:36px;border-radius:50%;background:#9b6dff;cursor:pointer;border:3px solid transparent;box-shadow:0 2px 8px rgba(155,109,255,.4);" onclick="pickColor(this)" data-c="#9b6dff"></span>
+          <span style="width:36px;height:36px;border-radius:50%;background:#f5a623;cursor:pointer;border:3px solid transparent;box-shadow:0 2px 8px rgba(245,166,35,.4);" onclick="pickColor(this)" data-c="#f5a623"></span>
+          <span style="width:36px;height:36px;border-radius:50%;background:#ec4899;cursor:pointer;border:3px solid transparent;box-shadow:0 2px 8px rgba(236,72,153,.4);" onclick="pickColor(this)" data-c="#ec4899"></span>
+        </div>
+      </div>
+      <div class="act-row" style="margin-top:8px;">
+        <button class="btn-cancel" onclick="closeOverlay('newTripOverlay')">Cancel</button>
+        <button class="btn-save" onclick="saveTrip()" style="background:linear-gradient(135deg,#0f3460,#1a5276);">Save Trip ✈️</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1027,6 +1179,23 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <button onclick="closeOverlay('shareOverlay')" style="background:var(--bg);border:none;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--txt2);">✕</button>
     </div>
     <div class="import-preview" id="shareTripPreview"></div>
+
+    <!-- Collaborative invite section -->
+    <div style="background:var(--mint-light);border:1.5px solid rgba(26,107,74,.15);border-radius:16px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:800;color:var(--mint);letter-spacing:.05em;margin-bottom:10px;">👥 INVITE A WANDR USER</div>
+      <div style="font-size:12px;color:var(--ink2);margin-bottom:10px;line-height:1.5;">Invite a Wandr user to collaborate — they can add places to this trip too.</div>
+      <div style="display:flex;gap:8px;">
+        <div style="position:relative;flex:1;">
+          <input type="text" id="collabHandleInput" placeholder="@username" autocomplete="off"
+            oninput="onCollabInput(this.value)"
+            style="width:100%;box-sizing:border-box;padding:10px 14px;border:1.5px solid var(--border2);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:#fff;outline:none;">
+          <div id="collabDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--border2);border-radius:12px;z-index:999;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.12);"></div>
+        </div>
+        <button onclick="inviteCollaborator()" style="padding:10px 16px;border:none;border-radius:12px;background:var(--mint);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Invite</button>
+      </div>
+      <div id="collabList" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+
     <div class="export-opts">
       <button class="export-btn" onclick="generateShareLink()">🔗 Generate Share Link</button>
       <button class="export-btn" onclick="exportJSON()">📥 Download as JSON</button>
@@ -1180,6 +1349,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div class="add-photo-btn" onclick="document.getElementById('photoInput').click()">+</div>
       </div>
       <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="uploadPhoto(this)">
+      <input type="file" id="videoInput" accept="video/*" style="display:none" onchange="uploadVideo(this)">
     </div>
     <div class="mf">
       <label>Tags</label>
@@ -1194,6 +1364,12 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div class="topt" data-t="Shopping" onclick="toggleTag(this)">🛍 Shopping</div>
         <div class="topt" data-t="Night Club" onclick="toggleTag(this)">🎵 Night Club</div>
         <div class="topt" data-t="Bar" onclick="toggleTag(this)">🍸 Bar</div>
+        <div class="topt" data-t="Meat" onclick="toggleTag(this)">🥩 Meat</div>
+        <div class="topt" data-t="Italian" onclick="toggleTag(this)">🍝 Italian</div>
+        <div class="topt" data-t="Fish" onclick="toggleTag(this)">🐟 Fish</div>
+        <div class="topt" data-t="Photo Spot" onclick="toggleTag(this)">📸 Photo Spot</div>
+        <div class="topt" data-t="Fun" onclick="toggleTag(this)">🎉 Fun</div>
+        <div class="topt" data-t="Hotel" onclick="toggleTag(this)">🏨 Hotel</div>
       </div>
     </div>
     <div class="mf">
@@ -1212,6 +1388,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <button class="btn-save" id="btnSave" onclick="savePlace()">Save 📍</button>
     </div>
     <button id="btnSocialIt" onclick="socialIt()" style="display:none;width:100%;margin-top:10px;padding:14px;border-radius:16px;border:2px solid var(--purple);background:rgba(155,109,255,.1);color:var(--purple);font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:var(--tr);">🌐 Social It!</button>
+    <button id="btnDonePlace" onclick="closeOverlay('addOverlay')" style="display:none;width:100%;margin-top:8px;padding:14px;border-radius:16px;border:none;background:#1a1a1a;color:#fff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;">✓ Done</button>
   </div>
 </div>
 
@@ -1306,6 +1483,17 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
             Google Maps
           </a>
         </div>
+        <div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin:14px 0 8px;">Send to Friend</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="sharePlaceLocation('waze')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:14px;background:#33ccff15;border:2px solid #33ccff55;color:#0099cc;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            Share Waze
+          </button>
+          <button onclick="sharePlaceLocation('gmaps')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:14px;background:#4a9eff15;border:2px solid var(--sky-mid);color:var(--sky);font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            Share Maps
+          </button>
+        </div>
       </div>
       <!-- Photos section -->
       <div style="margin-bottom:14px;">
@@ -1372,10 +1560,14 @@ async function checkAndShowOnboarding(){
     const d = await r.json();
     if(!d.profile || !d.profile.analyzedAt){
       showOnboarding();
-      return true; // blocked — show onboarding
+      return true; // no profile — show onboarding
     }
-  }catch{}
-  return false; // has profile — go to app
+    return false; // has profile — go to app
+  }catch{
+    // If API fails, show onboarding to be safe
+    showOnboarding();
+    return true;
+  }
 }
 
 function showOnboarding(){
@@ -1390,9 +1582,11 @@ function renderOnboardingUpload(){
     <div class="ob-wrap">
       <div class="ob-emoji">✦</div>
       <div class="ob-title">Let's get to know you</div>
-      <div class="ob-sub">Upload 5–20 photos of places you've been, food you love, coffee you drink, or anything you enjoy. AI will build your personal travel profile.</div>
+      <div class="ob-sub">Upload photos and answer a few quick questions — AI will build your personal travel profile.</div>
     </div>
-    <div style="padding:0 24px;width:100%;max-width:448px;margin:0 auto;">
+    <div style="padding:0 24px 32px;width:100%;max-width:448px;margin:0 auto;">
+
+      <!-- Photo upload -->
       <div class="ob-upload-zone" id="obDropZone" onclick="document.getElementById('obInput').click()" ondragover="obDragOver(event)" ondragleave="obDragLeave(event)" ondrop="obDropFiles(event)">
         <input type="file" id="obInput" multiple accept="image/*" style="display:none" onchange="obFilesSelected(event)">
         <div class="ob-upload-icon">📸</div>
@@ -1401,9 +1595,145 @@ function renderOnboardingUpload(){
       </div>
       <div class="ob-grid" id="obGrid"></div>
       <div class="ob-count" id="obCount"></div>
+
+      <!-- Music genres -->
+      <div class="ob-section">
+        <div class="ob-section-title">🎵 What music do you vibe with?</div>
+        <div class="ob-section-sub">Select all that apply</div>
+        <div class="ob-chips">
+          ${['Hip-Hop','80s','90s','Mainstream','Techno','Trance','R&B','Jazz','Rock','Electronic'].map(g=>
+            `<div class="ob-chip" data-group="music" data-val="${g}" onclick="obToggleChip(this)">${g}</div>`
+          ).join('')}
+        </div>
+      </div>
+
+      <!-- Q1: Goal -->
+      <div class="ob-section">
+        <div class="ob-section-title">🎯 What's the mission for events you like?</div>
+        <div class="ob-section-sub">Pick one</div>
+        <div class="ob-radio-group">
+          <div class="ob-radio" data-group="goal" data-val="Network" onclick="obSelectRadio(this)">
+            <div class="or-label">💼 Secure the bag</div>
+            <div class="or-sub">I'm here for tech, real estate, or business.</div>
+          </div>
+          <div class="ob-radio" data-group="goal" data-val="Vibe Out" onclick="obSelectRadio(this)">
+            <div class="or-label">⚡ Just for the energy</div>
+            <div class="or-sub">I want to meet people and hang out.</div>
+          </div>
+          <div class="ob-radio" data-group="goal" data-val="Low-Key" onclick="obSelectRadio(this)">
+            <div class="or-label">🎧 Staying in my lane</div>
+            <div class="or-sub">I'm here for the music or the activity itself.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Q2: Atmosphere -->
+      <div class="ob-section">
+        <div class="ob-section-title">🏛 What kind of room are we looking for?</div>
+        <div class="ob-section-sub">Pick one</div>
+        <div class="ob-radio-group">
+          <div class="ob-radio" data-group="atmosphere" data-val="Top-Shelf" onclick="obSelectRadio(this)">
+            <div class="or-label">🥂 Top-Shelf</div>
+            <div class="or-sub">High-end, sophisticated, and polished. Think rooftops or lounges.</div>
+          </div>
+          <div class="ob-radio" data-group="atmosphere" data-val="Electric" onclick="obSelectRadio(this)">
+            <div class="or-label">⚡ Electric</div>
+            <div class="or-sub">High-energy, loud, and main-character energy. Think clubs or stadiums.</div>
+          </div>
+          <div class="ob-radio" data-group="atmosphere" data-val="Main Street" onclick="obSelectRadio(this)">
+            <div class="or-label">🏠 Main Street</div>
+            <div class="or-sub">Local, authentic, and hidden gems. Think underground or boutique.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Q3: Music vibe -->
+      <div class="ob-section">
+        <div class="ob-section-title">🔊 How's the sound hitting?</div>
+        <div class="ob-section-sub">Pick one</div>
+        <div class="ob-radio-group">
+          <div class="ob-radio" data-group="soundVibe" data-val="Background" onclick="obSelectRadio(this)">
+            <div class="or-label">💬 Background</div>
+            <div class="or-sub">Clean audio, but keep it conversational. I want to hear you.</div>
+          </div>
+          <div class="ob-radio" data-group="soundVibe" data-val="Front & Center" onclick="obSelectRadio(this)">
+            <div class="or-label">🎛 Front & Center</div>
+            <div class="or-sub">Crank it. I want to hear the gear. I'm here for the DJ/Band.</div>
+          </div>
+          <div class="ob-radio" data-group="soundVibe" data-val="Acoustic" onclick="obSelectRadio(this)">
+            <div class="or-label">🎸 Acoustic</div>
+            <div class="or-sub">Raw, chill, and stripped back. Unplugged or low-tempo vibes.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:20px;"></div>
       <button class="ob-analyze-btn" id="obAnalyzeBtn" onclick="runOnboarding()" disabled>✦ Build My Profile</button>
       <div style="margin-top:14px;text-align:center;font-size:11px;color:var(--txt3);line-height:1.6;">Your photos are analyzed privately and never stored.<br>Only the insights are saved to your profile.</div>
     </div>`;
+}
+
+function obToggleChip(el){
+  el.classList.toggle('sel');
+}
+
+function obToggleChipMax(el, max) {
+  const group = el.dataset.group;
+  const selected = document.querySelectorAll(`.ob-chip[data-group="${group}"].sel`);
+  if (!el.classList.contains('sel') && selected.length >= max) {
+    // Deselect oldest (first selected) to make room
+    selected[0].classList.remove('sel');
+  }
+  el.classList.toggle('sel');
+}
+
+function obSelectRadio(el){
+  const group = el.dataset.group;
+  document.querySelectorAll(`.ob-radio[data-group="${group}"]`).forEach(r => r.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function obGetAnswers(){
+  const music = [...document.querySelectorAll('.ob-chip.sel')].map(el => el.dataset.val);
+  const goal = document.querySelector('.ob-radio[data-group="goal"].sel')?.dataset.val || '';
+  const atmosphere = document.querySelector('.ob-radio[data-group="atmosphere"].sel')?.dataset.val || '';
+  const soundVibe = document.querySelector('.ob-radio[data-group="soundVibe"].sel')?.dataset.val || '';
+  const crowdSizes = [...document.querySelectorAll('.ob-chip[data-group="crowdSize"].sel')].map(el=>el.dataset.val);
+  const crowdSize = crowdSizes.join(','); // e.g. "Intimate,Mid-size"
+  return { music, goal, atmosphere, soundVibe, crowdSize, crowdSizes };
+}
+
+function obRemoveFile(idx){
+  _obFiles.splice(idx,1);
+  obProcessFiles(new DataTransfer().files); // re-render with empty to reset, then rebuild
+  // rebuild grid from _obFiles directly
+  const grid=document.getElementById('obGrid');
+  const countEl=document.getElementById('obCount');
+  const btn=document.getElementById('obAnalyzeBtn');
+  if(grid){
+    grid.innerHTML='';
+    _obFiles.forEach((f,i)=>{
+      const wrap=document.createElement('div');
+      wrap.className='ob-thumb-wrap';
+      const img=document.createElement('img');
+      img.className='ob-thumb';
+      img.src=URL.createObjectURL(f);
+      const del=document.createElement('button');
+      del.className='ob-thumb-del';
+      del.textContent='✕';
+      del.onclick=()=>obRemoveFile(i);
+      wrap.appendChild(img);
+      wrap.appendChild(del);
+      grid.appendChild(wrap);
+    });
+  }
+  const n=_obFiles.length;
+  if(countEl){
+    const color=n<5?'var(--coral)':n>=5?'var(--mint)':'var(--txt3)';
+    const needMore = n<5 ? ` — need ${5-n} more` : '';
+    countEl.innerHTML=n?`<span style="color:${color};font-weight:700;">${n} photo${n!==1?'s':''} selected</span>${needMore}`:'';
+  }
+  if(btn)btn.disabled=n<5;
 }
 
 function obDragOver(e){e.preventDefault();document.getElementById('obDropZone')?.classList.add('dragover');}
@@ -1418,7 +1748,21 @@ function obProcessFiles(fileList){
   const countEl = document.getElementById('obCount');
   const btn = document.getElementById('obAnalyzeBtn');
   if(grid){
-    grid.innerHTML = _obFiles.map(f=>`<img class="ob-thumb" src="${URL.createObjectURL(f)}">`).join('');
+    grid.innerHTML = '';
+    _obFiles.forEach((f,i)=>{
+      const wrap=document.createElement('div');
+      wrap.className='ob-thumb-wrap';
+      const img=document.createElement('img');
+      img.className='ob-thumb';
+      img.src=URL.createObjectURL(f);
+      const del=document.createElement('button');
+      del.className='ob-thumb-del';
+      del.textContent='✕';
+      del.onclick=()=>obRemoveFile(i);
+      wrap.appendChild(img);
+      wrap.appendChild(del);
+      grid.appendChild(wrap);
+    });
   }
   if(countEl){
     const n = _obFiles.length;
@@ -1483,9 +1827,10 @@ async function runOnboarding(){
     })));
 
     // Build profile via AI
+    const answers = obGetAnswers();
     const r = await apiFetch('/api/ai/build-profile',{
       method:'POST',
-      body:JSON.stringify({images, isOnboarding:true})
+      body:JSON.stringify({images, isOnboarding:true, answers})
     });
     const data = await r.json();
     if(data.error) throw new Error(data.error);
@@ -1507,7 +1852,8 @@ async function runOnboarding(){
     // Small pause then enter app
     setTimeout(()=>{
       showScreen('mapScreen');
-      initApp();
+      startSplashAnimation();
+    initApp();
     }, 600);
 
   }catch(e){
@@ -1536,11 +1882,11 @@ window.addEventListener('load',()=>{
             initApp().then(()=>{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{if(gmap){gmap.panTo({lat:pos.coords.latitude,lng:pos.coords.longitude});gmap.setZoom(13);}},()=>{},{timeout:5000});});
           }
         }
-      } catch {showScreen('mapScreen');initApp();}
+      } catch {const nb=await checkAndShowOnboarding();if(!nb){showScreen('mapScreen');initApp();}}
     } else {
       showScreen('loginScreen');
     }
-  },1800);
+  },600);
 });
 
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
@@ -1592,7 +1938,7 @@ async function doAuth(){
     }
     token=data.token;localStorage.setItem('wandr_token',token);if(data.user){localStorage.setItem('wandr_user',JSON.stringify(data.user));currentUser=data.user;}
     const needsOnboarding = await checkAndShowOnboarding();
-    if(!needsOnboarding){ showScreen('mapScreen'); await initApp(); }
+    if(!needsOnboarding){ showScreen('mapScreen'); startSplashAnimation(); await initApp(); stopSplashAnimation(); }
   }catch{showAuthErr('Network error – is the server running?');}
   finally{btn.disabled=false;btn.textContent=isReg?'Create Account 🌍':'Sign In 🚀';}
 }
@@ -1636,21 +1982,44 @@ function logout(){
 }
 
 async function initApp(){
-  await loadPlaces();
-  await loadTrips();
-  await loadMapsKey();
-  // Load fresh profile from server
-  try{const r=await apiFetch('/api/auth/me');if(r.ok){currentUser=await r.json();localStorage.setItem('wandr_user',JSON.stringify(currentUser));}}catch{}
+  // Show cached data instantly if available
+  const cachedTrips = localStorage.getItem('wandr_trips_cache');
+  const cachedPlaces = localStorage.getItem('wandr_places_cache');
+  if (cachedTrips) { try { trips = JSON.parse(cachedTrips); renderTrips(); populateTripSelect(); } catch {} }
+  if (cachedPlaces) { try { places = JSON.parse(cachedPlaces); refreshMarkers(); updateCount(); } catch {} }
+
+  // Fetch everything in parallel — Maps key, trips, places, user profile
+  await Promise.all([
+    loadTrips(),
+    loadPlaces(),
+    loadMapsKey(),
+    apiFetch('/api/auth/me').then(async r => {
+      if(r.ok){ currentUser=await r.json(); localStorage.setItem('wandr_user',JSON.stringify(currentUser)); }
+    }).catch(()=>{})
+  ]);
   updateHeaderAvatar();
   checkUnreadCount();
   setInterval(checkUnreadCount,30000);
+  checkPendingInvites();
+  setInterval(checkPendingInvites,30000);
   try{const r=await apiFetch('/api/config/anthropic-key');const d=await r.json();anthropicKey=d.key;}catch{}
   // Check if URL has a share token
   const path=window.location.pathname;
   const match=path.match(/^\/trip\/([a-f0-9]+)$/);
   if(match) checkSharedTrip(match[1]);
 }
-async function loadMapsKey(){try{const res=await apiFetch('/api/config/maps-key');const{key}=await res.json();window._mapsKey=key;injectMaps(key);}catch{}}
+async function loadMapsKey(){
+  // Use cached key for instant map load
+  const cached = localStorage.getItem('wandr_maps_key');
+  if(cached){ window._mapsKey=cached; injectMaps(cached); }
+  try{
+    const res=await apiFetch('/api/config/maps-key');
+    const{key}=await res.json();
+    window._mapsKey=key;
+    localStorage.setItem('wandr_maps_key',key);
+    if(!cached) injectMaps(key);
+  }catch{}
+}
 function injectMaps(key){if(window.google){bootMap();return;}window.__mapsReady=bootMap;const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&callback=__mapsReady`;s.async=true;s.defer=true;document.head.appendChild(s);}
 
 function bootMap(){
@@ -1743,6 +2112,7 @@ function openFullFromDrop(lat,lng){
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='none';
   document.getElementById('btnSocialIt').style.display='none';
+  document.getElementById('btnDonePlace').style.display='none';
   document.getElementById('coverPhotoSection').style.display='block';
   document.getElementById('gallerySection').style.display='none';
   showCoverPreview('');
@@ -1761,26 +2131,113 @@ async function apiFetch(path,opts={}){
   if(res.status===401){logout();throw new Error('Unauthorized');}
   return res;
 }
-async function loadPlaces(){try{const res=await apiFetch('/api/places');places=await res.json();updateCount();}catch(e){if(e.message!=='Unauthorized')toast('Failed to load places','err');}}
+// Splash loading steps
+const splashSteps = [
+  'Loading your world…',
+  'Fetching your trips…',
+  'Placing your pins…',
+  'Almost ready ✦'
+];
+let _splashIdx = 0;
+let _splashInterval = null;
 
-const PCOL={Food:'#ff6b47',Beach:'#4a9eff',Nightlife:'#9b6dff',Nature:'#34c98a',Culture:'#f5a623',Coffee:'#a0522d',Beauty:'#e91e8c',Shopping:'#00bcd4','Night Club':'#6a0dad',Bar:'#e67e22'};
-const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸'};
+function startSplashAnimation() {
+  const el = document.getElementById('splashStep');
+  if (!el) return;
+  el.textContent = splashSteps[0];
+  el.style.opacity = '1';
+  _splashInterval = setInterval(() => {
+    if (_splashIdx >= splashSteps.length - 1) return; // Hold on last step, don't loop
+    _splashIdx++;
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.textContent = splashSteps[_splashIdx];
+      el.style.opacity = '1';
+    }, 150);
+  }, 1200);
+}
+
+function stopSplashAnimation() {
+  clearInterval(_splashInterval);
+  const el = document.getElementById('splashStep');
+  if (el) { el.style.opacity = '0'; }
+}
+
+async function loadPlaces(){
+  try{
+    // Load own places
+    const res=await apiFetch('/api/places');
+    places=await res.json();
+    try { localStorage.setItem('wandr_places_cache', JSON.stringify(places)); } catch {}
+
+    // Also load places from shared (MUTUAL) trips
+    const sharedTrips=trips.filter(t=>t.isShared);
+    if(sharedTrips.length){
+      const sharedPlaces=await Promise.all(
+        sharedTrips.map(async t=>{
+          try{
+            const r=await apiFetch(`/api/places?trip=${t._id}`);
+            if(r.ok) return await r.json();
+          }catch{}
+          return [];
+        })
+      );
+      // Merge, avoiding duplicates by _id
+      const existing=new Set(places.map(p=>p._id));
+      sharedPlaces.flat().forEach(p=>{
+        if(!existing.has(p._id)){
+          places.push(p);
+          existing.add(p._id);
+        }
+      });
+    }
+
+    updateCount();
+  }catch(e){if(e.message!=='Unauthorized')toast('Failed to load places','err');}
+}
+
+const PCOL={Food:'#ff6b47',Beach:'#4a9eff',Nightlife:'#9b6dff',Nature:'#34c98a',Culture:'#f5a623',Coffee:'#a0522d',Beauty:'#e91e8c',Shopping:'#00bcd4','Night Club':'#6a0dad',Bar:'#e67e22',Meat:'#c0392b',Italian:'#27ae60',Fish:'#2980b9','Photo Spot':'#e1306c',Fun:'#ffc700',Hotel:'#5e548e'};
+const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸',Meat:'🥩',Italian:'🍝',Fish:'🐟','Photo Spot':'📸',Fun:'🎉',Hotel:'🏨'};
 function pc(t){return(t&&t[0])?PCOL[t[0]]||'#4a9eff':'#4a9eff';}
 function pi(t){return(t&&t[0])?PICO[t[0]]||'📍':'📍';}
 function mkIcon(tags){const c=pc(tags),e=pi(tags);return{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="44" height="54" viewBox="0 0 44 54"><filter id="sh"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,.18)"/></filter><path d="M22 0C9.85 0 0 9.85 0 22c0 16.5 22 32 22 32S44 38.5 44 22C44 9.85 34.15 0 22 0z" fill="${c}" filter="url(#sh)"/><circle cx="22" cy="22" r="13" fill="rgba(255,255,255,.3)"/><text x="22" y="28" text-anchor="middle" font-size="16">${e}</text></svg>`),scaledSize:new google.maps.Size(44,54),anchor:new google.maps.Point(22,54)};}
 
 window._m={};
-function addMarker(place){if(!gmap)return;const m=new google.maps.Marker({position:{lat:place.lat,lng:place.lng},map:gmap,icon:mkIcon(place.tags),title:place.name});m.addListener('click',()=>openIW(place,m));window._m[place._id]=m;}
+function mkIconColor(color,emoji){return{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="44" height="54" viewBox="0 0 44 54"><filter id="sh"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,.18)"/></filter><path d="M22 0C9.85 0 0 9.85 0 22c0 16.5 22 32 22 32S44 38.5 44 22C44 9.85 34.15 0 22 0z" fill="${color}" filter="url(#sh)"/><circle cx="22" cy="22" r="13" fill="rgba(255,255,255,.3)"/><text x="22" y="28" text-anchor="middle" font-size="16">${emoji}</text></svg>`),scaledSize:new google.maps.Size(44,54),anchor:new google.maps.Point(22,54)};}
+function addMarker(place){
+  if(!gmap)return;
+  let icon;
+  if(place.source==='hidden-gem') icon=mkIconColor('#f5a623','💎');
+  else if(place.source==='michelin') icon=mkIconColor('#bf0000','🔴');
+  else if(place.source==='ai-japan-pick') icon=mkIconColor('#534AB7','✦');
+  else icon=mkIcon(place.tags);
+  const m=new google.maps.Marker({position:{lat:place.lat,lng:place.lng},map:gmap,icon,title:place.name});
+  m.addListener('click',()=>openIW(place,m));
+  window._m[place._id]=m;
+}
 function removeMarker(id){if(window._m[id]){window._m[id].setMap(null);delete window._m[id];}}
 function openIW(place,marker){
   const cover=place.coverPhoto?`<img src="${esc(place.coverPhoto)}" style="width:100%;height:140px;object-fit:cover;display:block;border-radius:16px 16px 0 0;" loading="lazy" onerror="this.style.display='none'">`: '';
   const stars=place.rating?starsHtml(place.rating):'';
+  conssourceBadge = (() => {
+    if(place.source==='hidden-gem') return '<span style="background:linear-gradient(135deg,#f5a623,#e8890a);color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">💎 Hidden Gem</span>';
+    if(place.source==='michelin') return '<span style="background:#bf0000;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">🔴 Michelin</span>';
+    if(place.source==='ai-japan-pick') return '<span style="background:#534AB7;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">✦ Wandr AI Pick</span>';
+    return '';
+  })();
   const statusBadge=place.status==='been'?'<span style="background:var(--mint-light);color:var(--mint);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">✅ Been There</span>':place.status==='tobe'?'<span style="background:var(--sky-light);color:var(--sky);font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">🗺️ To Be There</span>':'';
   infoWin.setContent(`<div class="map-popup" onclick="openPlaceInfo('${place._id}')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(74,158,255,.15);">${cover}<div style="padding:12px 14px 12px">${statusBadge?statusBadge+'<br style=margin:3px>':''}<div class="mp-name">${esc(place.name)}</div>${place.location?`<div class="mp-loc">📍 ${esc(place.location)}</div>`:''  }${place.notes?`<div class="mp-notes" style="margin-top:6px">${esc(place.notes.substring(0,80)+(place.notes.length>80?'…':''))}</div>`:''  }${stars?`<div class="mp-stars" style="margin-top:6px">${stars}</div>`:''}<div style="margin-top:10px;padding:8px;background:var(--sky-light);border-radius:10px;text-align:center;font-size:12px;font-weight:800;color:var(--sky);">👆 Tap for full details</div></div></div>`);
   infoWin.open(gmap,marker);
 }
 
 function setupAC(){const input=document.getElementById('pLocation');autocomplete=new google.maps.places.Autocomplete(input,{fields:['geometry','name','formatted_address','place_id']});autocomplete.addListener('place_changed',()=>{const pl=autocomplete.getPlace();if(!pl.geometry)return;pendingCoords={lat:pl.geometry.location.lat(),lng:pl.geometry.location.lng()};if(!document.getElementById('pName').value.trim())document.getElementById('pName').value=pl.name||'';});}
+
+function _setToggleActive(btnId){
+  ['toggleMap','toggleSocial','toggleSearch','toggleMessages'].forEach(b=>{
+    const e=document.getElementById(b);if(e)e.classList.remove('active');
+  });
+  const el=document.getElementById(btnId);if(el)el.classList.add('active');
+}
 
 function _setNavActive(btnId){
   ['btnAI','btnMap','btnTrips','btnProfile'].forEach(b=>{
@@ -1789,7 +2246,300 @@ function _setNavActive(btnId){
   const el=document.getElementById(btnId);if(el)el.classList.add('on');
 }
 
-function showAIScreen(){
+async function openEventDiscover(){
+  document.getElementById('eventDiscoverModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'eventDiscoverModal';
+
+  const now = new Date();
+  const timeLabel = now.getHours() < 12 ? 'morning' : now.getHours() < 17 ? 'afternoon' : now.getHours() < 21 ? 'evening' : 'night';
+  const dateStr = now.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+
+  modal.innerHTML = `<div class="ed-sheet">
+    <div class="ed-head">
+      <div class="ed-title">🎯 AI Event Discover</div>
+      <div class="ed-sub">${dateStr} · ${timeLabel} · building your match list</div>
+      <button class="ed-close" onclick="document.getElementById('eventDiscoverModal').remove()">✕</button>
+    </div>
+    <div class="ed-body" id="edBody">
+      <div class="ed-loading">
+        <div class="el-icon" id="edLoadIcon" style="animation:spin 2s linear infinite;display:inline-block;">🎯</div>
+        <div style="font-size:15px;font-weight:800;color:var(--ink);margin-bottom:4px;">Reading your Identity Cube…</div>
+        <div style="font-size:12px;color:var(--ink3);">Scanning events and matching to your profile</div>
+        <div class="el-steps">
+          <div class="el-step active" id="edStep1">📊 Loading your profile</div>
+          <div class="el-step" id="edStep2">📍 Getting your location</div>
+          <div class="el-step" id="edStep3">🌐 Searching local events</div>
+          <div class="el-step" id="edStep4">🤖 Claude scoring & ranking</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+
+  const step = (n, done=[]) => {
+    ['edStep1','edStep2','edStep3','edStep4'].forEach((id,i) => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      if(done.includes(i+1)) el.className='el-step done';
+      else if(i+1 === n) el.className='el-step active';
+      else el.className='el-step';
+    });
+  };
+
+  try {
+    // Step 1 - Load profile
+    step(1);
+    const pr = await apiFetch('/api/ai/profile');
+    const pd = await pr.json();
+    const profile = pd.profile;
+    if(!profile?.analyzedAt) throw new Error('no-profile');
+    step(2,[1]);
+
+    // Step 2 - Get location
+    const pos = await new Promise((resolve,reject) => {
+      if(!navigator.geolocation){reject(new Error('no-geo'));return;}
+      navigator.geolocation.getCurrentPosition(resolve, reject, {timeout:8000});
+    }).catch(()=>null);
+
+    let locationStr = null;
+    let lat = null, lng = null;
+    if(pos){
+      lat = pos.coords.latitude;
+      lng = pos.coords.longitude;
+      try{
+        const geo = new google.maps.Geocoder();
+        const res = await new Promise(resolve => {
+          geo.geocode({location:{lat,lng}}, (r,s) => resolve(s==='OK'?r:null));
+        });
+        const city = res?.[0]?.address_components?.find(c=>c.types.includes('locality'))?.long_name;
+        const country = res?.[0]?.address_components?.find(c=>c.types.includes('country'))?.long_name;
+        if(city) locationStr = country ? `${city}, ${country}` : city;
+      }catch{}
+    }
+
+    // If location not detected, ask the user
+    if(!locationStr){
+      locationStr = prompt('📍 Where are you? (e.g. Manila, Philippines)');
+      if(!locationStr || !locationStr.trim()){
+        body.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3);">Location needed to find events near you.</div>';
+        return;
+      }
+      locationStr = locationStr.trim();
+    }
+    step(3,[1,2]);
+
+    // Step 3+4 - Send to backend
+    const r = await apiFetch('/api/ai/event-discover', {
+      method: 'POST',
+      body: JSON.stringify({
+        lat, lng, locationStr,
+        timeLabel, hour: now.getHours(),
+        dayOfWeek: now.toLocaleDateString('en-US',{weekday:'long'}),
+        dateStr
+      })
+    });
+    const data = await r.json();
+    if(data.error) throw new Error(data.error);
+    step(4,[1,2,3,4]);
+
+    // Render results
+    const body = document.getElementById('edBody');
+    if(!body) return;
+
+    // Identity cube preview
+    const cubeHtml = `<div class="ed-cube">
+      <div class="ed-cube-label">YOUR IDENTITY CUBE</div>
+      ${(profile.aestheticTags||profile.tags||[]).slice(0,4).map(t=>`<span class="ed-cube-pill">${esc(t)}</span>`).join('')}
+      ${(profile.musicGenres||[]).slice(0,3).map(g=>`<span class="ed-cube-pill music">🎵 ${esc(g)}</span>`).join('')}
+      ${profile.eventGoal?`<span class="ed-cube-pill goal">🎯 ${esc(profile.eventGoal)}</span>`:''}
+      ${profile.atmosphere?`<span class="ed-cube-pill vibe">🏛 ${esc(profile.atmosphere)}</span>`:''}
+    </div>`;
+
+    const rankColors = ['rank-1','rank-2','rank-3'];
+    const rankLabels = ['#1 Best Match','#2 Strong Match','#3 Solid Pick'];
+
+    function renderEventCard(ev, i, isWeekend) {
+      const pct = ev.matchScore||0;
+      const isUrgent = ev.hoursUntil !== undefined && ev.hoursUntil <= 48;
+      const isUnmissable = pct >= 95;
+      const mapsUrl = ev.ticketUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((ev.venueName||ev.name)+' '+locationStr)}`;
+      const hasInsta = !!(ev.instagramUrl);
+      const hasWebsite = !!(ev.websiteUrl);
+
+      const instaBtn = `<a
+        class="ed-link ed-insta-btn ${hasInsta ? 'ed-insta-active' : 'ed-insta-disabled'}"
+        ${hasInsta ? `href="${esc(ev.instagramUrl)}" target="_blank" rel="noopener"` : 'aria-disabled="true"'}
+        style="display:flex;align-items:center;gap:5px;justify-content:center;background:${hasInsta ? 'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)' : '#222'};color:#fff;opacity:${hasInsta ? '1' : '0.45'};pointer-events:${hasInsta ? 'auto' : 'none'};border:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+        Instagram
+      </a>`;
+
+      return `<div class="ed-card">
+        <div class="ed-card-rank ${rankColors[i]||'rank-3'}"></div>
+        ${isWeekend ? `<div style="background:#1a1a2e;padding:6px 16px 0;"><span style="background:#2d1f5e;color:#a78bfa;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.05em;display:inline-block;">🗓 This ${esc(ev.date||'Weekend')}</span></div>` : ''}
+        <div class="ed-card-body">
+          ${!isWeekend ? `<div style="font-size:10px;font-weight:800;color:var(--ink3);letter-spacing:.07em;margin-bottom:6px;">${rankLabels[i]||''}</div>` : ''}
+          ${ev.photoUrl?`<img src="${esc(ev.photoUrl)}" style="width:calc(100% + 32px);height:140px;object-fit:cover;display:block;margin:${isWeekend?'0':'-16px'} -16px 12px;" onerror="this.style.display='none'">`:''}
+          <div class="ed-card-header">
+            <div class="ed-card-name">${esc(ev.name)}</div>
+            <div class="ed-match">
+              <div class="ed-match-pct">${pct}%</div>
+              <div class="ed-match-lbl">MATCH</div>
+            </div>
+          </div>
+          <div class="ed-meta">
+            ${ev.openConfirmed?'<span style="color:var(--mint);font-weight:700;">✓ Verified open</span>':ev.unverified?'<span style="color:#f59e0b;font-weight:700;">⚠️ Verify before going</span>':''}
+            ${isWeekend?`<span style="color:#a78bfa;font-weight:700;">📅 ${esc(ev.date||'Weekend')}</span>`:''}
+            ${ev.time?`<span>🕐 ${esc(ev.time)}</span>`:''}
+            ${ev.price?`<span>💰 ${esc(ev.price)}</span>`:''}
+            ${ev.estimatedCapacity?`<span>👥 ~${ev.estimatedCapacity} people</span>`:''}
+          </div>
+          <div class="ed-tags">
+            ${isUnmissable?`<span class="ed-tag timing-urgent">🔥 Unmissable</span>`:''}
+            ${isUrgent&&!isUnmissable&&!isWeekend?`<span class="ed-tag timing-urgent">⚡ Next 48h</span>`:''}
+            ${(ev.tags||[]).map(t=>`<span class="ed-tag">${esc(t)}</span>`).join('')}
+          </div>
+          <div class="ed-concierge">✦ ${esc(ev.conciergeNote)}</div>
+          <div class="ed-footer" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a class="ed-link primary" href="${mapsUrl}" target="_blank" rel="noopener">🗺 Find venue</a>
+            ${hasWebsite?`<a class="ed-link" href="${esc(ev.websiteUrl)}" target="_blank" rel="noopener">🌐 Website</a>`:''}
+            ${instaBtn}
+          </div>
+          ${isWeekend && ev.unverified ? `<div style="margin-top:8px;">
+            <button onclick="reportClosure('${esc(ev.name)}','${esc(ev.date||'')}',this)"
+              style="background:transparent;border:1px solid rgba(248,113,113,.4);border-radius:8px;padding:5px 10px;font-size:11px;color:#f87171;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">
+              📍 Help us verify — report if closed
+            </button>
+          </div>` : ''}
+        </div>
+      </div>`;
+    }
+
+    const todayHtml = (data.events||[]).map((ev,i) => renderEventCard(ev, i, false)).join('');
+    const weekendHtml = (data.weekendEvents||[]).length ? `
+      <div style="margin:20px 0 10px;display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+        <div style="font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.08em;white-space:nowrap;">🗓 THIS WEEKEND</div>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>
+      ${(data.weekendEvents||[]).map((ev,i) => renderEventCard(ev, i, true)).join('')}
+    ` : '';
+
+    body.innerHTML = cubeHtml + todayHtml + weekendHtml +
+    `<div style="text-align:center;font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.6;">
+      Ranked by AI against your Identity Cube · ${dateStr}
+    </div>`;
+
+  } catch(e) {
+    const body = document.getElementById('edBody');
+    if(!body) return;
+    if(e.message === 'no-profile'){
+      body.innerHTML = `<div style="text-align:center;padding:40px 20px;">
+        <div style="font-size:40px;margin-bottom:14px;">✦</div>
+        <div style="font-size:15px;font-weight:800;color:var(--ink);margin-bottom:8px;">Build your AI profile first</div>
+        <div style="font-size:13px;color:var(--ink3);margin-bottom:20px;line-height:1.6;">AI Event Discover needs your Identity Cube to find events that truly match you.</div>
+        <button onclick="document.getElementById('eventDiscoverModal').remove();openAIAgent()" style="background:var(--ink);color:#fff;border:none;border-radius:14px;padding:12px 24px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">📸 Build my profile</button>
+      </div>`;
+    } else {
+      body.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--coral);">
+        <div style="font-size:32px;margin-bottom:12px;">⚠️</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:16px;">${esc(e.message)||'Something went wrong'}</div>
+        <button onclick="openEventDiscover()" style="background:var(--ink);color:#fff;border:none;border-radius:12px;padding:10px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Retry</button>
+      </div>`;
+    }
+  }
+}
+
+async function openRightNow(){
+  document.getElementById('rightNowModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'rightNowModal';
+
+  const hr = new Date().getHours();
+  const timeLabel = hr < 6 ? 'late night' : hr < 12 ? 'morning' : hr < 17 ? 'afternoon' : hr < 21 ? 'evening' : 'night';
+
+  modal.innerHTML = `<div class="rn-sheet">
+    <div class="rn-head">
+      <div>
+        <div class="rn-title">⚡ Right Now</div>
+        <div class="rn-sub">${timeLabel.charAt(0).toUpperCase()+timeLabel.slice(1)} ideas for you</div>
+      </div>
+      <button class="rn-close" onclick="document.getElementById('rightNowModal').remove()">✕</button>
+    </div>
+    <div class="rn-body" id="rnBody">
+      <div class="rn-loading">
+        <div class="rl-icon">⚡</div>
+        <p>Finding ideas for right now…</p>
+        <small>Checking your location and taste</small>
+      </div>
+    </div>
+  </div>`;
+  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+
+  try {
+    // Get user location
+    const pos = await new Promise((resolve, reject) => {
+      if(!navigator.geolocation){ reject(new Error('no-geo')); return; }
+      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000 });
+    }).catch(() => null);
+
+    const lat = pos?.coords?.latitude;
+    const lng = pos?.coords?.longitude;
+
+    // Get reverse geocoded city if we have coords
+    let locationStr = 'your current location';
+    if(lat && lng && typeof google !== 'undefined'){
+      try {
+        const geo = new google.maps.Geocoder();
+        const result = await new Promise(resolve => {
+          geo.geocode({location: {lat, lng}}, (res, status) => {
+            if(status === 'OK') resolve(res);
+            else resolve(null);
+          });
+        });
+        const city = result?.[0]?.address_components?.find(c => c.types.includes('locality'))?.long_name;
+        const country = result?.[0]?.address_components?.find(c => c.types.includes('country'))?.long_name;
+        if(city) locationStr = country ? `${city}, ${country}` : city;
+      } catch {}
+    }
+
+    const r = await apiFetch('/api/ai/right-now', {
+      method: 'POST',
+      body: JSON.stringify({ lat, lng, locationStr, timeLabel, hour: new Date().getHours() })
+    });
+    const data = await r.json();
+    if(data.error) throw new Error(data.error);
+
+    const body = document.getElementById('rnBody');
+    if(!body) return;
+
+    body.innerHTML = `
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:14px;">📍 ${esc(locationStr)} · ${timeLabel}</div>
+      ${data.ideas.map((idea, i) => {
+        const typeMeta = {food:{label:'🍽 FOOD & DRINK',cls:'rn-type-food'},experience:{label:'⚡ EXPERIENCE',cls:'rn-type-experience'},outdoor:{label:'🌿 OUTDOOR',cls:'rn-type-outdoor'}};
+        const meta = typeMeta[idea.type] || typeMeta.food;
+        return `<div class="rn-idea idea-${i}">
+          <div class="rn-type-badge ${meta.cls}">${meta.label}</div>
+          <div class="ri-emoji">${idea.emoji}</div>
+          <div class="ri-title">${esc(idea.title)}</div>
+          <div class="ri-desc">${esc(idea.description)}</div>
+          <div class="ri-why">${esc(idea.why)}</div>
+          ${idea.searchQuery ? `<a class="ri-maps" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(idea.searchQuery)}" target="_blank" rel="noopener">🗺 Find nearby ↗</a>` : ''}
+        </div>`;
+      }).join('')}`;
+  } catch(e) {
+    const body = document.getElementById('rnBody');
+    if(body) body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--coral);">
+      ${e.message === 'no-geo' ? '📍 Location access needed for better suggestions.' : 'Something went wrong. Try again.'}
+      <br><br><button onclick="openRightNow()" style="background:var(--ink);color:#fff;border:none;border-radius:12px;padding:10px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Retry</button>
+    </div>`;
+  }
+}
+
+async function showAIScreen(){
   // Hide map views
   ['mapContainer','listView','tripsView','exploreView','messagesView','chatView','userProfileView','searchView'].forEach(id=>{
     const e=document.getElementById(id);if(e)e.style.display='none';
@@ -1797,39 +2547,43 @@ function showAIScreen(){
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('mapViewToggle').style.display='none';
   _setNavActive('btnAI');
-  // Populate AI screen with real data
-  const aiText=document.getElementById('aiSummaryText');
-  if(aiText&&currentUser?.aiProfile?.summary) aiText.textContent=currentUser.aiProfile.summary;
-  const aiTags=document.getElementById('aiTagsContainer');
-  if(aiTags&&currentUser?.aiProfile?.tags?.length){
-    aiTags.innerHTML=currentUser.aiProfile.tags.map(t=>`<span style="background:var(--ink);color:#fff;border-radius:10px;padding:6px 13px;font-size:12px;font-weight:600;">${esc(t)}</span>`).join('');
-  }
-  const pc=document.getElementById('aiPlacesCount');if(pc)pc.textContent=places.length;
-  const tc=document.getElementById('aiTripsCount');if(tc)tc.textContent=trips.length;
-  // Top category
-  const allTags=places.flatMap(p=>p.tags||[]);
-  const freq=allTags.reduce((a,t)=>{a[t]=(a[t]||0)+1;return a;},{});
-  const topTag=Object.entries(freq).sort((a,b)=>b[1]-a[1])[0]?.[0];
-  const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸'};
-  if(topTag){
-    const ti=document.getElementById('aiTopCatIcon');if(ti)ti.textContent=PICO[topTag]||'📍';
-    const tl=document.getElementById('aiTopCatLabel');if(tl)tl.textContent=topTag;
-  }
-  // Travel style from profile
-  const ts=currentUser?.aiProfile?.timeOfDay||currentUser?.aiProfile?.travelStyle||'';
-  const si=document.getElementById('aiStyleIcon');
-  const sl=document.getElementById('aiStyleLabel');
-  if(ts&&si&&sl){
-    si.textContent=ts.includes('night')?'🌙':ts.includes('luxury')?'💎':ts.includes('budget')?'🎒':'✈️';
-    sl.textContent=ts.replace(/-/g,' ');
-  }
   // Greeting
   const hr=new Date().getHours();
   const greet=hr<12?'Good morning':hr<18?'Good afternoon':'Good evening';
   const ag=document.getElementById('aiGreeting');
   if(ag)ag.textContent=greet+' ✦';
-  // Show AI screen
+  // Show AI screen immediately
   document.getElementById('aiScreen').style.display='flex';
+  // Populate stats from already-loaded data
+  const pc=document.getElementById('aiPlacesCount');if(pc)pc.textContent=places.length;
+  const tc=document.getElementById('aiTripsCount');if(tc)tc.textContent=trips.length;
+  const allTags=places.flatMap(p=>p.tags||[]);
+  const freq=allTags.reduce((a,t)=>{a[t]=(a[t]||0)+1;return a;},{});
+  const topTag=Object.entries(freq).sort((a,b)=>b[1]-a[1])[0]?.[0];
+  const PICO={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸',Meat:'🥩',Italian:'🍝',Fish:'🐟','Photo Spot':'📸',Fun:'🎉',Hotel:'🏨'};
+  if(topTag){
+    const ti=document.getElementById('aiTopCatIcon');if(ti)ti.textContent=PICO[topTag]||'📍';
+    const tl=document.getElementById('aiTopCatLabel');if(tl)tl.textContent=topTag;
+  }
+  // Always fetch fresh AI profile from server
+  try{
+    const r=await apiFetch('/api/ai/profile');
+    const d=await r.json();
+    const p=d.profile;
+    if(p&&p.analyzedAt){
+      const aiText=document.getElementById('aiSummaryText');
+      if(aiText)aiText.textContent=p.summary||'';
+      const aiTags=document.getElementById('aiTagsContainer');
+      if(aiTags&&p.tags?.length){
+        aiTags.innerHTML=p.tags.map(t=>`<span style="background:var(--ink);color:#fff;border-radius:10px;padding:6px 13px;font-size:12px;font-weight:600;">${esc(t)}</span>`).join('');
+      }
+      const ts=p.timeOfDay||p.travelStyle||'';
+      const si=document.getElementById('aiStyleIcon');
+      const sl=document.getElementById('aiStyleLabel');
+      if(si)si.textContent=ts.includes('night')?'🌙':ts.includes('luxury')?'💎':ts.includes('budget')?'🎒':'✈️';
+      if(sl)sl.textContent=ts?ts.replace(/-/g,' '):'—';
+    }
+  }catch{}
 }
 
 function showMap(){
@@ -1839,6 +2593,7 @@ function showMap(){
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=id==='fab'?'block':'flex';});
   document.getElementById('mapViewToggle').style.display='flex';
   _setNavActive('btnMap');
+  _setToggleActive('toggleMap');
   if(gmap)google.maps.event.trigger(gmap,'resize');
 }
 function showList(){
@@ -1848,6 +2603,7 @@ function showList(){
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('mapViewToggle').style.display='flex';
   _setNavActive('btnMap');
+  _setToggleActive('toggleSocial');
   loadSocialFeed();
 }
 
@@ -1857,7 +2613,10 @@ async function loadSocialFeed(){
   feed.innerHTML='<div style="text-align:center;padding:40px;color:var(--txt3);font-weight:600;">Loading feed…</div>';
   try{
     const res=await apiFetch('/api/posts');
-    socialPosts=await res.json();
+    const allPosts=await res.json();
+    // Frontend safety filter — only show posts from last 24 hours
+    const cutoff = Date.now() - 24*60*60*1000;
+    socialPosts=allPosts.filter(p => new Date(p.createdAt).getTime() > cutoff);
     renderFeed();
   }catch{feed.innerHTML='<div class="no-posts"><div class="ni">⚠️</div><p>Could not load feed</p></div>';}
 }
@@ -1866,7 +2625,7 @@ function renderFeed(){
   const feed=document.getElementById('socialFeed');
   const count=document.getElementById('feedCount');
   if(!socialPosts.length){
-    feed.innerHTML=`<div class="no-posts"><div class="ni">🌐</div><p>No posts yet.<br>Add a place and press <strong>Social It!</strong> to be the first.</p></div>`;
+    feed.innerHTML=`<div class="no-posts"><div class="ni">🌐</div><p>No posts in the last 24 hours.<br>Add a place and press <strong>Social It!</strong> to share with Wandr.</p></div>`;
     if(count) count.textContent='';
     return;
   }
@@ -1880,7 +2639,10 @@ function renderFeed(){
     const avatarContent=p.authorAvatar?`<img src="${esc(p.authorAvatar)}" style="width:100%;height:100%;object-fit:cover;">`:(p.authorName?p.authorName[0].toUpperCase():'?');
     const ismine=p.user===userId||p.user===(currentUser&&currentUser._id);
     const timeAgo=formatTimeAgo(p.createdAt);
-    return `<div class="post-card">
+    const hoursLeft = Math.max(0, Math.ceil((new Date(p.createdAt).getTime() + 24*60*60*1000 - Date.now()) / (60*60*1000)));
+    const expiryBar = hoursLeft <= 6 ? `<div style="height:2px;background:linear-gradient(90deg,#f87171,#fca5a5);border-radius:1px;width:${(hoursLeft/24*100)}%;margin-bottom:8px;" title="${hoursLeft}h left"></div>` : '';
+    const expiryLabel = hoursLeft <= 6 ? `<span style="font-size:10px;color:#f87171;font-weight:700;">⏱ ${hoursLeft}h left</span>` : `<span style="font-size:10px;color:var(--txt3);">⏱ ${timeAgo}</span>`;
+    return `<div class="post-card">${expiryBar}
       <div class="post-header">
         <div class="post-avatar" onclick="openUserProfile('${p.user}')" style="cursor:pointer;">${avatarContent}</div>
         <div class="post-author">
@@ -1888,7 +2650,7 @@ function renderFeed(){
           ${p.authorHandle?`<div class="post-author-handle">@${esc(p.authorHandle)}</div>`:''}
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <div class="post-time">${timeAgo}</div>
+          <div class="post-time">${expiryLabel}</div>
           ${ismine?`<button class="post-del-btn" onclick="deletePost('${p._id}')">✕</button>`:''}
         </div>
       </div>
@@ -1899,6 +2661,7 @@ function renderFeed(){
         ${p.notes?`<div class="post-notes">${esc(p.notes)}</div>`:''}
         <div class="post-footer">
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            ${sourceBadge}
             ${statusBadge}
             ${stars?`<div>${stars}</div>`:''}
             ${tags?`<div class="post-tags">${tags}</div>`:''}
@@ -2040,7 +2803,7 @@ function openAddresSearch(){
     });
   }
 }
-function openFull(pre={}){window._pendingCoverFile=null; // cleared when form opens fresh
+function openFull(pre={}){window._pendingCoverFile=null; window._googlePhotoSet=false; // cleared when form opens fresh
   editId=null;selTags=pre.tags?[...pre.tags]:[];pendingCoords=null;
   document.getElementById('addTitle').textContent='✍️ Add Place';
   document.getElementById('pName').value=pre.name||'';
@@ -2053,6 +2816,7 @@ function openFull(pre={}){window._pendingCoverFile=null; // cleared when form op
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='none';
   document.getElementById('btnSocialIt').style.display='none';
+  document.getElementById('btnDonePlace').style.display='none';
   document.getElementById('coverPhotoSection').style.display='block';
   document.getElementById('gallerySection').style.display='none';
   showCoverPreview('');
@@ -2087,7 +2851,7 @@ function editPlace(id){
   document.getElementById('coverPhotoSection').style.display='block';
   document.getElementById('gallerySection').style.display='block';
   showCoverPreview(p.coverPhoto||'');
-  renderGallery(p.photos||[]);
+  renderGallery(p.photos||[], p.videos||[]);
   document.querySelectorAll('.topt').forEach(t=>t.classList.toggle('sel',selTags.includes(t.dataset.t)));
   if(gmap){infoWin.close();gmap.panTo({lat:p.lat,lng:p.lng});}
   showMap();openOverlay('addOverlay');
@@ -2112,6 +2876,7 @@ async function savePlace(){
       editId=created._id;
       document.getElementById('btnDelete').style.display='block';
       document.getElementById('btnSocialIt').style.display='block';
+      document.getElementById('btnDonePlace').style.display='block';
       document.getElementById('addTitle').textContent='✏️ Edit Place';
       document.getElementById('gallerySection').style.display='block';
     }
@@ -2175,7 +2940,8 @@ async function scanImage(input){
   const file=input.files[0];
   if(!file)return;
   // Store a copy of the file blob so it survives input.value='' reset
-  resizeImageFile(file).then(r=>window._pendingCoverFile=r);
+  // Store uploaded file as fallback — will be replaced if Google photo is found
+  resizeImageFile(file).then(r=>{ if(!window._googlePhotoSet) window._pendingCoverFile=r; });
   const content=document.getElementById('uploadContent');
   const loading=document.getElementById('scanLoading');
   const result=document.getElementById('igResult');
@@ -2271,7 +3037,25 @@ async function scanImage(input){
       result.style.background='var(--sky-light)';
       result.style.borderColor='var(--sky-mid)';
       result.style.color='var(--sky)';
-      result.innerHTML=`✅ <strong>${parsed.name||''}</strong>${document.getElementById('pLocation').value?'<br><small style="font-weight:600;opacity:.8">📍 '+document.getElementById('pLocation').value+'</small>':''}<br><small style="font-weight:600;opacity:.65;font-size:10px;">${methodLabel} · ${foundCoords?'📍 Pinned on map!':'⚠️ Could not pin — try typing location manually'} · 📷 Will be saved as cover</small>`;
+      // Use Google Places photo as cover if available (better quality than screenshot)
+      window._googlePhotoSet = false;
+      if(parsed.googlePhotoUrl) {
+        try {
+          // Fetch via our proxy (avoids CORS with Google's API)
+          const photoRes = await apiFetch(parsed.googlePhotoUrl);
+          const blob = await photoRes.blob();
+          window._pendingCoverFile = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
+          window._googlePhotoSet = true;
+          // Show preview using object URL
+          const previewUrl = URL.createObjectURL(blob);
+          showCoverPreview(previewUrl);
+          console.log('✅ Using Google Places photo as cover');
+        } catch(e) {
+          console.log('Could not fetch Google photo, using uploaded image:', e.message);
+        }
+      }
+
+      result.innerHTML=`✅ <strong>${parsed.name||''}</strong>${document.getElementById('pLocation').value?'<br><small style="font-weight:600;opacity:.8">📍 '+document.getElementById('pLocation').value+'</small>':''}<br><small style="font-weight:600;opacity:.65;font-size:10px;">${methodLabel} · ${foundCoords?'📍 Pinned on map!':'⚠️ Could not pin — try typing location manually'} · ${parsed.googlePhotoUrl ? '🖼 Using Google photo as cover' : '📷 Will be saved as cover'}</small>`;
     } else {
       result.style.background='var(--amber-light)';
       result.style.borderColor='rgba(245,166,35,.4)';
@@ -2302,7 +3086,7 @@ function renderList(){
 function focusPlace(id){const p=places.find(x=>x._id===id);if(!p)return;showMap();if(gmap){gmap.panTo({lat:p.lat,lng:p.lng});gmap.setZoom(13);setTimeout(()=>{if(window._m[id])openIW(p,window._m[id]);},500);}}
 function setChip(el){document.querySelectorAll('.chips-row .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');activeTag=el.dataset.t;renderList();}
 async function loadTrips(){
-  try{const r=await apiFetch('/api/trips');trips=await r.json();populateTripSelect();}
+  try{const r=await apiFetch('/api/trips');trips=await r.json();try{localStorage.setItem('wandr_trips_cache',JSON.stringify(trips));}catch{}populateTripSelect();renderTrips();}
   catch(e){if(e.message!=='Unauthorized')console.error('trips load failed');}
 }
 
@@ -2316,8 +3100,26 @@ function populateTripSelect(){
     o.value=t._id; o.textContent=t.emoji+' '+t.name;
     sel.appendChild(o);
   });
-  if(cur) sel.value=cur;
+  // ➕ Create new trip from within save-place form
+  const newOpt=document.createElement('option');
+  newOpt.value='__new__'; newOpt.textContent='➕ New Trip…';
+  sel.appendChild(newOpt);
+  if(cur && cur!=='__new__') sel.value=cur;
   if(activeTrip) sel.value=activeTrip._id;
+  // Attach change handler once
+  if(!sel._newTripListenerAttached){
+    sel._newTripListenerAttached=true;
+    sel.addEventListener('change',function(){
+      if(this.value==='__new__'){
+        this.value=this._prevVal||''; // revert immediately
+        window._createTripFromForm=true;
+        openNewTrip();
+      } else {
+        this._prevVal=this.value;
+      }
+    });
+    sel.addEventListener('focus',function(){ this._prevVal=this.value; });
+  }
 }
 
 function showTrips(){
@@ -2362,6 +3164,42 @@ async function showExplore(){
   }catch{toast('Could not load explore','err');}
 }
 
+// Cache for trip destination photos
+const _tripPhotoCache = {};
+
+async function fetchTripPhoto(tripId, tripName){
+  if(_tripPhotoCache[tripId]) return _tripPhotoCache[tripId];
+  return new Promise(resolve=>{
+    try{
+      const svc = new google.maps.places.PlacesService(document.createElement('div'));
+      svc.textSearch({query: tripName + ' landmark'}, (results, status)=>{
+        if(status === google.maps.places.PlacesServiceStatus.OK && results?.[0]?.photos?.[0]){
+          const url = results[0].photos[0].getUrl({maxWidth:600, maxHeight:300});
+          _tripPhotoCache[tripId] = url;
+          resolve(url);
+        } else {
+          resolve(null);
+        }
+      });
+    }catch{ resolve(null); }
+  });
+}
+
+async function loadTripPhotos(){
+  // Load photos for all trips and update hero backgrounds
+  for(const t of trips){
+    const url = await fetchTripPhoto(t._id, t.name);
+    if(url){
+      const hero = document.getElementById('tripHero_'+t._id);
+      if(hero){
+        hero.style.backgroundImage = `url('${url}')`;
+        hero.style.backgroundSize = 'cover';
+        hero.style.backgroundPosition = 'center';
+      }
+    }
+  }
+}
+
 function renderTrips(){
   const el=document.getElementById('tripsList');
   if(!trips.length){
@@ -2372,7 +3210,7 @@ function renderTrips(){
     const count=places.filter(p=>p.trip===t._id).length;
     // Build emoji pills from top 3 places
     const tripPlaces=places.filter(p=>p.trip===t._id);
-    const PICO_MAP={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸'};
+    const PICO_MAP={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸',Meat:'🥩',Italian:'🍝',Fish:'🐟','Photo Spot':'📸',Fun:'🎉',Hotel:'🏨'};
     const topTags=[...new Set(tripPlaces.flatMap(p=>p.tags||[]))].slice(0,3);
     const pills=topTags.map(tag=>`<div style="background:rgba(255,255,255,.2);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.25);border-radius:9px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:15px;">${PICO_MAP[tag]||'📍'}</div>`).join('');
     const extraCount=count-topTags.length;
@@ -2382,14 +3220,14 @@ function renderTrips(){
     const heroGrad=`linear-gradient(135deg,${c}cc 0%,${c}88 60%,${c}44 100%)`;
     const emptyHint=count===0?`<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-65%);text-align:center;"><div style="font-size:26px;margin-bottom:6px;">🗺</div><div style="font-size:11px;color:rgba(255,255,255,.8);background:rgba(0,0,0,.2);backdrop-filter:blur(8px);padding:5px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.2);">No places yet — tap Suggest!</div></div>`:'';
     return `<div class="trip-card">
-      <div style="height:148px;background:${heroGrad};position:relative;display:flex;align-items:flex-end;overflow:hidden;">
+      <div id="tripHero_${t._id}" style="height:148px;background:${heroGrad};position:relative;display:flex;align-items:flex-end;overflow:hidden;">
         <div style="position:absolute;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06);top:-50px;right:-40px;"></div>
         <div style="position:absolute;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.04);top:10px;right:70px;"></div>
         ${emptyHint}
         <div style="position:absolute;top:12px;right:12px;display:flex;gap:4px;">${pills}${extraPill}</div>
         <div style="position:relative;z-index:1;padding:12px 16px;width:100%;background:linear-gradient(to top,rgba(0,0,0,.5) 0%,transparent 100%);">
           <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#fff;line-height:1.2;">${esc(t.name)} ${t.emoji}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;">📍 ${count} place${count!==1?'s':''}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;">📍 ${count} place${count!==1?'s':''} ${t.isShared?'<span style="background:rgba(255,255,255,.2);padding:2px 7px;border-radius:8px;font-size:9px;font-weight:800;margin-left:4px;">👥 MUTUAL</span>':''}</div>
         </div>
       </div>
       <div style="padding:12px 14px;display:flex;gap:6px;align-items:center;background:var(--card);" onclick="event.stopPropagation()">
@@ -2397,12 +3235,13 @@ function renderTrips(){
         <button style="flex:1;padding:8px 3px;border-radius:10px;border:1.5px solid var(--border2);background:var(--bg);color:var(--ink2);font-family:'DM Sans',sans-serif;font-size:10px;font-weight:700;cursor:pointer;" onclick="openShare('${t._id}')">🔗 Share</button>
         <button style="flex:1;padding:8px 3px;border-radius:10px;border:1.5px solid var(--purple);background:var(--purple-light);color:var(--purple);font-family:'DM Sans',sans-serif;font-size:10px;font-weight:700;cursor:pointer;" onclick="openAIPlan('${t._id}','${esc(t.name)}')">✦ Plan</button>
         <button style="flex:1;padding:8px 3px;border-radius:10px;border:1.5px solid var(--mint);background:var(--mint-light);color:var(--mint);font-family:'DM Sans',sans-serif;font-size:10px;font-weight:700;cursor:pointer;" onclick="openTripSuggest('${t._id}','${esc(t.name)}')">✦ Suggest</button>
-        <button style="flex:1;padding:8px 3px;border-radius:10px;border:1.5px solid var(--amber);background:var(--amber-light);color:#8B6914;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:700;cursor:pointer;" onclick="openStory('${t._id}','${esc(t.name)}')">🎬</button>
+        <button style="flex:1;padding:8px 3px;border-radius:10px;border:1.5px solid var(--border2);background:var(--bg);color:var(--ink3);font-family:'DM Sans',sans-serif;font-size:10px;font-weight:700;cursor:not-allowed;opacity:.45;position:relative;" title="Coming soon" disabled>🎬🔒</button>
         <button style="padding:8px 9px;border-radius:10px;border:1.5px solid var(--border2);background:var(--bg);font-size:12px;cursor:pointer;" onclick="openEditTrip('${t._id}')">✏️</button>
-        <button style="padding:8px 9px;border-radius:10px;border:1.5px solid rgba(200,75,47,.25);background:#fff0f0;font-size:12px;cursor:pointer;" onclick="deleteTrip('${t._id}')">🗑</button>
+        <button style="padding:8px 9px;border-radius:10px;border:1.5px solid rgba(200,75,47,.25);background:#fff0f0;font-size:12px;cursor:pointer;" onclick="deleteTrip('${t._id}')">${t.isShared?'🚪':'🗑'}</button>
       </div>
     </div>`;
   }).join('');
+  if(typeof google !== 'undefined' && google.maps) loadTripPhotos();
 }
 
 /* ── TRIP SUGGEST ── */
@@ -2416,7 +3255,7 @@ async function openTripSuggest(tripId, tripName){
     <button class="sm-close" onclick="document.getElementById('suggestModal').remove()">✕</button>
     <div class="sm-head">
       <div class="sm-title">✦ Suggestions for ${esc(tripName)}</div>
-      <div class="sm-sub">8 curated picks · 2 hidden gems · 1 Michelin pick — all based on what AI knows about you</div>
+      <div class="sm-sub" id="suggestSubtitle">7 picks · 2 hidden gems · 1 Michelin · AI-powered, verify before you go</div>
     </div>
     <div class="sm-body">
       <div class="sm-seasonal">
@@ -2444,7 +3283,29 @@ async function runTripSuggest(tripId, tripName){
   if(!body) return;
   const visitMonth = document.getElementById('visitMonth')?.value || '';
 
-  body.innerHTML = '<div class="suggest-loading"><div class="sl-icon">✦</div><div style="margin-top:14px;font-size:14px;font-weight:700;color:var(--txt)">Finding places for you…</div><div style="font-size:12px;color:var(--txt3);margin-top:4px;">Building 8 picks + 2 hidden gems</div></div>';
+  const steps = [
+    { icon: '🧠', text: 'Reading your taste profile…', sub: 'Analyzing your Identity Cube' },
+    { icon: '📍', text: `Discovering the best of ${tripName}…`, sub: 'Curating 7 picks + 2 hidden gems + Michelin' },
+    { icon: '✅', text: 'Verifying venues are open…', sub: 'Cross-checking with Google Places' },
+    { icon: '🌤', text: 'Checking weather & events…', sub: visitMonth ? `What to expect in ${visitMonth}` : 'Local events & holidays' },
+    { icon: '✦', text: 'Putting it all together…', sub: 'Almost ready' }
+  ];
+
+  let stepIdx = 0;
+  function renderStep() {
+    const s = steps[stepIdx % steps.length];
+    body.innerHTML = `<div class="suggest-loading">
+      <div style="font-size:40px;margin-bottom:16px;animation:spin 2s linear infinite;display:inline-block;">${s.icon}</div>
+      <div style="font-size:15px;font-weight:800;color:var(--txt);margin-bottom:6px;">${s.text}</div>
+      <div style="font-size:12px;color:var(--txt3);">${s.sub}</div>
+      <div style="display:flex;gap:6px;justify-content:center;margin-top:20px;">
+        ${steps.map((_,i) => `<div style="width:${i===stepIdx%steps.length?20:6}px;height:6px;border-radius:3px;background:${i===stepIdx%steps.length?'var(--mint)':'var(--border2)'};transition:all .3s;"></div>`).join('')}
+      </div>
+    </div>`;
+    stepIdx++;
+  }
+  renderStep();
+  const loadingInterval = setInterval(renderStep, 2000);
 
   try {
     // Check AI profile exists
@@ -2474,25 +3335,32 @@ async function runTripSuggest(tripId, tripName){
     const data = await r.json();
     if(data.error) throw new Error(data.error);
 
+    if(data.error) throw new Error(data.error);
     if(!data.suggestions || !data.suggestions.length) {
-      body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--txt3);font-size:14px;">No suggestions found. Try building your AI profile with more photos.</div>';
+      body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--txt3);font-size:14px;">No suggestions found for this destination. Try again or add more photos to your AI profile.</div>';
       return;
     }
 
     window._currentSuggestions = data.suggestions;
     window._currentSuggestTripId = tripId;
 
-    const normalPlaces  = data.suggestions.filter(s => !s.isGem && !s.isMichelin);
+    const normalPlaces  = data.suggestions.filter(s => !s.isGem && !s.isMichelin && !s.isTabelog);
     const gemPlaces     = data.suggestions.filter(s => s.isGem);
     const michelinPlace = data.suggestions.find(s => s.isMichelin) || null;
+    const tabelogPlaces = data.suggestions.filter(s => s.isTabelog);
 
     const michelinEmoji={'Bib Gourmand':'🍽','1 Star':'⭐','2 Stars':'⭐⭐','3 Stars':'⭐⭐⭐'};
     const renderCard = (s, i) => {
-      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name+' '+s.location)}`;
-      const cardClass = s.isMichelin?'michelin':s.isGem?'gem':'';
+      // Use just name + city, but don't duplicate if city already in name
+      const mapsCity = (s.location||'').split(',')[0].trim();
+      const nameAlreadyHasCity = mapsCity && s.name.toLowerCase().includes(mapsCity.toLowerCase());
+      const mapsQuery = nameAlreadyHasCity ? s.name : (s.name + (mapsCity ? ' ' + mapsCity : ''));
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`;
+      const cardClass = s.isMichelin?'michelin':s.isGem?'gem':s.isTabelog?'tabelog':'';
       const badge = s.isMichelin
         ?`<div class="sc-michelin-badge">${michelinEmoji[s.michelinDistinction]||'🔴'} Michelin ${esc(s.michelinDistinction||'')}</div>`
-        :s.isGem?`<div class="sc-gem-badge">💎 Hidden Gem</div>`:'';
+        :s.isGem?`<div class="sc-gem-badge">💎 Hidden Gem</div>`
+        :s.isTabelog?`<div class="sc-tabelog-badge">✦ Suggested by Wandr AI</div>`:'';
       return `<div class="suggest-card${cardClass?' '+cardClass:''}" id="scard_${i}">
         <div class="sc-body">
           ${badge}
@@ -2508,6 +3376,17 @@ async function runTripSuggest(tripId, tripName){
 
     const tasteLabel = (pd.profile.tags||[]).slice(0,4).join(', ');
     const monthLabel = visitMonth ? ` · ${visitMonth}` : '';
+    // Show weather in the seasonal box
+    if (data.weather) {
+      const wd = document.getElementById('weatherDisplay');
+      const wl = document.getElementById('weatherLabel');
+      const ws = document.getElementById('weatherSub');
+      if (wd && wl) {
+        wl.textContent = `${data.weather.label}`;
+        if (ws) ws.textContent = `Typical temperature in ${data.weather.month}`;
+        wd.style.display = 'flex';
+      }
+    }
 
     // Render holidays section
     const holidaysHtml = (data.holidays && data.holidays.length) ? `
@@ -2524,16 +3403,26 @@ async function runTripSuggest(tripId, tripName){
           </div>`).join('')}
       </div>` : '';
 
+    clearInterval(loadingInterval);
     body.innerHTML = `
       <div style="font-size:12px;color:var(--txt3);margin-bottom:14px;line-height:1.5;">Based on your taste for <strong>${esc(tasteLabel)}</strong>${monthLabel}</div>
       ${holidaysHtml}
+      ${data.weather ? `<div style="background:linear-gradient(135deg,#e8f4fd,#d6eaf8);border:1.5px solid #85c1e9;border-radius:14px;padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:28px;">🌡️</span>
+        <div>
+          <div style="font-size:18px;font-weight:800;color:#1a5276;">${data.weather.label}</div>
+          <div style="font-size:12px;color:#2e86c1;margin-top:2px;">Typical temperature in ${data.weather.month}</div>
+        </div>
+      </div>` : ''}
       ${normalPlaces.length?`<div style="font-size:11px;font-weight:800;color:var(--txt2);letter-spacing:.06em;margin-bottom:8px;">CURATED PICKS</div>`:''}
       ${data.suggestions.filter(s=>!s.isGem&&!s.isMichelin).map((s,i)=>renderCard(s,data.suggestions.indexOf(s))).join('')}
       ${gemPlaces.length?`<div style="font-size:11px;font-weight:800;color:#e8890a;letter-spacing:.06em;margin:16px 0 8px;">💎 HIDDEN GEMS</div>`:''}
       ${gemPlaces.map(s=>renderCard(s,data.suggestions.indexOf(s))).join('')}
-      ${michelinPlace?`<div style="font-size:11px;font-weight:800;color:#bf0000;letter-spacing:.06em;margin:16px 0 8px;">🔴 MICHELIN GUIDE</div>${renderCard(michelinPlace,data.suggestions.indexOf(michelinPlace))}`:''}`;
+      ${michelinPlace?`<div style="font-size:11px;font-weight:800;color:#bf0000;letter-spacing:.06em;margin:16px 0 8px;">🔴 MICHELIN GUIDE</div>${renderCard(michelinPlace,data.suggestions.indexOf(michelinPlace))}`:''} 
+      ${tabelogPlaces.length?`<div style="font-size:11px;font-weight:800;color:#534AB7;letter-spacing:.06em;margin:16px 0 8px;">✦ WANDR AI JAPAN PICKS</div>${tabelogPlaces.map(s=>renderCard(s,data.suggestions.indexOf(s))).join('')}`:''}`;
 
   } catch(e) {
+    clearInterval(loadingInterval);
     body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--coral);font-size:14px;">Error: ${esc(e.message)}</div>`;
   }
 }
@@ -2556,7 +3445,8 @@ async function addSuggestionToTrip(idx, tripId){
         trip: tripId,
         status: 'tobe',
         isPublic: false,
-        visibility: 'private'
+        visibility: 'private',
+        source: s.isGem ? 'hidden-gem' : s.isMichelin ? 'michelin' : s.isTabelog ? 'ai-japan-pick' : 'ai-suggest'
       })
     });
     if(!res.ok) throw new Error();
@@ -2567,6 +3457,21 @@ async function addSuggestionToTrip(idx, tripId){
     renderTrips();
     if(btn){ btn.textContent = '✓ Added!'; btn.style.background = 'var(--mint)'; }
     toast(`📍 "${s.name}" added to trip!`, 'ok');
+
+    // Auto-fetch Google Places photo as cover
+    if(p._id) {
+      try {
+        const photoRes = await apiFetch(`/api/places/${p._id}/fetch-google-photo`, { method: 'POST', body: JSON.stringify({ name: s.name, location: s.location }) });
+        if(photoRes.ok) {
+          const photoData = await photoRes.json();
+          if(photoData.coverPhoto) {
+            const place = places.find(x => x._id === p._id);
+            if(place) place.coverPhoto = photoData.coverPhoto;
+            console.log(`✅ Auto cover photo set for "${s.name}"`);
+          }
+        }
+      } catch(e) { console.log('Auto photo fetch failed:', e.message); }
+    }
   } catch {
     if(btn) btn.disabled = false;
     toast('Could not add place', 'err');
@@ -3025,12 +3930,14 @@ async function openAIAgent(){
   document.getElementById('aiAgentModal')?.remove();
   _agentFiles=[];
 
-  // Check if profile already exists
-  let existingProfile=null;
+  // Load existing profile AND photos in parallel
+  let existingProfile=null, existingPhotos=[];
   try{
-    const r=await apiFetch('/api/ai/profile');
-    const d=await r.json();
-    existingProfile=d.profile?.analyzedAt?d.profile:null;
+    const [pr, phr] = await Promise.all([apiFetch('/api/ai/profile'), apiFetch('/api/ai/photos')]);
+    const pd = await pr.json();
+    const phd = await phr.json();
+    existingProfile = pd.profile?.analyzedAt ? pd.profile : null;
+    existingPhotos = phd.photos || [];
   }catch{}
 
   const modal=document.createElement('div');
@@ -3039,7 +3946,7 @@ async function openAIAgent(){
     <button class="aam-close" onclick="document.getElementById('aiAgentModal').remove()">✕</button>
     <div class="aam-head">
       <div class="aam-title"><span style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">✦ AI Agent</span></div>
-      <div class="aam-sub">Upload photos from your travels and hobbies — AI will build a personal profile and use it to recommend places you'll love.</div>
+      <div class="aam-sub">Your uploaded photos — the AI built your profile from these. Delete any and add new ones to update your profile.</div>
     </div>
     <div class="aam-body">
       ${existingProfile?`<div class="aaz-profile" id="existingProfile">
@@ -3049,6 +3956,18 @@ async function openAIAgent(){
         ${existingProfile.locations?.length?`<div class="azpr-locs">📍 ${esc(existingProfile.locations.join(' · '))}</div>`:''}
         <div class="azpr-date">Last analyzed: ${new Date(existingProfile.analyzedAt).toLocaleDateString()}</div>
       </div>`:''}
+      ${existingPhotos.length?`
+        <div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin:14px 0 8px;">📸 YOUR UPLOADED PHOTOS (${existingPhotos.length})</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;" id="existingPhotosGrid">
+          ${existingPhotos.map(p=>`
+            <div style="position:relative;">
+              <img src="${esc(p.url)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:2px solid var(--border);display:block;">
+              <button onclick="deleteAIPhoto('${esc(p.publicId)}',this)" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;" title="Delete photo">✕</button>
+            </div>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--ink3);text-align:center;margin-bottom:12px;line-height:1.5;">Tap ✕ to remove a photo · Add new photos below to re-analyze</div>
+      `:''}
+      <div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:8px;">➕ ADD NEW PHOTOS</div>
       <div class="aaz-upload" id="aazDrop" onclick="document.getElementById('aazInput').click()" ondragover="aazDragOver(event)" ondragleave="aazDragLeave(event)" ondrop="aazDrop(event)">
         <input type="file" id="aazInput" multiple accept="image/*" onchange="aazFilesSelected(event)">
         <div class="aaz-icon">📸</div>
@@ -3057,12 +3976,111 @@ async function openAIAgent(){
       </div>
       <div class="aaz-grid" id="aazGrid"></div>
       <div id="aazCount" style="font-size:12px;color:var(--txt3);text-align:center;margin-bottom:4px;"></div>
+
+      <!-- Music & Questions section — rendered by JS to avoid nested template literal issues -->
+      <div style="margin:16px 0 0;" id="aazPrefsSection"></div>
+
       <button class="aaz-btn" id="aazAnalyzeBtn" onclick="runAIAgent()" disabled>✦ Analyze &amp; Build Profile</button>
+      <button onclick="document.getElementById('aiAgentModal').remove();openNewTrip();" style="margin-top:10px;width:100%;padding:13px;border:1.5px solid var(--border);border-radius:14px;background:var(--bg2);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">✈️ Plan a Trip</button>
     </div>
   </div>`;
   modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
   document.body.appendChild(modal);
+  // Render preferences section now that DOM exists
+  renderAazPrefs(existingProfile);
 }
+
+function renderAazPrefs(existingProfile){
+  const el = document.getElementById('aazPrefsSection');
+  if(!el) return;
+  const mg = existingProfile?.musicGenres||[];
+  const genres = ['Hip-Hop','80s','90s','Mainstream','Techno','Trance','R&B','Jazz','Rock','Electronic'];
+  const goals = [{v:'Network',l:'💼 Secure the bag',s:"I’m here for tech, real estate, or business."},
+                 {v:'Vibe Out',l:'⚡ Just for the energy',s:'I want to meet people and hang out.'},
+                 {v:'Low-Key',l:'🎧 Staying in my lane',s:"I’m here for the music or the activity itself."}];
+  const atms  = [{v:'Top-Shelf',l:'🥂 Top-Shelf',s:'High-end, sophisticated, and polished. Think rooftops or lounges.'},
+                 {v:'Electric',l:'⚡ Electric',s:'High-energy, loud, and main-character energy. Think clubs or stadiums.'},
+                 {v:'Main Street',l:'🏠 Main Street',s:'Local, authentic, and hidden gems. Think underground or boutique.'}];
+  const sounds= [{v:'Background',l:'💬 Background',s:'Clean audio, but keep it conversational.'},
+                 {v:'Front & Center',l:'🎛 Front & Center',s:"Crank it. I’m here for the DJ/Band."},
+                 {v:'Acoustic',l:'🎸 Acoustic',s:'Raw, chill, and stripped back.'}];
+  el.innerHTML =
+    '<div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:10px;">🎵 MUSIC YOU VIBE WITH</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;">' +
+    genres.map(g=>'<div class="ob-chip'+(mg.includes(g)?' sel':'')+'" data-group="music" data-val="'+g+'" onclick="obToggleChip(this)">'+g+'</div>').join('') +
+    '</div>' +
+    '<div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:8px;">🎯 WHAT’S THE MISSION?</div>' +
+    '<div class="ob-radio-group" style="margin-bottom:14px;">' +
+    goals.map(o=>'<div class="ob-radio'+(existingProfile?.eventGoal===o.v?' sel':'')+'" data-group="goal" data-val="'+o.v+'" onclick="obSelectRadio(this)"><div class="or-label">'+o.l+'</div><div class="or-sub">'+o.s+'</div></div>').join('') +
+    '</div>' +
+    '<div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:8px;">🏛 WHAT KIND OF ROOM?</div>' +
+    '<div class="ob-radio-group" style="margin-bottom:14px;">' +
+    atms.map(o=>'<div class="ob-radio'+(existingProfile?.atmosphere===o.v?' sel':'')+'" data-group="atmosphere" data-val="'+o.v+'" onclick="obSelectRadio(this)"><div class="or-label">'+o.l+'</div><div class="or-sub">'+o.s+'</div></div>').join('') +
+    '</div>' +
+    '<div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:8px;">🔊 HOW’S THE SOUND HITTING?</div>' +
+    '<div class="ob-radio-group" style="margin-bottom:16px;">' +
+    sounds.map(o=>'<div class="ob-radio'+(existingProfile?.soundVibe===o.v?' sel':'')+'" data-group="soundVibe" data-val="'+o.v+'" onclick="obSelectRadio(this)"><div class="or-label">'+o.l+'</div><div class="or-sub">'+o.s+'</div></div>').join('') +
+    '</div>' +
+    '<div style="font-size:11px;font-weight:800;color:var(--ink2);letter-spacing:.06em;margin-bottom:8px;">👥 HOW PACKED DO YOU LIKE IT? <span style="font-weight:400;color:var(--ink3);font-size:10px;">(pick up to 2)</span></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;">' +
+    [{v:"Intimate",l:"🔒 Intimate"},{v:"Mid-size",l:"🎵 Mid-size"},{v:"Big Room",l:"🏟 Big Room"},{v:"No Preference",l:"🤷 Any size"}].map(o=>'<div class="ob-chip'+((existingProfile?.crowdSizes||[]).includes(o.v)||(existingProfile?.crowdSize===o.v)?' sel':'')+'" data-group="crowdSize" data-val="'+o.v+'" onclick="obToggleChipMax(this,2)">'+o.l+'</div>').join('') +
+    '</div>' +
+    '<button class="aaz-btn" style="margin-bottom:8px;" onclick="savePreferencesOnly()">💾 Save Preferences</button>';
+}
+
+async function deleteAIPhoto(publicId, btn){
+  btn.disabled=true;
+  btn.textContent='…';
+  try{
+    const r=await apiFetch('/api/ai/photo/'+encodeURIComponent(publicId),{method:'DELETE'});
+    const d=await r.json();
+    if(d.ok){
+      // Remove the photo card from UI
+      btn.closest('div[style*="position:relative"]').remove();
+      toast('Photo deleted');
+      // Update count label
+      const grid=document.getElementById('existingPhotosGrid');
+      if(grid){
+        const remaining=grid.querySelectorAll('div[style*="position:relative"]').length;
+        const lbl=grid.previousElementSibling;
+        if(lbl)lbl.textContent=`📸 YOUR UPLOADED PHOTOS (${remaining})`;
+      }
+    }else{
+      btn.disabled=false;btn.textContent='✕';
+      toast('Failed to delete','err');
+    }
+  }catch{
+    btn.disabled=false;btn.textContent='✕';
+    toast('Error deleting photo','err');
+  }
+}
+
+async function savePreferencesOnly(){
+  const answers = obGetAnswers();
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try{
+    const r = await apiFetch('/api/ai/preferences', {
+      method: 'POST',
+      body: JSON.stringify(answers)
+    });
+    const d = await r.json();
+    if(d.ok){
+      toast('✅ Preferences saved!');
+      btn.textContent = '✓ Saved';
+      setTimeout(()=>{btn.textContent=orig;btn.disabled=false;},2000);
+    } else {
+      throw new Error(d.error);
+    }
+  }catch(e){
+    toast(e.message||'Failed to save','err');
+    btn.disabled=false;
+    btn.textContent=orig;
+  }
+}
+
 
 function aazDragOver(e){e.preventDefault();document.getElementById('aazDrop').classList.add('dragover');}
 function aazDragLeave(e){document.getElementById('aazDrop').classList.remove('dragover');}
@@ -3224,6 +4242,17 @@ async function saveTrip(){
       const created=await r.json();
       trips.unshift(created);
       toast('✈️ Trip created!','ok');
+      populateTripSelect();
+      closeOverlay('newTripOverlay');
+      // If triggered from place-save form, auto-select the new trip and keep form open
+      if(window._createTripFromForm){
+        window._createTripFromForm=false;
+        const sel=document.getElementById('pTrip');
+        if(sel){ sel.value=created._id; sel._prevVal=created._id; }
+        // Re-open the add overlay in case it got hidden
+        openOverlay('addOverlay');
+        return;
+      }
     }
     populateTripSelect();
     closeOverlay('newTripOverlay');
@@ -3232,7 +4261,23 @@ async function saveTrip(){
 }
 
 async function deleteTrip(id){
-  if(!confirm('Delete this trip? Places will not be deleted.'))return;
+  const trip = trips.find(t=>t._id===id);
+  if(!trip) return;
+
+  if(trip.isShared){
+    // Shared trip — leave it instead of deleting
+    if(!confirm('Leave this shared trip? You will no longer see it.')) return;
+    try{
+      await apiFetch(`/api/trips/${id}/leave`,{method:'POST'});
+      trips=trips.filter(t=>t._id!==id);
+      if(activeTrip&&activeTrip._id===id) clearActiveTrip();
+      populateTripSelect(); renderTrips();
+      toast('Left the shared trip','');
+    } catch(e){toast(e.message||'Error leaving trip','err');}
+    return;
+  }
+
+  if(!confirm('Delete this trip? Places will not be deleted.')) return;
   try{
     await apiFetch(`/api/trips/${id}`,{method:'DELETE'});
     trips=trips.filter(t=>t._id!==id);
@@ -3284,8 +4329,100 @@ async function openShare(id){
     <h3>${shareTargetTrip.emoji} ${esc(shareTargetTrip.name)}</h3>
     <p>📍 ${count} places</p>`;
   document.getElementById('shareLinkBox').style.display='none';
+  document.getElementById('collabHandleInput').value='';
+  renderCollabList(shareTargetTrip.collaborators||[]);
   openOverlay('shareOverlay');
 }
+
+function renderCollabList(collabs){
+  const el=document.getElementById('collabList');
+  if(!el)return;
+  if(!collabs||!collabs.length){el.innerHTML='';return;}
+  el.innerHTML=collabs.map(c=>`
+    <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 12px;">
+      <div style="width:30px;height:30px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">${(c.name||c.handle||'?')[0].toUpperCase()}</div>
+      <div style="flex:1;">
+        <div style="font-size:12px;font-weight:700;color:var(--ink);">${esc(c.name||c.handle)}</div>
+        <div style="font-size:11px;color:var(--ink3);">@${esc(c.handle)}</div>
+      </div>
+      <div style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;${c.status==='accepted'?'background:var(--mint-light);color:var(--mint);':'background:var(--amber-light);color:var(--amber);'}">${c.status==='accepted'?'✓ Active':'Pending'}</div>
+    </div>`).join('');
+}
+
+let _collabUsers = null;
+
+async function loadCollabUsers() {
+  if (_collabUsers) return _collabUsers;
+  try {
+    const r = await apiFetch('/api/users');
+    if (r.ok) {
+      const all = await r.json();
+      // Filter to followers/following first, then all users
+      _collabUsers = all;
+    }
+  } catch {}
+  return _collabUsers || [];
+}
+
+async function onCollabInput(val) {
+  const dropdown = document.getElementById('collabDropdown');
+  const q = val.replace(/^@/, '').toLowerCase().trim();
+  if (!q) { dropdown.style.display = 'none'; return; }
+
+  const users = await loadCollabUsers();
+  const matches = users.filter(u =>
+    (u.handle && u.handle.toLowerCase().includes(q)) ||
+    (u.firstName && u.firstName.toLowerCase().includes(q)) ||
+    (u.lastName && u.lastName.toLowerCase().includes(q))
+  ).slice(0, 6);
+
+  if (!matches.length) { dropdown.style.display = 'none'; return; }
+
+  dropdown.innerHTML = matches.map(u => `
+    <div onclick="selectCollabUser('${esc(u.handle||'')}','${esc(u.firstName||'')} ${esc(u.lastName||'')}')"
+      style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);"
+      onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+      ${u.avatar
+        ? `<img src="${esc(u.avatar)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`
+        : `<div style="width:32px;height:32px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;">${(u.firstName||u.handle||'?')[0].toUpperCase()}</div>`
+      }
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--ink);">@${esc(u.handle||'')}</div>
+        <div style="font-size:11px;color:var(--ink3);">${esc(u.firstName||'')} ${esc(u.lastName||'')}</div>
+      </div>
+    </div>
+  `).join('');
+  dropdown.style.display = 'block';
+}
+
+function selectCollabUser(handle, name) {
+  document.getElementById('collabHandleInput').value = '@' + handle;
+  document.getElementById('collabDropdown').style.display = 'none';
+}
+
+async function inviteCollaborator(){
+  if(!shareTargetTrip)return;
+  const handle=document.getElementById('collabHandleInput').value.trim();
+  if(!handle){toast('Enter a @username','err');return;}
+  try{
+    const r=await apiFetch(`/api/trips/${shareTargetTrip._id}/invite`,{
+      method:'POST',body:JSON.stringify({handle})
+    });
+    const data=await r.json();
+    if(data.error)throw new Error(data.error);
+    toast(`✅ Invited ${data.collaborator.name||handle}!`,'ok');
+    document.getElementById('collabHandleInput').value='';
+    // Update local trip object
+    const t=trips.find(t=>t._id===shareTargetTrip._id);
+    if(t){
+      if(!t.collaborators)t.collaborators=[];
+      t.collaborators.push({handle:handle.replace('@',''),name:data.collaborator.name||'',status:'pending'});
+      shareTargetTrip=t;
+      renderCollabList(t.collaborators);
+    }
+  }catch(e){toast(e.message,'err');}
+}
+
 
 async function generateShareLink(){
   if(!shareTargetTrip)return;
@@ -3396,6 +4533,8 @@ function renderProfileSheetAICard(){
       return;
     }
     if(resetBtn)resetBtn.style.display='block';
+    const musicRow = p.musicGenres?.length ? `<div style="margin-top:8px;"><div style="font-size:10px;font-weight:700;color:#764ba2;margin-bottom:4px;">🎵 MUSIC</div><div style="display:flex;flex-wrap:wrap;gap:4px;">${p.musicGenres.map(g=>`<span style="background:#f0edff;border:1px solid #764ba2;color:#764ba2;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;">${esc(g)}</span>`).join('')}</div></div>` : '';
+    const prefsRow = [p.eventGoal, p.atmosphere, p.soundVibe, p.crowdSize].filter(Boolean).length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">${[p.eventGoal&&`🎯 ${esc(p.eventGoal)}`,p.atmosphere&&`🏛 ${esc(p.atmosphere)}`,p.soundVibe&&`🔊 ${esc(p.soundVibe)}`,p.crowdSize&&`👥 ${esc(p.crowdSize.replace(/,/g,' · '))}`].filter(Boolean).map(s=>`<span style="background:var(--bg);border:1px solid var(--border2);color:var(--ink2);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600;">${s}</span>`).join('')}</div>` : '';
     card.innerHTML=`
       <div style="background:linear-gradient(135deg,#f8f5ff,#f0f4ff);border-radius:14px;padding:13px;">
         <div style="font-size:13px;color:var(--txt);font-style:italic;line-height:1.5;margin-bottom:10px;">"${esc(p.summary)}"</div>
@@ -3403,6 +4542,7 @@ function renderProfileSheetAICard(){
           ${(p.tags||[]).map(t=>`<span style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">${esc(t)}</span>`).join('')}
         </div>
         ${p.locations?.length?`<div style="font-size:11px;color:var(--txt3);">📍 ${esc(p.locations.join(' · '))}</div>`:''}
+        ${musicRow}${prefsRow}
         <div style="font-size:10px;color:var(--txt3);margin-top:6px;">Updated ${new Date(p.analyzedAt).toLocaleDateString()}</div>
       </div>`;
   }).catch(()=>{
@@ -3525,6 +4665,7 @@ async function showSearch(){
   document.getElementById('searchView').style.display='flex';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   _setNavActive('btnMap');
+  _setToggleActive('toggleSearch');
   document.getElementById('mapViewToggle').style.display='flex';
   if(!_allUsers.length){
     try{const res=await apiFetch('/api/users');_allUsers=await res.json();}catch{}
@@ -3585,6 +4726,7 @@ function showMessages(){
   document.getElementById('messagesView').style.display='flex';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   _setNavActive('btnMap');
+  _setToggleActive('toggleMessages');
   document.getElementById('mapViewToggle').style.display='flex';
   loadConversations();
 }
@@ -3693,11 +4835,85 @@ function closeChatView(){
 
 async function checkUnreadCount(){
   try{
-    const res=await apiFetch('/api/messages/unread/count');
-    if(res.ok){
-      const{count}=await res.json();
-      const badge=document.getElementById('msgBadge');
-      if(badge) badge.style.display=count>0?'block':'none';
+    const [msgRes, inviteRes] = await Promise.all([
+      apiFetch('/api/messages/unread/count'),
+      apiFetch('/api/trips/pending-invites')
+    ]);
+    let count = 0;
+    if(msgRes.ok){ const d=await msgRes.json(); count+=d.count||0; }
+    if(inviteRes.ok){ const invites=await inviteRes.json(); count+=invites.length||0; }
+    const badge=document.getElementById('msgBadge');
+    if(badge) badge.style.display=count>0?'block':'none';
+  }catch{}
+}
+
+async function checkPendingInvites(){
+  try{
+    const res=await apiFetch('/api/trips/pending-invites');
+    if(!res.ok)return;
+    const invites=await res.json();
+    if(!invites.length)return;
+    // Show invite notification banner for each pending invite
+    invites.forEach(inv=>{
+      const existingId=`inviteBanner_${inv.tripId}`;
+      if(document.getElementById(existingId))return;
+      const banner=document.createElement('div');
+      banner.id=existingId;
+      banner.style.cssText='position:fixed;bottom:80px;left:12px;right:12px;z-index:9999;background:#fff;border:1.5px solid var(--mint);border-radius:16px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.15);display:flex;gap:12px;align-items:center;';
+      banner.innerHTML=`
+        <div style="font-size:28px;">✈️</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:800;color:var(--ink);margin-bottom:2px;">Mutual Trip Invite!</div>
+          <div style="font-size:12px;color:var(--ink2);line-height:1.4;"><strong>${esc(inv.invitedBy?.firstName||inv.invitedBy?.handle||'Someone')}</strong> invited you to join <strong>${esc(inv.tripEmoji)} ${esc(inv.tripName)}</strong></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <button onclick="acceptTripInvite('${inv.tripId}','${existingId}')" style="padding:6px 12px;border:none;border-radius:8px;background:var(--mint);color:#fff;font-size:11px;font-weight:800;cursor:pointer;">✓ Join</button>
+          <button onclick="declineTripInvite('${inv.tripId}','${existingId}')" style="padding:6px 12px;border:1px solid var(--border2);border-radius:8px;background:var(--bg);color:var(--ink3);font-size:11px;font-weight:700;cursor:pointer;">✕ Decline</button>
+        </div>`;
+      document.body.appendChild(banner);
+    });
+  }catch{}
+}
+
+async function reportClosure(venueName, city, btn) {
+  if (!confirm(`Report "${venueName}" as permanently closed? This will be reviewed by the admin.`)) return;
+  try {
+    const r = await apiFetch('/api/report-closure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ venueName, city })
+    });
+    if (r.ok) {
+      btn.textContent = '✅ Reported — thank you!';
+      btn.disabled = true;
+      btn.style.color = 'var(--mint)';
+      btn.style.borderColor = 'var(--mint)';
+    }
+  } catch(e) { toast('Could not send report', 'err'); }
+}
+
+async function acceptTripInvite(tripId, bannerId){
+  try{
+    const r=await apiFetch(`/api/trips/${tripId}/accept-invite`,{method:'POST'});
+    if(r.ok){
+      toast('✅ Joined the trip!','ok');
+      document.getElementById(bannerId)?.remove();
+      // Reload trips then places (shared trip places now accessible)
+      const res=await apiFetch('/api/trips');
+      if(res.ok) trips=await res.json();
+      await loadPlaces();
+      refreshMarkers();
+      renderTrips();
+    }
+  }catch(e){toast(e.message,'err');}
+}
+
+async function declineTripInvite(tripId, bannerId){
+  try{
+    const r=await apiFetch(`/api/trips/${tripId}/decline-invite`,{method:'POST'});
+    if(r.ok){
+      document.getElementById(bannerId)?.remove();
+      toast('Invite declined','ok');
     }
   }catch{}
 }
@@ -3730,6 +4946,8 @@ async function showMyProfile(){
 async function openUserProfile(userId){
   _upUserId=userId;
   _upTab='been';
+  _setNavActive('btnProfile');
+  document.getElementById('mapViewToggle').style.display='none';
   // Show view
   ['mapContainer','listView','tripsView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('userProfileView').style.display='flex';
@@ -3741,7 +4959,7 @@ async function openUserProfile(userId){
     const res=await apiFetch(`/api/users/${userId}`);
     _upData=await res.json();
     renderProfileHeader();
-    switchProfileTab('photos');
+    switchProfileTab('been');
   }catch{document.getElementById('upContent').innerHTML='<div style="text-align:center;padding:40px;color:var(--coral);">Could not load profile</div>';}
 }
 
@@ -3814,21 +5032,24 @@ function renderProfileContent(){
     return;
   }
 
-  el.innerHTML='<div style="padding:12px 16px;">'+filtered.map(p=>{
-    const allPhotos=[];
-    if(p.coverPhoto) allPhotos.push(p.coverPhoto);
-    (p.photos||[]).forEach(url=>allPhotos.push(url));
-    return `<div style="background:#fff;border:2px solid var(--border);border-radius:18px;margin-bottom:12px;overflow:hidden;">
-      ${p.coverPhoto?`<img src="${esc(p.coverPhoto)}" style="width:100%;height:160px;object-fit:cover;display:block;cursor:pointer;" loading="lazy" onclick="openPhotoLightbox('${esc(p.coverPhoto)}','${p._id}')">`:''}
-      <div style="padding:12px 14px;">
-        <div style="font-size:15px;font-weight:800;color:var(--txt);margin-bottom:3px;">${esc(p.name)}</div>
-        ${p.location?`<div style="font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:6px;">📍 ${esc(p.location)}</div>`:''}
-        ${p.rating?`<div style="margin-bottom:6px;">${starsHtml(p.rating)}</div>`:''}
-        ${(p.tags||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;">${(p.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('')}</div>`:''}
-        ${allPhotos.length>1?`<div style="display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;">${allPhotos.slice(1,6).map(url=>`<img src="${esc(url)}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:pointer;" onclick="openPhotoLightbox('${esc(url)}','${p._id}')" loading="lazy">`).join('')}</div>`:''}
+  // Instagram-style grid
+  const gridItems = filtered.map(p=>{
+    const photo = p.coverPhoto || (p.photos&&p.photos[0]) || '';
+    return `<div style="position:relative;aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--border);" onclick="openPlaceInfo('${p._id}')">
+      ${photo
+        ? `<img src="${esc(photo)}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy">`
+        : `<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg2);gap:4px;">
+            <div style="font-size:22px;">📍</div>
+            <div style="font-size:10px;font-weight:700;color:var(--ink3);text-align:center;padding:0 6px;line-height:1.3;">${esc(p.name.slice(0,20))}</div>
+           </div>`
+      }
+      <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(0,0,0,.6) 0%,transparent 100%);padding:6px 6px 5px;">
+        <div style="font-size:10px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</div>
       </div>
     </div>`;
-  }).join('')+'</div>';
+  }).join('');
+
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;">${gridItems}</div>`;
 }
 
 function renderAIProfileTab(el){
@@ -4044,11 +5265,19 @@ function openPlaceInfo(id){
   const navBtns=document.getElementById('piNavBtns');
   if(p.lat&&p.lng){
     document.getElementById('piWaze').href=`https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`;
-    // Build Google Maps URL — prefer name search so Google shows correct business page
-    const gmapsQuery = p.name + (p.location ? ' ' + p.location : '') + (p.address ? ' ' + p.address : '');
-    document.getElementById('piGmaps').href=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(gmapsQuery)}`;
+    // Use coordinates for navigation — more accurate, especially for GPS-shared locations
+    if(p.placeId) {
+      // Has a Google Place ID — use it for direct business page
+      document.getElementById('piGmaps').href=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name)}&query_place_id=${p.placeId}`;
+    } else {
+      // No Place ID (e.g. GPS-shared location) — navigate by exact coordinates
+      document.getElementById('piGmaps').href=`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
+    }
     navBtns.style.display='block';
   } else { navBtns.style.display='none'; }
+
+  // Stash current place name for the share buttons
+  window._piShareName = p.name || 'this place';
 
   // Photos grid
   renderInfoPhotos(p);
@@ -4056,12 +5285,27 @@ function openPlaceInfo(id){
   openOverlay('placeInfoOverlay');
 }
 
+function sharePlaceLocation(type){
+  const url = type==='waze' ? document.getElementById('piWaze').href : document.getElementById('piGmaps').href;
+  const name = window._piShareName || 'this place';
+  const appUrl = window.location.origin;
+  const text = `📍 ${name}\n${url}\n\n✦ Sent from Wander — your social AI travel app\n${appUrl}`;
+  if(navigator.share){
+    navigator.share({title:name, text:text, url:url}).catch(()=>{});
+  } else {
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  }
+}
+
 function renderInfoPhotos(p){
   const grid=document.getElementById('piPhotosGrid');
   const photos=p.photos||[];
-  const addBtn=`<div onclick="document.getElementById('piPhotoInput').click()" style="aspect-ratio:1;border-radius:10px;border:2px dashed var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;">+</div>`;
+  const videos=p.videos||[];
+  const addPhotoBtn=`<div onclick="document.getElementById('piPhotoInput').click()" style="aspect-ratio:1;border-radius:10px;border:2px dashed var(--border);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;cursor:pointer;gap:2px;"><span>📷</span></div>`;
+  const addVideoBtn=`<div onclick="document.getElementById('piVideoInput').click()" style="aspect-ratio:1;border-radius:10px;border:2px dashed var(--border);background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;cursor:pointer;gap:2px;"><span>🎬</span></div>`;
   const photoItems=photos.map(url=>`<div style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;cursor:pointer;" onclick="openLightbox('${url}')"><img src="${url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"></div>`).join('');
-  grid.innerHTML=photoItems+addBtn;
+  const videoItems=videos.map(url=>`<div style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#000;cursor:pointer;" onclick="openVideoLightbox('${url}')"><video src="${url}" style="width:100%;height:100%;object-fit:cover;" muted playsinline preload="metadata"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;"><div style="background:rgba(0,0,0,.5);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg></div></div></div>`).join('');
+  grid.innerHTML=photoItems+videoItems+addPhotoBtn+addVideoBtn;
   // Hidden file input
   let inp=document.getElementById('piPhotoInput');
   if(!inp){
@@ -4070,9 +5314,11 @@ function renderInfoPhotos(p){
     inp.onchange=async function(){
       const file=this.files[0]; if(!file||!window._piPlaceId)return;
       try{
-        const resized=await resizeImageFile(file,1200,0.82);
+        const [resized, hash] = await Promise.all([resizeImageFile(file,1200,0.82), hashFile(file)]);
         const fd=new FormData(); fd.append('photo',resized);
+        if(hash) fd.append('fileHash',hash);
         const res=await fetch(`/api/upload/photo/${window._piPlaceId}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
+        if(res.status===409){const e=await res.json();toast('⚠️ '+(e.message||'Duplicate photo!'),'err');this.value='';return;}
         if(!res.ok)throw new Error();
         const{photos}=await res.json();
         const pl=places.find(x=>x._id===window._piPlaceId); if(pl) pl.photos=photos;
@@ -4083,6 +5329,60 @@ function renderInfoPhotos(p){
     };
     document.body.appendChild(inp);
   }
+
+  // Video input for place info panel
+  let vinp=document.getElementById('piVideoInput');
+  if(!vinp){
+    vinp=document.createElement('input');
+    vinp.type='file'; vinp.id='piVideoInput'; vinp.accept='video/*'; vinp.style.display='none';
+    vinp.onchange=async function(){
+      const file=this.files[0]; if(!file||!window._piPlaceId)return;
+      if(file.size>150*1024*1024){toast('Video too large (max 150MB) 😢','err');this.value='';return;}
+      toast('🎬 Uploading video… this may take a moment','');
+      try{
+        const fd=new FormData(); fd.append('video',file);
+        const res=await fetch(`/api/upload/video/${window._piPlaceId}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
+        if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error||'failed');}
+        const{videos}=await res.json();
+        const pl=places.find(x=>x._id===window._piPlaceId); if(pl) pl.videos=videos;
+        renderInfoPhotos(pl);
+        toast('🎬 Video added!','ok');
+      }catch(e){toast('Video upload failed: '+e.message,'err');}
+      this.value='';
+    };
+    document.body.appendChild(vinp);
+  }
+}
+
+function openVideoLightbox(url){
+  if(!url)return;
+  // Reuse lightbox — swap img for video
+  const lb=document.getElementById('lightbox');
+  let img=document.getElementById('lightboxImg');
+  // Hide image, show/create video player
+  img.style.display='none';
+  let vid=document.getElementById('lightboxVid');
+  if(!vid){
+    vid=document.createElement('video');
+    vid.id='lightboxVid';
+    vid.controls=true;
+    vid.playsInline=true;
+    vid.style.cssText='max-width:95vw;max-height:90vh;border-radius:12px;background:#000;';
+    img.parentNode.insertBefore(vid,img.nextSibling);
+  }
+  vid.src=url;
+  vid.style.display='block';
+  lb.style.display='flex';
+  // When lightbox closes, stop video and restore image
+  lb.onclick=function(e){
+    if(e.target===lb){
+      vid.pause(); vid.src='';
+      vid.style.display='none';
+      img.style.display='block';
+      lb.style.display='none';
+      lb.onclick=null;
+    }
+  };
 }
 
 function openLightbox(url){
@@ -4294,6 +5594,15 @@ function resetRating(){
 /* ── PHOTO UPLOAD ── */
 
 /* ── IMAGE RESIZE HELPER ── */
+// Compute SHA-256 fingerprint of a File — used to detect duplicate uploads
+async function hashFile(file){
+  try{
+    const buf = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch{ return null; }
+}
+
 function resizeImageFile(file, maxPx=1200, quality=0.85){
   return new Promise((resolve)=>{
     const img=new Image();
@@ -4329,9 +5638,11 @@ async function uploadCover(input){
   const btn=document.getElementById('changeCoverBtn');
   btn.textContent='Uploading…';
   try{
-    const resized=await resizeImageFile(file);
+    const [resized, hash] = await Promise.all([resizeImageFile(file), hashFile(file)]);
     const fd=new FormData(); fd.append('photo',resized);
+    if(hash) fd.append('fileHash',hash);
     const res=await fetch(`/api/upload/cover/${editId}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
+    if(res.status===409){const e=await res.json();toast('⚠️ '+(e.message||'Duplicate photo!'),'err');btn.textContent='Change ✏️';input.value='';return;}
     if(!res.ok)throw new Error();
     const{url}=await res.json();
     const p=places.find(x=>x._id===editId); if(p) p.coverPhoto=url;
@@ -4353,13 +5664,15 @@ function showCoverPreview(url){
 async function uploadPhoto(input){
   const file=input.files[0]; if(!file||!editId)return;
   try{
-    const resized=await resizeImageFile(file,1200,0.82);
+    const [resized, hash] = await Promise.all([resizeImageFile(file,1200,0.82), hashFile(file)]);
     const fd=new FormData(); fd.append('photo',resized);
+    if(hash) fd.append('fileHash',hash);
     const res=await fetch(`/api/upload/photo/${editId}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
+    if(res.status===409){const e=await res.json();toast('⚠️ '+(e.message||'Duplicate photo!'),'err');input.value='';return;}
     if(!res.ok)throw new Error();
     const{photos}=await res.json();
     const p=places.find(x=>x._id===editId); if(p) p.photos=photos;
-    renderGallery(photos);
+    renderGallery(photos, p?.videos||[]);
     toast('📷 Photo added!','ok');
   }catch{toast('Upload failed 😢','err');}
   input.value='';
@@ -4372,15 +5685,48 @@ async function deletePhoto(url){
     if(!res.ok)throw new Error();
     const{photos}=await res.json();
     const p=places.find(x=>x._id===editId); if(p) p.photos=photos;
-    renderGallery(photos);
+    renderGallery(photos, p?.videos||[]);
     toast('Photo removed','');
   }catch{toast('Delete failed','err');}
 }
 
-function renderGallery(photos){
+async function uploadVideo(input){
+  const file=input.files[0]; if(!file||!editId)return;
+  const MAX_MB=150;
+  if(file.size>MAX_MB*1024*1024){toast(`Video too large (max ${MAX_MB}MB) 😢`,'err');input.value='';return;}
+  // Show uploading toast with progress feel
+  toast('🎬 Uploading video… this may take a moment','');
+  try{
+    const fd=new FormData(); fd.append('video',file);
+    const res=await fetch(`/api/upload/video/${editId}`,{method:'POST',headers:{'Authorization':`Bearer ${token}`},body:fd});
+    if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error||'failed');}
+    const{videos}=await res.json();
+    const p=places.find(x=>x._id===editId); if(p) p.videos=videos;
+    renderGallery(p?.photos||[], videos);
+    toast('🎬 Video added!','ok');
+  }catch(e){toast('Video upload failed: '+e.message,'err');}
+  input.value='';
+}
+
+async function deleteVideo(url){
+  if(!editId)return;
+  try{
+    const res=await apiFetch(`/api/upload/video/${editId}`,{method:'DELETE',body:JSON.stringify({url})});
+    if(!res.ok)throw new Error();
+    const{videos}=await res.json();
+    const p=places.find(x=>x._id===editId); if(p) p.videos=videos;
+    renderGallery(p?.photos||[], videos);
+    toast('Video removed','');
+  }catch{toast('Delete failed','err');}
+}
+
+function renderGallery(photos, videos){
   const grid=document.getElementById('galleryGrid');
-  const items=(photos||[]).map(url=>`<div class="gallery-item"><img src="${url}" loading="lazy"><button class="del-photo" onclick="deletePhoto('${url}')">✕</button></div>`).join('');
-  grid.innerHTML=items+`<div class="add-photo-btn" onclick="document.getElementById('photoInput').click()">+</div>`;
+  const photoItems=(photos||[]).map(url=>`<div class="gallery-item"><img src="${url}" loading="lazy"><button class="del-photo" onclick="deletePhoto('${url}')">✕</button></div>`).join('');
+  const videoItems=(videos||[]).map(url=>`<div class="gallery-item" style="position:relative;"><video src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" muted playsinline preload="metadata"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;"><div style="background:rgba(0,0,0,.45);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg></div></div><button class="del-photo" onclick="deleteVideo('${url}')">✕</button></div>`).join('');
+  const addPhotoBtn=`<div class="add-photo-btn" onclick="document.getElementById('photoInput').click()" title="Add photo">📷</div>`;
+  const addVideoBtn=`<div class="add-photo-btn" onclick="document.getElementById('videoInput').click()" title="Add video" style="font-size:20px;">🎬</div>`;
+  grid.innerHTML=photoItems+videoItems+addPhotoBtn+addVideoBtn;
 }
 
 function starsHtml(rating){
@@ -4409,6 +5755,21 @@ function locateMe(){
   },()=>{toast('Location access denied 🙅','err');btn.textContent='📍';},{enableHighAccuracy:true,timeout:10000});
 }
 function updateCount(){const el=document.getElementById('placeCount');if(el)el.textContent=places.length;}
+function togglePwd(inputId, btn){
+  const inp = document.getElementById(inputId);
+  const icon = document.getElementById('eyeIcon_'+inputId);
+  if(!inp) return;
+  if(inp.type === 'password'){
+    inp.type = 'text';
+    // Eye with slash (hidden)
+    if(icon) icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  } else {
+    inp.type = 'password';
+    // Eye open
+    if(icon) icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  }
+}
+
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(msg,type='',duration=2800){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type}`;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),duration);}
 
