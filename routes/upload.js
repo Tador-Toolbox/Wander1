@@ -11,10 +11,19 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Multer – store in memory
+// Multer – store in memory (photos: 15MB, videos: 200MB)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 15 * 1024 * 1024 } // 15MB
+  limits: { fileSize: 15 * 1024 * 1024 } // 15MB for images
+});
+
+const uploadVideo = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB — Cloudinary compresses server-side
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('video/')) return cb(new Error('Video files only'));
+    cb(null, true);
+  }
 });
 
 router.use(auth);
@@ -26,6 +35,12 @@ router.post('/cover/:placeId', upload.single('photo'), async (req, res) => {
     if (!place) return res.status(404).json({ error: 'Place not found' });
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
+    // Duplicate detection for cover photo
+    const incomingHash = req.body.fileHash;
+    if (incomingHash && (place.photoHashes || []).includes(incomingHash)) {
+      return res.status(409).json({ error: 'duplicate', message: 'You already uploaded this photo!' });
+    }
+
     if (place.coverPhoto) {
       const publicId = extractPublicId(place.coverPhoto);
       if (publicId) await cloudinary.uploader.destroy(publicId).catch(() => {});
@@ -33,6 +48,10 @@ router.post('/cover/:placeId', upload.single('photo'), async (req, res) => {
 
     const result = await uploadBuffer(req.file.buffer, `wandr/covers/${req.userId}`);
     place.coverPhoto = result.secure_url;
+    if (incomingHash) {
+      if (!place.photoHashes) place.photoHashes = [];
+      place.photoHashes.push(incomingHash);
+    }
     await place.save();
     res.json({ url: result.secure_url });
   } catch (err) {
@@ -49,8 +68,18 @@ router.post('/photo/:placeId', upload.single('photo'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     if (place.photos.length >= 10) return res.status(400).json({ error: 'Max 10 photos per place' });
 
+    // Duplicate detection
+    const incomingHash = req.body.fileHash;
+    if (incomingHash && (place.photoHashes || []).includes(incomingHash)) {
+      return res.status(409).json({ error: 'duplicate', message: 'You already uploaded this photo!' });
+    }
+
     const result = await uploadBuffer(req.file.buffer, `wandr/photos/${req.userId}`);
     place.photos.push(result.secure_url);
+    if (incomingHash) {
+      if (!place.photoHashes) place.photoHashes = [];
+      place.photoHashes.push(incomingHash);
+    }
     await place.save();
     res.json({ url: result.secure_url, photos: place.photos });
   } catch (err) {
@@ -62,7 +91,7 @@ router.post('/photo/:placeId', upload.single('photo'), async (req, res) => {
 // DELETE /api/upload/photo/:placeId
 router.delete('/photo/:placeId', async (req, res) => {
   try {
-    const { url } = req.body;
+    const { url, fileHash } = req.body;
     const place = await Place.findOne({ _id: req.params.placeId, user: req.userId });
     if (!place) return res.status(404).json({ error: 'Place not found' });
 
@@ -70,8 +99,49 @@ router.delete('/photo/:placeId', async (req, res) => {
     if (publicId) await cloudinary.uploader.destroy(publicId).catch(() => {});
 
     place.photos = place.photos.filter(p => p !== url);
+    // Remove hash so the photo can be re-uploaded if desired
+    if (fileHash && place.photoHashes) {
+      place.photoHashes = place.photoHashes.filter(h => h !== fileHash);
+    }
     await place.save();
     res.json({ photos: place.photos });
+  } catch (err) {
+    res.status(500).json({ error: 'Delete failed: ' + err.message });
+  }
+});
+
+// POST /api/upload/video/:placeId
+router.post('/video/:placeId', uploadVideo.single('video'), async (req, res) => {
+  try {
+    const place = await Place.findOne({ _id: req.params.placeId, user: req.userId });
+    if (!place) return res.status(404).json({ error: 'Place not found' });
+    if (!req.file) return res.status(400).json({ error: 'No video uploaded' });
+    if ((place.videos || []).length >= 3) return res.status(400).json({ error: 'Max 3 videos per place' });
+
+    const result = await uploadVideoBuffer(req.file.buffer, `wandr/videos/${req.userId}`);
+    if (!place.videos) place.videos = [];
+    place.videos.push(result.secure_url);
+    await place.save();
+    res.json({ url: result.secure_url, videos: place.videos });
+  } catch (err) {
+    console.error('Video upload error:', err);
+    res.status(500).json({ error: 'Upload failed: ' + err.message });
+  }
+});
+
+// DELETE /api/upload/video/:placeId
+router.delete('/video/:placeId', async (req, res) => {
+  try {
+    const { url } = req.body;
+    const place = await Place.findOne({ _id: req.params.placeId, user: req.userId });
+    if (!place) return res.status(404).json({ error: 'Place not found' });
+
+    const publicId = extractPublicId(url);
+    if (publicId) await cloudinary.uploader.destroy(publicId, { resource_type: 'video' }).catch(() => {});
+
+    place.videos = (place.videos || []).filter(v => v !== url);
+    await place.save();
+    res.json({ videos: place.videos });
   } catch (err) {
     res.status(500).json({ error: 'Delete failed: ' + err.message });
   }
@@ -105,6 +175,32 @@ function uploadBuffer(buffer, folder) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       { folder, resource_type: 'image', transformation: [{ quality: 'auto', fetch_format: 'auto' }] },
+      (err, result) => err ? reject(err) : resolve(result)
+    );
+    stream.end(buffer);
+  });
+}
+
+// Upload video with Cloudinary server-side compression:
+//  - Scale down to max 720p
+//  - H.264 auto-quality (typically achieves 80–90% size reduction)
+//  - Output as mp4 for universal playback
+function uploadVideoBuffer(buffer, folder) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: 'video',
+        transformation: [
+          {
+            quality: 'auto:low',   // aggressive compression — good for travel clips
+            fetch_format: 'mp4',
+            video_codec: 'auto',
+            width: 720,
+            crop: 'limit'          // never upscale, only downscale
+          }
+        ]
+      },
       (err, result) => err ? reject(err) : resolve(result)
     );
     stream.end(buffer);
