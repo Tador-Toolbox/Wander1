@@ -18,6 +18,8 @@ const PlaceSchema = new mongoose.Schema({
   visibility:{ type: String, enum: ['private','public','both'], default: 'private' },
   coverPhoto:{ type: String, default: '' },
   photos:    { type: [String], default: [] },
+  photoHashes: { type: [String], default: [] },  // SHA-256 fingerprints for duplicate detection
+  videos:    { type: [String], default: [] },
   photoLikes:[ { url: String, user: { type: require('mongoose').Schema.Types.ObjectId, ref: 'User' } } ]
 }, { timestamps: true });
 
