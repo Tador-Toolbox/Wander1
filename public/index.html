@@ -1473,7 +1473,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <!-- Navigation buttons -->
       <div id="piNavBtns" style="display:none;margin-bottom:18px;">
         <div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Navigate</div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
           <a id="piWaze" href="#" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:14px;background:#33ccff15;border:2px solid #33ccff55;color:#0099cc;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;text-decoration:none;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
             Waze
@@ -1483,8 +1483,18 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
             Google Maps
           </a>
         </div>
-        <div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin:14px 0 8px;">Send to Friend</div>
         <div style="display:flex;gap:8px;">
+          <a id="piKakao" href="#" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:14px;background:#ffe81215;border:2px solid #ffe81255;color:#c8a600;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;text-decoration:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.69 2 11.25c0 2.9 1.76 5.45 4.41 7l-1.12 4.07 4.7-3.1c.63.09 1.29.13 1.96.13 5.52 0 10-3.69 10-8.25S17.52 3 12 3z"/></svg>
+            KakaoMap
+          </a>
+          <a id="piNaver" href="#" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:14px;background:#03c75a15;border:2px solid #03c75a55;color:#02a34a;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;text-decoration:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg>
+            NaverMap
+          </a>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin:14px 0 8px;">Send to Friend</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
           <button onclick="sharePlaceLocation('waze')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:14px;background:#33ccff15;border:2px solid #33ccff55;color:#0099cc;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
             Share Waze
@@ -1492,6 +1502,16 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
           <button onclick="sharePlaceLocation('gmaps')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:14px;background:#4a9eff15;border:2px solid var(--sky-mid);color:var(--sky);font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
             Share Maps
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="sharePlaceLocation('kakao')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:14px;background:#ffe81215;border:2px solid #ffe81255;color:#c8a600;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            Share Kakao
+          </button>
+          <button onclick="sharePlaceLocation('naver')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:14px;background:#03c75a15;border:2px solid #03c75a55;color:#02a34a;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            Share Naver
           </button>
         </div>
       </div>
@@ -5265,6 +5285,10 @@ function openPlaceInfo(id){
   const navBtns=document.getElementById('piNavBtns');
   if(p.lat&&p.lng){
     document.getElementById('piWaze').href=`https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`;
+    // KakaoMap: web URL works on both mobile (opens app if installed) and desktop
+    document.getElementById('piKakao').href=`https://map.kakao.com/link/map/${encodeURIComponent(p.name)},${p.lat},${p.lng}`;
+    // NaverMap: directions to destination
+    document.getElementById('piNaver').href=`https://map.naver.com/v5/directions/-/-/-/transit?c=${p.lng},${p.lat},15,0,0,0,dh&destination=${encodeURIComponent(p.name)}`;
     // Use coordinates for navigation — more accurate, especially for GPS-shared locations
     if(p.placeId) {
       // Has a Google Place ID — use it for direct business page
@@ -5286,7 +5310,11 @@ function openPlaceInfo(id){
 }
 
 function sharePlaceLocation(type){
-  const url = type==='waze' ? document.getElementById('piWaze').href : document.getElementById('piGmaps').href;
+  let url;
+  if(type==='waze') url=document.getElementById('piWaze').href;
+  else if(type==='gmaps') url=document.getElementById('piGmaps').href;
+  else if(type==='kakao') url=document.getElementById('piKakao').href;
+  else if(type==='naver') url=document.getElementById('piNaver').href;
   const name = window._piShareName || 'this place';
   const appUrl = window.location.origin;
   const text = `📍 ${name}\n${url}\n\n✦ Sent from Wander — your social AI travel app\n${appUrl}`;
