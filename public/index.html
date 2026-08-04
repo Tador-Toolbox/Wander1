@@ -1917,10 +1917,20 @@ async function runOnboarding(){
     if(fill){fill.style.transition='width .3s ease';fill.style.width='100%';}
 
     // Small pause then enter app
-    setTimeout(()=>{
+    setTimeout(async ()=>{
       showScreen('mapScreen');
       startSplashAnimation();
-    initApp();
+      await initApp();
+      // Auto-import pending shared trip if user came from a share link
+      if(window._pendingImportToken){
+        const t=window._pendingImportToken;
+        window._pendingImportToken=null;
+        importToken=t;
+        await checkSharedTrip(t);
+        // Override CTA back to import (now logged in)
+        const btn=document.getElementById('importBtn');
+        if(btn){ btn.innerHTML='📥 Import Trip to My Wander'; btn.onclick=confirmImport; }
+      }
     }, 600);
 
   }catch(e){
@@ -1936,6 +1946,15 @@ async function runOnboarding(){
 
 window.addEventListener('load',()=>{
   setTimeout(async ()=>{
+    // ── Check for shared trip link FIRST — works for anyone, logged in or not ──
+    const sharePath=window.location.pathname;
+    const shareMatch=sharePath.match(/^\/trip\/([a-f0-9]+)$/);
+    if(shareMatch){
+      loadMapsKey(); // need maps key for map preview
+      await checkSharedTrip(shareMatch[1]);
+      // Continue normal auth check in background (don't block)
+    }
+
     if(token){
       // Verify token is still valid
       try{
@@ -2070,10 +2089,6 @@ async function initApp(){
   checkPendingInvites();
   setInterval(checkPendingInvites,30000);
   try{const r=await apiFetch('/api/config/anthropic-key');const d=await r.json();anthropicKey=d.key;}catch{}
-  // Check if URL has a share token
-  const path=window.location.pathname;
-  const match=path.match(/^\/trip\/([a-f0-9]+)$/);
-  if(match) checkSharedTrip(match[1]);
 }
 async function loadMapsKey(){
   // Use cached key for instant map load
@@ -4577,6 +4592,28 @@ async function checkSharedTrip(token){
     document.getElementById('importPlacesList').innerHTML=placeCards;
 
     openOverlay('importOverlay');
+
+    // ── CTA: auth-aware ──
+    const importBtn=document.getElementById('importBtn');
+    if(token){
+      // Logged in — import directly
+      importBtn.innerHTML='📥 Import Trip to My Wander';
+      importBtn.onclick=confirmImport;
+    } else {
+      // Guest — show signup CTA, save token for after auth
+      importBtn.innerHTML='🚀 Create Free Account & Import';
+      importBtn.style.background='linear-gradient(135deg,#ff6b47,#e91e8c)';
+      importBtn.onclick=()=>{
+        window._pendingImportToken=importToken;
+        closeOverlay('importOverlay');
+        showScreen('loginScreen');
+        // Switch to register tab
+        setTimeout(()=>{
+          const reg=document.getElementById('switchToRegister')||document.querySelector('[onclick*="Register"]')||document.querySelector('[onclick*="isReg=true"]');
+          if(reg) reg.click();
+        },200);
+      };
+    }
   } catch{toast('Invalid or expired share link','err');}
 }
 
