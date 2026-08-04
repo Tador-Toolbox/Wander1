@@ -5579,27 +5579,17 @@ async function suggestPlaceNamesFromImage(file, address){
       reader.onload=e=>res(e.target.result.split(',')[1]);
       reader.readAsDataURL(file);
     });
+    console.log('[SUGGEST] Calling backend /api/ai/place-name-suggestions…');
 
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    const resp=await apiFetch('/api/ai/place-name-suggestions',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:300,
-        messages:[{
-          role:'user',
-          content:[
-            {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:base64}},
-            {type:'text',text:`This photo was taken at: ${address}.\n\nLook at what's in the photo and suggest 3 short, specific place name options the user might want to call this saved place. Think about: what type of place is it (cafe, restaurant, viewpoint, beach, club, hotel, street, etc.), any visible signage or branding, the overall vibe.\n\nRespond ONLY with a JSON array of 3 strings, no other text. Example: ["Rooftop Bar Seoul","Night View Spot","Han River Terrace"]`}
-          ]
-        }]
-      })
+      body:JSON.stringify({imageBase64:base64, mimeType:file.type||'image/jpeg', address})
     });
+    if(!resp.ok){ console.warn('[SUGGEST] Backend returned', resp.status); throw new Error('Backend error '+resp.status); }
     const data=await resp.json();
-    const raw=data.content?.[0]?.text||'[]';
-    let suggestions=[];
-    try{ suggestions=JSON.parse(raw.replace(/```json|```/g,'').trim()); }catch{}
-    if(!Array.isArray(suggestions)||!suggestions.length) throw new Error('no suggestions');
+    console.log('[SUGGEST] Suggestions received:', data.suggestions);
+    const suggestions=data.suggestions||[];
+    if(!suggestions.length) throw new Error('no suggestions');
 
     const chips=suggestions.map(s=>`<button onclick="document.getElementById('pName').value='${s.replace(/'/g,"\\'")}';this.parentNode.querySelectorAll('button').forEach(b=>b.style.background='');this.style.background='var(--sky-light)';this.style.borderColor='var(--sky)';this.style.color='var(--sky)';" style="padding:6px 12px;border-radius:20px;border:2px solid var(--border);background:#fff;color:var(--txt2);font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;">${s}</button>`).join('');
     suggBox.innerHTML=`<div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">✦ AI Name Suggestions</div><div style="display:flex;gap:6px;flex-wrap:wrap;">${chips}</div><div style="font-size:10px;color:var(--txt3);margin-top:5px;">Tap to use · or type your own above</div>`;
