@@ -1706,46 +1706,39 @@ router.post('/place-name-suggestions', auth, async (req, res) => {
       return res.status(400).json({ error: 'No image provided' });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    console.log('[place-name-suggestions] ANTHROPIC_API_KEY present:', !!apiKey);
-    if (!apiKey) {
-      console.error('[place-name-suggestions] ❌ No ANTHROPIC_API_KEY in env');
+    const geminiKey = process.env.GEMINI_API_KEY;
+    console.log('[place-name-suggestions] GEMINI_API_KEY present:', !!geminiKey);
+    if (!geminiKey) {
+      console.error('[place-name-suggestions] ❌ No GEMINI_API_KEY in env');
       return res.status(500).json({ error: 'AI not configured' });
     }
 
-    console.log('[place-name-suggestions] Calling Anthropic API…');
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 200,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: mimeType || 'image/jpeg', data: imageBase64 }
-            },
-            {
-              type: 'text',
-              text: `This photo was taken at: ${address || 'unknown location'}.\n\nLook at what's in the photo and suggest 3 short, specific place name options the user might want to save this as. Consider: visible signs/branding, type of place (cafe, viewpoint, beach, club, restaurant, hotel, street, market, etc.), and overall vibe.\n\nRespond ONLY with a JSON array of exactly 3 short strings. No markdown, no explanation. Example: ["Rooftop Bar Seoul","Night View Spot","Han River Terrace"]`
-            }
-          ]
-        }]
-      })
-    });
+    const prompt = `This photo was taken at: ${address || 'unknown location'}.\n\nLook at what's in the photo and suggest 3 short, specific place name options the user might want to save this as. Consider: visible signs/branding, type of place (cafe, viewpoint, beach, club, restaurant, hotel, street, market, etc.), and overall vibe.\n\nRespond ONLY with a JSON array of exactly 3 short strings. No markdown, no explanation. Example: ["Rooftop Bar Seoul","Night View Spot","Han River Terrace"]`;
 
-    console.log('[place-name-suggestions] Anthropic HTTP status:', response.status);
+    console.log('[place-name-suggestions] Calling Gemini vision API…');
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inline_data: { mime_type: mimeType || 'image/jpeg', data: imageBase64 } },
+              { text: prompt }
+            ]
+          }],
+          generationConfig: { maxOutputTokens: 200, temperature: 0.4 }
+        })
+      }
+    );
+
+    console.log('[place-name-suggestions] Gemini HTTP status:', response.status);
     const data = await response.json();
-    console.log('[place-name-suggestions] Anthropic response:', JSON.stringify(data).slice(0, 300));
+    console.log('[place-name-suggestions] Gemini response:', JSON.stringify(data).slice(0, 300));
 
-    const raw = data.content?.[0]?.text || '[]';
-    console.log('[place-name-suggestions] Raw text from Claude:', raw);
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+    console.log('[place-name-suggestions] Raw text from Gemini:', raw);
 
     let suggestions = [];
     try { suggestions = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch(parseErr) {
