@@ -1946,9 +1946,7 @@ window.addEventListener('load',()=>{
     const sharePath=window.location.pathname;
     const shareMatch=sharePath.match(/^\/trip\/([a-f0-9]+)$/);
     if(shareMatch){
-      loadMapsKey(); // need maps key for map preview
       await checkSharedTrip(shareMatch[1]);
-      // Continue normal auth check in background (don't block)
     }
 
     if(token){
@@ -2166,8 +2164,8 @@ function bootMap(){
 
   places.forEach(p=>addMarker(p));
   setupAC();
-  // Zoom to user location on first load
-  if(navigator.geolocation){
+  // Zoom to user location on first load — skip on share pages
+  if(navigator.geolocation && !window.location.pathname.match(/^\/trip\//)){
     navigator.geolocation.getCurrentPosition(pos=>{
       const{latitude:lat,longitude:lng}=pos.coords;
       gmap.panTo({lat,lng}); gmap.setZoom(12);
