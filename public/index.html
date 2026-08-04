@@ -1248,6 +1248,10 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
     <!-- Places list -->
     <div style="padding:16px 20px 0;flex:1;">
+      <!-- Mini map -->
+      <div id="importMapCard" style="display:none;border-radius:16px;overflow:hidden;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,.1);">
+        <img id="importMapCardImg" src="" style="width:100%;height:160px;object-fit:cover;display:block;" alt="Map">
+      </div>
       <div style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">📍 Places in this trip</div>
       <div id="importPlacesList" style="display:flex;flex-direction:column;gap:8px;"></div>
     </div>
@@ -4539,15 +4543,22 @@ async function checkSharedTrip(token){
       document.getElementById('importHero').style.background=`linear-gradient(135deg,${trip.color}cc,${trip.color}55)`;
     }
 
-    // Static map preview using first 5 place coordinates
+    // Static map — visible card
     const withCoords=places.filter(p=>p.lat&&p.lng);
     if(withCoords.length && window._mapsKey){
-      const markers=withCoords.slice(0,8).map(p=>`markers=color:red%7C${p.lat},${p.lng}`).join('&');
-      const center=withCoords.length===1
-        ? `${withCoords[0].lat},${withCoords[0].lng}`
-        : `${withCoords.reduce((s,p)=>s+p.lat,0)/withCoords.length},${withCoords.reduce((s,p)=>s+p.lng,0)/withCoords.length}`;
-      document.getElementById('importMapImg').src=`https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=12&size=600x300&scale=2&${markers}&style=feature:all|element:labels.text.fill|color:0x666666&style=feature:poi|visibility:off&key=${window._mapsKey}`;
-      document.getElementById('importMapStrip').style.opacity='.5';
+      const markers=withCoords.slice(0,15).map(p=>`markers=color:red%7Clabel:%E2%80%A2%7C${p.lat},${p.lng}`).join('&');
+      const avgLat=withCoords.reduce((s,p)=>s+p.lat,0)/withCoords.length;
+      const avgLng=withCoords.reduce((s,p)=>s+p.lng,0)/withCoords.length;
+      // Dark styled map
+      const mapStyle='style=element:geometry%7Ccolor:0x1d2c4d&style=element:labels.text.fill%7Ccolor:0x8ec3b9&style=element:labels.text.stroke%7Ccolor:0x1a3646&style=feature:road%7Celement:geometry%7Ccolor:0x304a7d&style=feature:poi%7Cvisibility:off';
+      const mapUrl=`https://maps.googleapis.com/maps/api/staticmap?center=${avgLat},${avgLng}&zoom=13&size=700x400&scale=2&${markers}&${mapStyle}&key=${window._mapsKey}`;
+      const cardImg=document.getElementById('importMapCardImg');
+      const card=document.getElementById('importMapCard');
+      cardImg.src=mapUrl;
+      cardImg.onload=()=>{ card.style.display='block'; };
+      // Also use as subtle hero background
+      document.getElementById('importMapImg').src=mapUrl;
+      document.getElementById('importMapStrip').style.opacity='.4';
     }
 
     // Place cards
