@@ -1717,7 +1717,7 @@ router.post('/place-name-suggestions', auth, async (req, res) => {
 
     console.log('[place-name-suggestions] Calling Gemini vision API…');
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
