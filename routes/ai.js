@@ -1713,7 +1713,7 @@ router.post('/place-name-suggestions', auth, async (req, res) => {
       return res.status(500).json({ error: 'AI not configured' });
     }
 
-    const prompt = `This photo was taken at: ${address || 'unknown location'}.\n\nLook at what's in the photo and suggest 3 short, specific place name options the user might want to save this as. Consider: visible signs/branding, type of place (cafe, viewpoint, beach, club, restaurant, hotel, street, market, etc.), and overall vibe.\n\nRespond ONLY with a JSON array of exactly 3 short strings. No markdown, no explanation. Example: ["Rooftop Bar Seoul","Night View Spot","Han River Terrace"]`;
+    const prompt = `You are helping a user name a saved place in a travel app.\n\nGPS location: ${address || 'unknown'}.\nAnalyze the image carefully — look for: visible signs or branding, type of establishment (cafe, restaurant, bar, viewpoint, beach, hotel, museum, market, street, park, etc.), architectural style, and overall vibe.\n\nCombine what you SEE in the image with the GPS location to suggest 3 short, specific place names the user could save this as.\n\nRules:\n- Each name should be 2-5 words max\n- Be specific (not generic like "Nice Place")\n- If you see a sign or brand name, use it\n- Respond ONLY with a valid JSON array of exactly 3 strings\n- No markdown, no explanation, just the array\n\nExample: ["KITA Business Library","Gangnam Study Cafe","Seoul Library View"]`;
 
     console.log('[place-name-suggestions] Calling Gemini vision API…');
     const response = await fetch(
@@ -1728,7 +1728,7 @@ router.post('/place-name-suggestions', auth, async (req, res) => {
               { text: prompt }
             ]
           }],
-          generationConfig: { maxOutputTokens: 200, temperature: 0.4 }
+          generationConfig: { maxOutputTokens: 500, temperature: 0.3 }
         })
       }
     );
