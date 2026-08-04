@@ -1035,64 +1035,24 @@ router.post('/event-discover', auth, async (req, res) => {
     // Filter to only venues open today
     const openToday = detailResults
       .filter(p => p && isOpenToday(p.opening_hours))
-      .slice(0, 12);
+      .slice(0, 8);
 
     if (!openToday.length) {
       return res.status(200).json({ events: [], weekendEvents: [], message: 'No open venues found for today. Try a different time.' });
     }
 
-    // ── NIGHTLIFE TYPE FILTER ──
-    // For night hours, reject pure restaurants/food venues — they should not appear in club/nightlife discovery.
-    // A venue qualifies if it has night_club or bar type, OR if we have no nightlife venues at all (fallback).
-    const isNightHour = hour >= 20 || hour < 6;
-    const NIGHTLIFE_TYPES = ['night_club', 'bar'];
-    const RESTAURANT_ONLY_TYPES = ['restaurant', 'food', 'meal_takeaway', 'meal_delivery', 'cafe', 'bakery'];
-
-    const isNightlifeVenue = (p) => {
-      const types = p.types || [];
-      return NIGHTLIFE_TYPES.some(t => types.includes(t));
-    };
-    const isPureRestaurant = (p) => {
-      const types = p.types || [];
-      const hasNightlife = NIGHTLIFE_TYPES.some(t => types.includes(t));
-      const hasRestaurant = RESTAURANT_ONLY_TYPES.some(t => types.includes(t));
-      return hasRestaurant && !hasNightlife;
-    };
-
-    let venuePool = openToday;
-    if (isNightHour) {
-      const nightlifeOnly = openToday.filter(p => !isPureRestaurant(p));
-      // Only apply filter if it leaves at least 2 venues — else fall back to all
-      if (nightlifeOnly.length >= 2) {
-        venuePool = nightlifeOnly;
-        const dropped = openToday.length - nightlifeOnly.length;
-        if (dropped > 0) console.log(`Night filter: dropped ${dropped} pure restaurant(s) from venue pool`);
-      } else {
-        console.log(`Night filter: not enough nightlife venues (${nightlifeOnly.length}) — keeping all`);
-      }
-    }
-    const limitedPool = venuePool.slice(0, 8);
-
-    // Build venue list — include website + type info for AI scoring
-    const venueList = limitedPool.map((p, i) => {
-      const types = p.types || [];
-      const isClub = types.includes('night_club');
-      const isBar = types.includes('bar');
-      const isRestaurant = types.includes('restaurant') || types.includes('food');
-      const venueTypeLabel = isClub ? '[NIGHTCLUB]' : isBar ? '[BAR]' : isRestaurant ? '[RESTAURANT]' : '[VENUE]';
-      return {
-        index: i,
-        name: p.name,
-        address: p.formatted_address,
-        rating: p.rating,
-        priceLevel: getPriceLabel(p.price_level),
-        venueTypeLabel,
-        openToday: true,
-        website: p.website || '',
-        photoUrl: getPhotoUrl(p.photos, mapsKey),
-        mapsUrl: p.url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name+' '+locationStr)}`
-      };
-    });
+    // Build venue list — include website for Instagram lookup
+    const venueList = openToday.map((p, i) => ({
+      index: i,
+      name: p.name,
+      address: p.formatted_address,
+      rating: p.rating,
+      priceLevel: getPriceLabel(p.price_level),
+      openToday: true,
+      website: p.website || '',
+      photoUrl: getPhotoUrl(p.photos, mapsKey),
+      mapsUrl: p.url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name+' '+locationStr)}`
+    }));
 
     // ── PHASE 2: AI scores today's venues + finds Instagram handles ──
     const scoringPrompt = `You are an elite personal concierge AI. Score these venues against the user's Identity Cube and pick the TOP 3.
@@ -1112,7 +1072,7 @@ Location: ${locationStr} | Time: ${timeLabel} (${hour}:00) | Day: ${dayOfWeek} |
 All venues below are confirmed OPEN today.
 
 == VENUES TO SCORE ==
-${venueList.map(v=>'['+v.index+'] '+v.venueTypeLabel+' '+v.name+' | '+v.address+' | Rating: '+(v.rating||'?')+'/5 | '+v.priceLevel).join('\n')}
+${venueList.map(v=>'['+v.index+'] '+v.name+' | '+v.address+' | Rating: '+(v.rating||'?')+'/5 | '+v.priceLevel).join('\n')}
 
 == SCORING RULES ==
 +30pts music genre match
@@ -1122,8 +1082,6 @@ ${venueList.map(v=>'['+v.index+'] '+v.venueTypeLabel+' '+v.name+' | '+v.address+
 +10pts aesthetic/tag match
 +15pts crowd size match (Intimate=small underground venues, Mid-size=classic clubs like Cappella/Emesh, Big Room=Haoman 17/large venues)
 TIMING BOOST: Events in next 48h get 1.3x multiplier (max 100)
-
-⛔ STRICT RULE: DO NOT select [RESTAURANT] venues for nightlife discovery. A restaurant with a high rating is NOT a nightlife venue. Only [NIGHTCLUB] and [BAR] venues qualify. If only [RESTAURANT] venues are available, still pick the best options but give them a low score (below 60).
 
 Pick the TOP 3 venues. For each venue, if you know their Instagram handle from your training knowledge, include it (without the @ symbol). If unsure, return empty string.
 
@@ -1325,9 +1283,7 @@ Return ONLY valid JSON:
               // Reject non-nightlife venue types when searching for clubs
               const wrongCategory = ['gym','sports_complex','climbing','health','fitness_center',
                 'physiotherapist','beauty_salon','hair_care','store','shopping_mall',
-                'cafe','coffee','bakery','food','meal_takeaway','meal_delivery',
-                'restaurant'].some(t => placeTypesEarly.includes(t)) &&
-                !['night_club','bar'].some(t => placeTypesEarly.includes(t)); // still allow bar+restaurant combos
+                'cafe','coffee','bakery','food','meal_takeaway','meal_delivery'].some(t => placeTypesEarly.includes(t));
 
               if ((directMatch || closeMatch) && !wrongCategory) {
                 details = d;
@@ -1354,9 +1310,8 @@ Return ONLY valid JSON:
               // Also require at least one nightlife-related type — rejects office buildings, malls, etc.
               // Must have at least bar or night_club to be considered a nightlife venue
               const hasNightlifeType = ['night_club','bar'].some(t => placeTypes.includes(t));
-              // Hybrid venues MUST have at least 'bar' type — pure restaurants are rejected
-              // A restaurant alone is not a "transforms into club night" venue in Places eyes
-              const hasHybridType = !hasNightlifeType && placeTypes.includes('bar');
+              // If no nightlife type but has restaurant/food, still allow (hybrid venues)
+              const hasHybridType = !hasNightlifeType && ['restaurant','food'].some(t => placeTypes.includes(t));
               const isPureCommercial = !hasNightlifeType && !hasHybridType;
 
               if (isWrongType) {
@@ -1730,5 +1685,57 @@ router.post('/preferences', auth, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/* ─────────────────────────────────────────
+   POST /api/ai/place-name-suggestions
+   Accepts a base64 image + address,
+   returns 3 AI-suggested place names
+───────────────────────────────────────── */
+router.post('/place-name-suggestions', auth, async (req, res) => {
+  try {
+    const { imageBase64, mimeType, address } = req.body;
+    if (!imageBase64) return res.status(400).json({ error: 'No image provided' });
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'AI not configured' });
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 200,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mimeType || 'image/jpeg', data: imageBase64 }
+            },
+            {
+              type: 'text',
+              text: `This photo was taken at: ${address || 'unknown location'}.\n\nLook at what's in the photo and suggest 3 short, specific place name options the user might want to save this as. Consider: visible signs/branding, type of place (cafe, viewpoint, beach, club, restaurant, hotel, street, market, etc.), and overall vibe.\n\nRespond ONLY with a JSON array of exactly 3 short strings. No markdown, no explanation. Example: ["Rooftop Bar Seoul","Night View Spot","Han River Terrace"]`
+            }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const raw = data.content?.[0]?.text || '[]';
+    let suggestions = [];
+    try { suggestions = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch {}
+    if (!Array.isArray(suggestions)) suggestions = [];
+
+    res.json({ suggestions: suggestions.slice(0, 3) });
+  } catch (err) {
+    console.error('[place-name-suggestions] error:', err.message);
+    res.status(500).json({ error: 'AI suggestion failed', suggestions: [] });
   }
 });
