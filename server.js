@@ -50,7 +50,7 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // Expose Maps API key to frontend (authenticated requests only)
 // The key is never hard-coded in public HTML
-app.get('/api/config/maps-key', require('./middleware/auth'), (req, res) => {
+app.get('/api/config/maps-key', (req, res) => { // public — needed for share page map preview
   res.json({ key: process.env.GOOGLE_MAPS_API_KEY });
 });
 
