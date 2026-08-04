@@ -1694,13 +1694,26 @@ router.post('/preferences', auth, async (req, res) => {
    returns 3 AI-suggested place names
 ───────────────────────────────────────── */
 router.post('/place-name-suggestions', auth, async (req, res) => {
+  console.log('[place-name-suggestions] ▶ Request received');
   try {
     const { imageBase64, mimeType, address } = req.body;
-    if (!imageBase64) return res.status(400).json({ error: 'No image provided' });
+    console.log('[place-name-suggestions] address:', address);
+    console.log('[place-name-suggestions] mimeType:', mimeType);
+    console.log('[place-name-suggestions] imageBase64 length:', imageBase64?.length || 0);
+
+    if (!imageBase64) {
+      console.warn('[place-name-suggestions] ❌ No image provided');
+      return res.status(400).json({ error: 'No image provided' });
+    }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'AI not configured' });
+    console.log('[place-name-suggestions] ANTHROPIC_API_KEY present:', !!apiKey);
+    if (!apiKey) {
+      console.error('[place-name-suggestions] ❌ No ANTHROPIC_API_KEY in env');
+      return res.status(500).json({ error: 'AI not configured' });
+    }
 
+    console.log('[place-name-suggestions] Calling Anthropic API…');
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -1727,15 +1740,24 @@ router.post('/place-name-suggestions', auth, async (req, res) => {
       })
     });
 
+    console.log('[place-name-suggestions] Anthropic HTTP status:', response.status);
     const data = await response.json();
+    console.log('[place-name-suggestions] Anthropic response:', JSON.stringify(data).slice(0, 300));
+
     const raw = data.content?.[0]?.text || '[]';
+    console.log('[place-name-suggestions] Raw text from Claude:', raw);
+
     let suggestions = [];
-    try { suggestions = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch {}
+    try { suggestions = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch(parseErr) {
+      console.error('[place-name-suggestions] JSON parse error:', parseErr.message, '— raw:', raw);
+    }
     if (!Array.isArray(suggestions)) suggestions = [];
 
+    console.log('[place-name-suggestions] ✅ Returning suggestions:', suggestions);
     res.json({ suggestions: suggestions.slice(0, 3) });
+
   } catch (err) {
-    console.error('[place-name-suggestions] error:', err.message);
+    console.error('[place-name-suggestions] ❌ Exception:', err.message, err.stack);
     res.status(500).json({ error: 'AI suggestion failed', suggestions: [] });
   }
 });
