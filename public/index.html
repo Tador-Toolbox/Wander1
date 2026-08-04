@@ -2095,7 +2095,11 @@ async function loadMapsKey(){
   const cached = localStorage.getItem('wandr_maps_key');
   if(cached){ window._mapsKey=cached; injectMaps(cached); }
   try{
-    const res=await apiFetch('/api/config/maps-key');
+    // Use plain fetch — maps key endpoint may be called before login (e.g. share page preview)
+    const headers={'Content-Type':'application/json'};
+    if(token) headers['Authorization']=`Bearer ${token}`;
+    const res=await fetch('/api/config/maps-key',{headers});
+    if(!res.ok) return; // silently skip if not authed
     const{key}=await res.json();
     window._mapsKey=key;
     localStorage.setItem('wandr_maps_key',key);
@@ -2210,7 +2214,11 @@ function cancelDrop(){
 
 async function apiFetch(path,opts={}){
   const res=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,...(opts.headers||{})}});
-  if(res.status===401){logout();throw new Error('Unauthorized');}
+  if(res.status===401){
+    // Only logout if user was actually logged in — not for unauthenticated share page visitors
+    if(token){ logout(); }
+    throw new Error('Unauthorized');
+  }
   return res;
 }
 // Splash loading steps
