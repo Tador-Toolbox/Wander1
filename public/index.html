@@ -5497,8 +5497,13 @@ async function socialItFromInfo(){
 
 /* ── PHOTO GPS EXTRACTION ── */
 async function extractPhotoGPS(input){
-  const file=input.files[0]; if(!file)return;
+  console.log('[GPS] extractPhotoGPS triggered');
+  const file=input.files[0];
+  if(!file){ console.warn('[GPS] No file selected'); return; }
+  console.log('[GPS] File:', file.name, 'size:', file.size, 'type:', file.type);
+
   const result=document.getElementById('igResult');
+  if(!result){ console.error('[GPS] igResult element not found!'); return; }
   result.style.display='none';
 
   // Show loading
@@ -5507,19 +5512,27 @@ async function extractPhotoGPS(input){
   result.style.color='var(--sky)';
   result.innerHTML='🔍 Reading photo location…';
   result.style.display='block';
+  console.log('[GPS] Loading state shown');
 
   try{
+    console.log('[GPS] Calling readExifGPS…');
     const gps=await readExifGPS(file);
+    console.log('[GPS] readExifGPS result:', gps);
+
     if(!gps){
+      console.warn('[GPS] No GPS data found in EXIF');
       result.style.background='var(--amber-light)';
       result.style.borderColor='rgba(245,166,35,.4)';
       result.style.color='#b37c00';
       result.innerHTML='⚠️ <strong>No GPS data in this photo.</strong><br><small style="font-weight:600;opacity:.75">Try a photo taken on your phone with location enabled.</small>';
       input.value=''; return;
     }
-    // Reverse geocode
+
+    console.log('[GPS] GPS found:', gps.lat, gps.lng, '— calling reverse geocode…');
     const geoRes=await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${gps.lat},${gps.lng}&key=${window._mapsKey}`);
+    console.log('[GPS] Geocode HTTP status:', geoRes.status);
     const geoData=await geoRes.json();
+    console.log('[GPS] Geocode response:', geoData.status, geoData.results?.[0]?.formatted_address);
     const address=geoData.results?.[0]?.formatted_address||`${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`;
 
     // Fill form
@@ -5533,15 +5546,17 @@ async function extractPhotoGPS(input){
     result.innerHTML=`📍 <strong>Location found!</strong><br><small style="font-weight:600;opacity:.8">${address}</small><br><small style="font-weight:600;opacity:.65;font-size:10px;">📷 Photo will be saved as cover when you save the place</small>`;
     window._pendingCoverFile=file;
     toast('📍 GPS location extracted!','ok');
+    console.log('[GPS] ✅ Done — address:', address);
 
     // ── AI Place Name Suggestions from image ──
     suggestPlaceNamesFromImage(file, address);
 
   }catch(e){
+    console.error('[GPS] ❌ Exception in extractPhotoGPS:', e);
     result.style.background='var(--coral-light)';
     result.style.borderColor='rgba(255,107,71,.3)';
     result.style.color='var(--coral)';
-    result.innerHTML='❌ <strong>Could not read GPS.</strong> Fill in manually.';
+    result.innerHTML=`❌ <strong>Error: ${e.message}</strong> — check console for details.`;
   }
   input.value='';
 }
@@ -5596,29 +5611,42 @@ async function suggestPlaceNamesFromImage(file, address){
 
 function readExifGPS(file){
   return new Promise((resolve)=>{
+    console.log('[EXIF] Starting FileReader for', file.name);
     const reader=new FileReader();
     reader.onload=e=>{
       try{
         const buf=e.target.result;
+        console.log('[EXIF] Buffer loaded, size:', buf.byteLength);
         const view=new DataView(buf);
-        // Check JPEG SOI marker
-        if(view.getUint16(0)!==0xFFD8){resolve(null);return;}
+        const soi=view.getUint16(0);
+        console.log('[EXIF] SOI marker:', '0x'+soi.toString(16), soi===0xFFD8 ? '✅ JPEG' : '❌ NOT JPEG');
+        if(soi!==0xFFD8){resolve(null);return;}
         let offset=2;
+        let foundApp1=false;
         while(offset<buf.byteLength-2){
           const marker=view.getUint16(offset);
           offset+=2;
-          if(marker===0xFFE1){// APP1 = EXIF
+          if(marker===0xFFE1){
+            foundApp1=true;
+            console.log('[EXIF] Found APP1 (EXIF) at offset', offset);
             const len=view.getUint16(offset);
             const exifData=buf.slice(offset+2,offset+len);
             const gps=parseExifGPS(exifData);
+            console.log('[EXIF] parseExifGPS result:', gps);
             resolve(gps); return;
           }
-          if(marker===0xFFDA) break;// SOS - no more metadata
+          if(marker===0xFFDA){ console.log('[EXIF] Hit SOS marker — no EXIF found'); break; }
+          if(offset+2>buf.byteLength){ console.warn('[EXIF] Offset out of bounds'); break; }
           offset+=view.getUint16(offset);
         }
+        if(!foundApp1) console.warn('[EXIF] No APP1 marker found in JPEG');
         resolve(null);
-      }catch{resolve(null);}
+      }catch(err){
+        console.error('[EXIF] Exception in readExifGPS:', err);
+        resolve(null);
+      }
     };
+    reader.onerror=e=>{ console.error('[EXIF] FileReader error:', e); resolve(null); };
     reader.readAsArrayBuffer(file);
   });
 }
