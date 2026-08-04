@@ -1248,9 +1248,11 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
     <!-- Places list -->
     <div style="padding:16px 20px 0;flex:1;">
-      <!-- Mini map -->
-      <div id="importMapCard" style="display:none;border-radius:16px;overflow:hidden;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,.1);">
-        <img id="importMapCardImg" src="" style="width:100%;height:160px;object-fit:cover;display:block;" alt="Map">
+      <!-- Map button -->
+      <div id="importMapCard" style="display:none;margin-bottom:16px;">
+        <button id="importMapBtn" onclick="" style="width:100%;padding:13px;border-radius:14px;border:2px solid #e0e0e8;background:#fff;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:#1a1a2e;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 1px 6px rgba(0,0,0,.06);">
+          🗺️ View All Places on Map
+        </button>
       </div>
       <div style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">📍 Places in this trip</div>
       <div id="importPlacesList" style="display:flex;flex-direction:column;gap:8px;"></div>
@@ -1965,7 +1967,11 @@ window.addEventListener('load',()=>{
           const needsOnboarding = await checkAndShowOnboarding();
           if(!needsOnboarding){
             showScreen('mapScreen');
-            initApp().then(()=>{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{if(gmap){gmap.panTo({lat:pos.coords.latitude,lng:pos.coords.longitude});gmap.setZoom(13);}},()=>{},{timeout:5000});});
+            initApp().then(()=>{
+              // Don't request location if user arrived via a share link
+              const onSharePage=!!window.location.pathname.match(/^\/trip\/([a-f0-9]+)$/);
+              if(!onSharePage && navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{if(gmap){gmap.panTo({lat:pos.coords.latitude,lng:pos.coords.longitude});gmap.setZoom(13);}},()=>{},{timeout:5000});
+            });
           }
         }
       } catch {const nb=await checkAndShowOnboarding();if(!nb){showScreen('mapScreen');initApp();}}
@@ -4566,22 +4572,25 @@ async function checkSharedTrip(token){
       document.getElementById('importHero').style.background=`linear-gradient(135deg,${trip.color}cc,${trip.color}55)`;
     }
 
-    // Static map — visible card
+    // Map button — opens Google Maps with all place pins
     const withCoords=places.filter(p=>p.lat&&p.lng);
-    if(withCoords.length && window._mapsKey){
-      const markers=withCoords.slice(0,15).map(p=>`markers=color:red%7Clabel:%E2%80%A2%7C${p.lat},${p.lng}`).join('&');
-      const avgLat=withCoords.reduce((s,p)=>s+p.lat,0)/withCoords.length;
-      const avgLng=withCoords.reduce((s,p)=>s+p.lng,0)/withCoords.length;
-      // Dark styled map
-      const mapStyle='style=element:geometry%7Ccolor:0x1d2c4d&style=element:labels.text.fill%7Ccolor:0x8ec3b9&style=element:labels.text.stroke%7Ccolor:0x1a3646&style=feature:road%7Celement:geometry%7Ccolor:0x304a7d&style=feature:poi%7Cvisibility:off';
-      const mapUrl=`https://maps.googleapis.com/maps/api/staticmap?center=${avgLat},${avgLng}&zoom=13&size=700x400&scale=2&${markers}&${mapStyle}&key=${window._mapsKey}`;
-      const cardImg=document.getElementById('importMapCardImg');
-      const card=document.getElementById('importMapCard');
-      cardImg.src=mapUrl;
-      cardImg.onload=()=>{ card.style.display='block'; };
-      // Also use as subtle hero background
-      document.getElementById('importMapImg').src=mapUrl;
-      document.getElementById('importMapStrip').style.opacity='.4';
+    const card=document.getElementById('importMapCard');
+    const btn=document.getElementById('importMapBtn');
+    if(withCoords.length && card && btn){
+      // Build Google Maps URL: search/directions with waypoints
+      let mapsUrl;
+      if(withCoords.length===1){
+        mapsUrl=`https://www.google.com/maps/search/?api=1&query=${withCoords[0].lat},${withCoords[0].lng}`;
+      } else {
+        // Use the first place as origin and show all as search results via a custom map link
+        const avgLat=withCoords.reduce((s,p)=>s+p.lat,0)/withCoords.length;
+        const avgLng=withCoords.reduce((s,p)=>s+p.lng,0)/withCoords.length;
+        // Build a Google Maps search centered on average
+        const placeNames=places.slice(0,5).map(p=>encodeURIComponent(p.name)).join('+');
+        mapsUrl=`https://www.google.com/maps/search/${placeNames}/@${avgLat},${avgLng},13z`;
+      }
+      btn.onclick=()=>window.open(mapsUrl,'_blank');
+      card.style.display='block';
     }
 
     // Place cards
