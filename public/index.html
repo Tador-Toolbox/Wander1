@@ -5562,40 +5562,67 @@ async function extractPhotoGPS(input){
 }
 
 async function suggestPlaceNamesFromImage(file, address){
+  console.log('[SUGGEST] Starting — file:', file.name, 'address:', address);
+
   // Show loading chips placeholder
   const existing=document.getElementById('placeNameSuggestions');
   if(existing) existing.remove();
   const nameField=document.getElementById('pName');
+  if(!nameField){ console.error('[SUGGEST] pName field not found!'); return; }
   const suggBox=document.createElement('div');
   suggBox.id='placeNameSuggestions';
   suggBox.style.cssText='margin-top:8px;';
   suggBox.innerHTML=`<div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">✦ AI Name Suggestions</div><div style="display:flex;gap:6px;flex-wrap:wrap;"><div style="font-size:12px;color:var(--txt3);padding:6px 0;">🤖 Identifying place…</div></div>`;
   nameField.parentNode.insertBefore(suggBox, nameField.nextSibling);
+  console.log('[SUGGEST] Loading box inserted into DOM');
 
   try{
     // Convert image to base64
-    const base64=await new Promise(res=>{
+    console.log('[SUGGEST] Converting image to base64…');
+    const base64=await new Promise((res,rej)=>{
       const reader=new FileReader();
-      reader.onload=e=>res(e.target.result.split(',')[1]);
+      reader.onload=e=>{
+        const result=e.target.result;
+        console.log('[SUGGEST] base64 data URL length:', result?.length);
+        res(result.split(',')[1]);
+      };
+      reader.onerror=e=>{ console.error('[SUGGEST] FileReader error:', e); rej(e); };
       reader.readAsDataURL(file);
     });
-    console.log('[SUGGEST] Calling backend /api/ai/place-name-suggestions…');
+    console.log('[SUGGEST] base64 ready, length:', base64?.length, 'mimeType:', file.type);
 
+    console.log('[SUGGEST] Calling backend /api/ai/place-name-suggestions…');
     const resp=await apiFetch('/api/ai/place-name-suggestions',{
       method:'POST',
       body:JSON.stringify({imageBase64:base64, mimeType:file.type||'image/jpeg', address})
     });
-    if(!resp.ok){ console.warn('[SUGGEST] Backend returned', resp.status); throw new Error('Backend error '+resp.status); }
+    console.log('[SUGGEST] HTTP status:', resp.status, resp.statusText);
+
+    if(!resp.ok){
+      const errText=await resp.text().catch(()=>'');
+      console.error('[SUGGEST] Backend error:', resp.status, errText);
+      throw new Error(`Backend ${resp.status}: ${errText}`);
+    }
+
     const data=await resp.json();
-    console.log('[SUGGEST] Suggestions received:', data.suggestions);
+    console.log('[SUGGEST] Response data:', JSON.stringify(data));
+
     const suggestions=data.suggestions||[];
-    if(!suggestions.length) throw new Error('no suggestions');
+    console.log('[SUGGEST] Suggestions array:', suggestions);
+
+    if(!suggestions.length){
+      console.warn('[SUGGEST] Empty suggestions array — removing box');
+      suggBox.innerHTML=`<div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">✦ AI Name Suggestions</div><div style="font-size:11px;color:var(--txt3);">Could not identify place — type a name above</div>`;
+      return;
+    }
 
     const chips=suggestions.map(s=>`<button onclick="document.getElementById('pName').value='${s.replace(/'/g,"\\'")}';this.parentNode.querySelectorAll('button').forEach(b=>b.style.background='');this.style.background='var(--sky-light)';this.style.borderColor='var(--sky)';this.style.color='var(--sky)';" style="padding:6px 12px;border-radius:20px;border:2px solid var(--border);background:#fff;color:var(--txt2);font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;">${s}</button>`).join('');
     suggBox.innerHTML=`<div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">✦ AI Name Suggestions</div><div style="display:flex;gap:6px;flex-wrap:wrap;">${chips}</div><div style="font-size:10px;color:var(--txt3);margin-top:5px;">Tap to use · or type your own above</div>`;
-  }catch{
-    // Silently remove if AI fails — don't block the flow
-    suggBox.remove();
+    console.log('[SUGGEST] ✅ Chips rendered');
+
+  }catch(e){
+    console.error('[SUGGEST] ❌ Exception:', e.message, e);
+    suggBox.innerHTML=`<div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">✦ AI Name Suggestions</div><div style="font-size:11px;color:var(--coral);">⚠️ ${e.message}</div>`;
   }
 }
 
