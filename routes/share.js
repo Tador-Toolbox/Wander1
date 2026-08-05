@@ -28,18 +28,24 @@ router.post('/:token/import', auth, async (req, res) => {
       color: sourceTripDoc.color
     });
 
-    // Copy all places
+    // Copy all places — including photos, cover photo, rating, status, videos
     const newPlaces = await Place.insertMany(
       sourcePlaces.map(p => ({
-        user:     req.userId,
-        trip:     newTrip._id,
-        name:     p.name,
-        location: p.location,
-        notes:    p.notes,
-        link:     p.link,
-        tags:     p.tags,
-        lat:      p.lat,
-        lng:      p.lng
+        user:       req.userId,
+        trip:       newTrip._id,
+        name:       p.name,
+        location:   p.location,
+        notes:      p.notes,
+        link:       p.link,
+        tags:       p.tags,
+        lat:        p.lat,
+        lng:        p.lng,
+        rating:     p.rating,
+        status:     p.status,
+        coverPhoto: p.coverPhoto || '',
+        photos:     p.photos     || [],
+        videos:     p.videos     || [],
+        // photoHashes intentionally NOT copied — hashes belong to original uploader
       }))
     );
 
