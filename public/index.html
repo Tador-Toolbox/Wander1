@@ -4722,28 +4722,32 @@ async function checkSharedTrip(token){
 }
 
 async function confirmImport(){
-  if(!importToken)return;
+  if(!importToken){ toast('No import token','err'); return; }
   try{
     const r=await apiFetch(`/api/share/${importToken}/import`,{method:'POST'});
     if(r.status===401){
-      // Session expired — save token and go back to login
       closeOverlay('importOverlay');
       if(isReg)toggleMode();
       showScreen('loginScreen');
       toast('Session expired — sign in again to import','err');
       return;
     }
-    if(!r.ok) throw new Error();
+    if(!r.ok){
+      let msg='Error importing trip';
+      try{ const d=await r.json(); msg=d.error||msg; }catch{}
+      toast(msg+' ('+r.status+')','err');
+      console.error('[import] server returned',r.status);
+      return;
+    }
     const data=await r.json();
     trips.unshift(data.trip);
     places=[...data.places,...places];
     populateTripSelect(); updateCount();
     closeOverlay('importOverlay');
-    // Clean URL
     window.history.replaceState(null,'','/');
     toast(`✅ "${data.trip.name}" imported!`,'ok');
     showTrips();
-  } catch{toast('Error importing trip','err');}
+  } catch(e){ toast('Error importing trip: '+e.message,'err'); console.error('[import] exception',e); }
 }
 
 /* ── PROFILE ── */
