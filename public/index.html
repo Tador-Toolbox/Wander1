@@ -2231,12 +2231,6 @@ function cancelDrop(){
   if(window._dropPin){window._dropPin.setMap(null);window._dropPin=null;}
 }
 
-
-  }catch{
-    toast('Could not import trip – please try again','err');
-  }
-}
-
 async function apiFetch(path,opts={}){
   const res=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,...(opts.headers||{})}});
   if(res.status===401){
