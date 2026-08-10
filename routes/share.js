@@ -28,29 +28,32 @@ router.post('/:token/import', auth, async (req, res) => {
       color: sourceTripDoc.color
     });
 
-    // Copy all places — including photos, cover photo, rating, status, videos
+    // Copy all places (photoHashes NOT copied — they belong to the original uploader)
     const newPlaces = await Place.insertMany(
       sourcePlaces.map(p => ({
         user:       req.userId,
         trip:       newTrip._id,
         name:       p.name,
-        location:   p.location,
-        notes:      p.notes,
-        link:       p.link,
-        tags:       p.tags,
+        location:   p.location  || '',
+        notes:      p.notes     || '',
+        link:       p.link      || '',
+        tags:       p.tags      || [],
         lat:        p.lat,
         lng:        p.lng,
-        rating:     p.rating,
-        status:     p.status,
-        coverPhoto: p.coverPhoto || '',
-        photos:     p.photos     || [],
-        videos:     p.videos     || [],
-        // photoHashes intentionally NOT copied — hashes belong to original uploader
+        rating:     p.rating    || 0,
+        status:     p.status    || 'none',
+        coverPhoto: p.coverPhoto|| '',
+        photos:     p.photos    || [],
+        videos:     p.videos    || [],
+        source:     'shared'
       }))
     );
 
     res.status(201).json({ trip: newTrip, places: newPlaces });
-  } catch { res.status(500).json({ error: 'Server error' }); }
+  } catch(e) {
+    console.error('[share/import]', e.message);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 module.exports = router;
