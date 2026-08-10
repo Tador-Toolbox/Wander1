@@ -1258,7 +1258,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <button id="importBtn" onclick="confirmImport()" style="width:100%;padding:16px;border-radius:18px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:16px;font-weight:900;color:#fff;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
         📥 Import Trip to My Wander
       </button>
-      <button id="signupBtn" onclick="window._pendingImportToken=importToken;closeOverlay('importOverlay');if(!isReg)toggleMode();showScreen('loginScreen');" style="width:100%;padding:14px;border-radius:18px;background:#fff;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#1a1a2e;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <button id="signupBtn" onclick="localStorage.setItem('wander_pendingImport',importToken);closeOverlay('importOverlay');if(!isReg)toggleMode();showScreen('loginScreen');" style="width:100%;padding:14px;border-radius:18px;background:#fff;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#1a1a2e;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
         🚀 Sign Up Free & Import
       </button>
       <!-- Branding -->
@@ -1921,33 +1921,7 @@ async function runOnboarding(){
       startSplashAnimation();
       await initApp();
       // Auto-import pending shared trip if user came from a share link
-      if(window._pendingImportToken){
-        const t=window._pendingImportToken;
-        window._pendingImportToken=null;
-        importToken=t;
-        try{
-          toast('📥 Importing trip…','ok');
-          const r=await apiFetch(`/api/share/${t}/import`,{method:'POST'});
-          if(r.ok){
-            const data=await r.json();
-            trips.unshift(data.trip);
-            places=[...data.places,...places];
-            populateTripSelect(); updateCount();
-            window.history.replaceState(null,'','/');
-            toast(`✅ "${data.trip.name}" imported!`,'ok');
-            showTrips();
-          } else {
-            // Fallback: show overlay so user can retry
-            await checkSharedTrip(t);
-            const btn=document.getElementById('importBtn');
-            if(btn){ btn.innerHTML='📥 Import Trip to My Wander'; btn.onclick=confirmImport; }
-          }
-        }catch{
-          await checkSharedTrip(t);
-          const btn=document.getElementById('importBtn');
-          if(btn){ btn.innerHTML='📥 Import Trip to My Wander'; btn.onclick=confirmImport; }
-        }
-      }
+      await doPostLoginImport();
     }, 600);
 
   }catch(e){
@@ -2043,7 +2017,7 @@ async function doAuth(){
     }
     token=data.token;localStorage.setItem('wandr_token',token);if(data.user){localStorage.setItem('wandr_user',JSON.stringify(data.user));currentUser=data.user;}
     const needsOnboarding = await checkAndShowOnboarding();
-    if(!needsOnboarding){ showScreen('mapScreen'); startSplashAnimation(); await initApp(); stopSplashAnimation(); }
+    if(!needsOnboarding){ showScreen('mapScreen'); startSplashAnimation(); await initApp(); stopSplashAnimation(); await doPostLoginImport(); }
   }catch{showAuthErr('Network error – is the server running?');}
   finally{btn.disabled=false;btn.textContent=isReg?'Create Account 🌍':'Sign In 🚀';}
 }
@@ -2229,6 +2203,32 @@ function openFullFromDrop(lat,lng){
 function cancelDrop(){
   infoWin.close();
   if(window._dropPin){window._dropPin.setMap(null);window._dropPin=null;}
+}
+
+
+async function doPostLoginImport(){
+  const t=localStorage.getItem('wander_pendingImport');
+  if(!t) return;
+  localStorage.removeItem('wander_pendingImport');
+  importToken=t;
+  try{
+    toast('📥 Importing trip…','ok');
+    // Use raw fetch to avoid apiFetch auto-logout on errors
+    const r=await fetch(`/api/share/${t}/import`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`}});
+    if(r.ok){
+      const data=await r.json();
+      trips.unshift(data.trip);
+      places=[...data.places,...places];
+      populateTripSelect(); updateCount();
+      window.history.replaceState(null,'','/');
+      toast(`✅ "${data.trip.name}" imported!`,'ok');
+      showTrips();
+    } else {
+      toast('Could not import trip – please try again','err');
+    }
+  }catch{
+    toast('Could not import trip – please try again','err');
+  }
 }
 
 async function apiFetch(path,opts={}){
@@ -4616,7 +4616,7 @@ async function checkSharedTrip(token){
       importBtn.innerHTML='📥 Import Trip';
       importBtn.style.background='linear-gradient(135deg,#4a9eff,#764ba2)';
       importBtn.onclick=()=>{
-        window._pendingImportToken=importToken;
+        localStorage.setItem('wander_pendingImport',importToken);
         closeOverlay('importOverlay');
         showScreen('loginScreen');
       };
@@ -4632,8 +4632,9 @@ async function confirmImport(){
     const r=await apiFetch(`/api/share/${importToken}/import`,{method:'POST'});
     if(r.status===401){
       // Session expired — save token and go back to login
-      window._pendingImportToken=importToken;
+      localStorage.setItem('wander_pendingImport',importToken);
       closeOverlay('importOverlay');
+      if(isReg)toggleMode(); // show login mode
       showScreen('loginScreen');
       toast('Session expired — please sign in again','err');
       return;
