@@ -1258,8 +1258,8 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <button id="importBtn" onclick="confirmImport()" style="width:100%;padding:16px;border-radius:18px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:16px;font-weight:900;color:#fff;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
         📥 Import Trip to My Wander
       </button>
-      <button id="signupBtn" onclick="window._pendingImportToken=importToken;closeOverlay('importOverlay');showScreen('loginScreen');" style="width:100%;padding:14px;border-radius:18px;background:#fff;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#1a1a2e;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
-        🚀 Sign Up Free
+      <button id="signupBtn" onclick="window._pendingImportToken=importToken;closeOverlay('importOverlay');if(!isReg)toggleMode();showScreen('loginScreen');" style="width:100%;padding:14px;border-radius:18px;background:#fff;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#1a1a2e;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+        🚀 Sign Up Free & Import
       </button>
       <!-- Branding -->
       <div style="text-align:center;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;color:#aaa;">
@@ -1925,10 +1925,28 @@ async function runOnboarding(){
         const t=window._pendingImportToken;
         window._pendingImportToken=null;
         importToken=t;
-        await checkSharedTrip(t);
-        // Override CTA back to import (now logged in)
-        const btn=document.getElementById('importBtn');
-        if(btn){ btn.innerHTML='📥 Import Trip to My Wander'; btn.onclick=confirmImport; }
+        try{
+          toast('📥 Importing trip…','ok');
+          const r=await apiFetch(`/api/share/${t}/import`,{method:'POST'});
+          if(r.ok){
+            const data=await r.json();
+            trips.unshift(data.trip);
+            places=[...data.places,...places];
+            populateTripSelect(); updateCount();
+            window.history.replaceState(null,'','/');
+            toast(`✅ "${data.trip.name}" imported!`,'ok');
+            showTrips();
+          } else {
+            // Fallback: show overlay so user can retry
+            await checkSharedTrip(t);
+            const btn=document.getElementById('importBtn');
+            if(btn){ btn.innerHTML='📥 Import Trip to My Wander'; btn.onclick=confirmImport; }
+          }
+        }catch{
+          await checkSharedTrip(t);
+          const btn=document.getElementById('importBtn');
+          if(btn){ btn.innerHTML='📥 Import Trip to My Wander'; btn.onclick=confirmImport; }
+        }
       }
     }, 600);
 
@@ -4612,6 +4630,14 @@ async function confirmImport(){
   if(!importToken)return;
   try{
     const r=await apiFetch(`/api/share/${importToken}/import`,{method:'POST'});
+    if(r.status===401){
+      // Session expired — save token and go back to login
+      window._pendingImportToken=importToken;
+      closeOverlay('importOverlay');
+      showScreen('loginScreen');
+      toast('Session expired — please sign in again','err');
+      return;
+    }
     if(!r.ok) throw new Error();
     const data=await r.json();
     trips.unshift(data.trip);
