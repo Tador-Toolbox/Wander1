@@ -5402,7 +5402,15 @@ function openPlaceInfo(id){
   if(p.lat&&p.lng){
     document.getElementById('piWaze').href=`https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`;
     // KakaoMap: coordinates in path — name is just a display label
-    document.getElementById('piKakao').href=`https://map.kakao.com/link/to/${encodeURIComponent((p.name||'destination').replace(/,/g,' '))},${p.lat},${p.lng}`;
+    // KakaoMap deep link — uses exact coordinates, by=CAR
+    document.getElementById('piKakao').href='#';
+    document.getElementById('piKakao').onclick=function(e){
+      e.preventDefault();
+      var kakaoApp='kakaomap://route?ep='+p.lat+','+p.lng+'&by=CAR';
+      var kakaoWeb='https://map.kakao.com/link/map/'+(p.name||'destination').replace(/,/g,' ')+','+p.lat+','+p.lng;
+      window.location.href=kakaoApp;
+      setTimeout(function(){if(!document.hidden)window.open(kakaoWeb,'_blank');},1200);
+    };
     // NaverMap: nmap:// deep link uses exact coordinates
     // If app not installed, fall back to coordinate search on Naver web
     const naverLabel=encodeURIComponent((p.name||'destination').replace(/,/g,' '));
