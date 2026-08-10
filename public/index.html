@@ -1253,16 +1253,43 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     </div>
 
     <!-- CTA section -->
-    <div style="padding:20px;flex-shrink:0;">
-      <!-- CTA buttons -->
+    <div id="importCtaSection" style="padding:20px;flex-shrink:0;">
+      <!-- Logged-in: import button -->
       <button id="importBtn" onclick="confirmImport()" style="width:100%;padding:16px;border-radius:18px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:16px;font-weight:900;color:#fff;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
         📥 Import Trip to My Wander
       </button>
-      <button id="signupBtn" onclick="localStorage.setItem('wander_pendingImport',importToken);closeOverlay('importOverlay');if(!isReg)toggleMode();showScreen('loginScreen');" style="width:100%;padding:14px;border-radius:18px;background:#fff;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#1a1a2e;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <!-- Guest: sign up button (shown/hidden by checkSharedTrip) -->
+      <button id="signupBtn" onclick="showImportAuthForm()" style="width:100%;padding:14px;border-radius:18px;background:#fff;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#1a1a2e;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
         🚀 Sign Up Free & Import
       </button>
       <!-- Branding -->
       <div style="text-align:center;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;color:#aaa;">
+        ✦ Wander — your social AI travel app
+      </div>
+    </div>
+
+    <!-- Inline auth form (guest signup/login on share page) — hidden by default -->
+    <div id="importAuthForm" style="display:none;padding:20px;flex-shrink:0;border-top:1px solid #f0f0f4;">
+      <div style="text-align:center;margin-bottom:16px;">
+        <div style="font-family:'Nunito',sans-serif;font-size:17px;font-weight:900;color:#1a1a2e;" id="importAuthTitle">Create your free account</div>
+        <div style="font-family:'Nunito',sans-serif;font-size:13px;color:#888;margin-top:4px;" id="importAuthSub">and import this trip instantly</div>
+      </div>
+      <!-- Tab row -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button id="importTabReg" onclick="switchImportTab(true)" style="flex:1;padding:9px;border-radius:12px;background:#1a1a2e;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:#fff;cursor:pointer;">Sign Up</button>
+        <button id="importTabLog" onclick="switchImportTab(false)" style="flex:1;padding:9px;border-radius:12px;background:#f0f0f4;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:#1a1a2e;cursor:pointer;">Log In</button>
+      </div>
+      <!-- Fields -->
+      <div id="importRegFields" style="display:flex;flex-direction:column;gap:10px;">
+        <input id="iaFirst" placeholder="First name" style="padding:12px 14px;border-radius:12px;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;outline:none;width:100%;box-sizing:border-box;">
+        <input id="iaEmail" type="email" placeholder="Email" style="padding:12px 14px;border-radius:12px;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;outline:none;width:100%;box-sizing:border-box;">
+        <input id="iaPass" type="password" placeholder="Password (min 6 chars)" style="padding:12px 14px;border-radius:12px;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;outline:none;width:100%;box-sizing:border-box;">
+      </div>
+      <div id="importAuthErr" style="color:#e63946;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;display:none;margin-top:8px;text-align:center;"></div>
+      <button id="importAuthSubmit" onclick="doImportAuth()" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:15px;font-weight:900;color:#fff;cursor:pointer;margin-top:12px;">
+        Create Account & Import 🌍
+      </button>
+      <div style="text-align:center;margin-top:10px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:#aaa;">
         ✦ Wander — your social AI travel app
       </div>
     </div>
@@ -1921,7 +1948,6 @@ async function runOnboarding(){
       startSplashAnimation();
       await initApp();
       // Auto-import pending shared trip if user came from a share link
-      await doPostLoginImport();
     }, 600);
 
   }catch(e){
@@ -2017,7 +2043,7 @@ async function doAuth(){
     }
     token=data.token;localStorage.setItem('wandr_token',token);if(data.user){localStorage.setItem('wandr_user',JSON.stringify(data.user));currentUser=data.user;}
     const needsOnboarding = await checkAndShowOnboarding();
-    if(!needsOnboarding){ showScreen('mapScreen'); startSplashAnimation(); await initApp(); stopSplashAnimation(); await doPostLoginImport(); }
+    if(!needsOnboarding){ showScreen('mapScreen'); startSplashAnimation(); await initApp(); stopSplashAnimation(); }
   }catch{showAuthErr('Network error – is the server running?');}
   finally{btn.disabled=false;btn.textContent=isReg?'Create Account 🌍':'Sign In 🚀';}
 }
@@ -2206,26 +2232,6 @@ function cancelDrop(){
 }
 
 
-async function doPostLoginImport(){
-  const t=localStorage.getItem('wander_pendingImport');
-  if(!t) return;
-  localStorage.removeItem('wander_pendingImport');
-  importToken=t;
-  try{
-    toast('📥 Importing trip…','ok');
-    // Use raw fetch to avoid apiFetch auto-logout on errors
-    const r=await fetch(`/api/share/${t}/import`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`}});
-    if(r.ok){
-      const data=await r.json();
-      trips.unshift(data.trip);
-      places=[...data.places,...places];
-      populateTripSelect(); updateCount();
-      window.history.replaceState(null,'','/');
-      toast(`✅ "${data.trip.name}" imported!`,'ok');
-      showTrips();
-    } else {
-      toast('Could not import trip – please try again','err');
-    }
   }catch{
     toast('Could not import trip – please try again','err');
   }
@@ -4566,6 +4572,102 @@ function exportJSON(){
 }
 
 // ── IMPORT ──
+
+// ── SHARE PAGE INLINE AUTH ──
+let _importAuthIsReg = true;
+
+function showImportAuthForm(){
+  document.getElementById('importCtaSection').style.display='none';
+  document.getElementById('importAuthForm').style.display='block';
+  document.getElementById('iaFirst').focus();
+}
+
+function switchImportTab(reg){
+  _importAuthIsReg = reg;
+  document.getElementById('importRegFields').querySelector('#iaFirst').style.display = reg ? 'block' : 'none';
+  document.getElementById('importAuthTitle').textContent = reg ? 'Create your free account' : 'Sign in to Wander';
+  document.getElementById('importAuthSub').textContent = reg ? 'and import this trip instantly' : 'and import this trip';
+  document.getElementById('importAuthSubmit').textContent = reg ? 'Create Account & Import 🌍' : 'Sign In & Import 🚀';
+  document.getElementById('importTabReg').style.background = reg ? '#1a1a2e' : '#f0f0f4';
+  document.getElementById('importTabReg').style.color = reg ? '#fff' : '#1a1a2e';
+  document.getElementById('importTabLog').style.background = reg ? '#f0f0f4' : '#1a1a2e';
+  document.getElementById('importTabLog').style.color = reg ? '#1a1a2e' : '#fff';
+  document.getElementById('importAuthErr').style.display = 'none';
+}
+
+async function doImportAuth(){
+  const btn = document.getElementById('importAuthSubmit');
+  const errEl = document.getElementById('importAuthErr');
+  const email = document.getElementById('iaEmail').value.trim();
+  const pass  = document.getElementById('iaPass').value;
+  const first = document.getElementById('iaFirst').value.trim();
+  errEl.style.display = 'none';
+  if(!email || !pass){ errEl.textContent='Please fill in email and password'; errEl.style.display='block'; return; }
+  if(_importAuthIsReg && !first){ errEl.textContent='Please enter your first name'; errEl.style.display='block'; return; }
+  btn.disabled = true;
+  btn.textContent = '...';
+  try{
+    const handle = first.toLowerCase().replace(/[^a-z0-9]/g,'_') + Math.floor(Math.random()*999);
+    const body = _importAuthIsReg
+      ? {firstName: first, lastName: '', handle: handle, email: email, password: pass}
+      : {email: email, password: pass};
+    const res = await fetch(_importAuthIsReg ? '/api/auth/register' : '/api/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if(!res.ok){
+      errEl.textContent = data.error || 'Something went wrong';
+      errEl.style.display = 'block';
+      return;
+    }
+    if(_importAuthIsReg && !data.token){
+      // Email verification required
+      document.getElementById('importAuthForm').innerHTML =
+        '<div style="text-align:center;padding:20px 0;">' +
+        '<div style="font-size:48px;margin-bottom:12px;">' + String.fromCodePoint(0x1F4E7) + '</div>' +
+        '<div style="font-family:Nunito,sans-serif;font-size:17px;font-weight:900;color:#1a1a2e;margin-bottom:8px;">Check your email!</div>' +
+        '<div style="font-family:Nunito,sans-serif;font-size:13px;color:#666;line-height:1.6;margin-bottom:16px;">' +
+        'We sent a verification link to <strong>' + email + '</strong>.<br>' +
+        'After clicking it, come back here to import your trip.' +
+        '</div>' +
+        '<div style="background:#f5f5f8;border-radius:12px;padding:12px;font-family:Nunito,sans-serif;font-size:12px;color:#555;font-weight:700;word-break:break-all;">' +
+        'Save this link: ' + window.location.href +
+        '</div></div>';
+      return;
+    }
+    // We have a token (login or immediate register) — save and import
+    token = data.token;
+    localStorage.setItem('wandr_token', token);
+    if(data.user){ localStorage.setItem('wandr_user', JSON.stringify(data.user)); currentUser = data.user; }
+    // Import immediately
+    btn.textContent = 'Importing...';
+    const ir = await fetch('/api/share/' + importToken + '/import', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer ' + token}
+    });
+    if(ir.ok){
+      const idata = await ir.json();
+      trips.unshift(idata.trip);
+      places = [].concat(idata.places, places);
+      populateTripSelect(); updateCount();
+      closeOverlay('importOverlay');
+      window.history.replaceState(null,'','/');
+      await initApp();
+      toast('"' + idata.trip.name + '" imported!', 'ok');
+      showTrips();
+    } else {
+      errEl.textContent = 'Import failed - please try again';
+      errEl.style.display = 'block';
+    }
+  }catch(e){
+    errEl.textContent = 'Network error - please try again';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = _importAuthIsReg ? 'Create Account & Import' : 'Sign In & Import';
+  }
+}
+
+
 async function checkSharedTrip(token){
   importToken=token;
   try{
@@ -4616,7 +4718,6 @@ async function checkSharedTrip(token){
       importBtn.innerHTML='📥 Import Trip';
       importBtn.style.background='linear-gradient(135deg,#4a9eff,#764ba2)';
       importBtn.onclick=()=>{
-        localStorage.setItem('wander_pendingImport',importToken);
         closeOverlay('importOverlay');
         showScreen('loginScreen');
       };
@@ -4632,11 +4733,10 @@ async function confirmImport(){
     const r=await apiFetch(`/api/share/${importToken}/import`,{method:'POST'});
     if(r.status===401){
       // Session expired — save token and go back to login
-      localStorage.setItem('wander_pendingImport',importToken);
       closeOverlay('importOverlay');
-      if(isReg)toggleMode(); // show login mode
+      if(isReg)toggleMode();
       showScreen('loginScreen');
-      toast('Session expired — please sign in again','err');
+      toast('Session expired — sign in again to import','err');
       return;
     }
     if(!r.ok) throw new Error();
