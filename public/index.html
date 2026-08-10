@@ -4662,10 +4662,10 @@ async function doImportAuth(){
 }
 
 
-async function checkSharedTrip(token){
-  importToken=token;
+async function checkSharedTrip(shareToken){
+  importToken=shareToken;
   try{
-    const r=await fetch(`/api/share/${token}`);
+    const r=await fetch(`/api/share/${shareToken}`);
     if(!r.ok) throw new Error();
     const data=await r.json();
     const trip=data.trip;
@@ -4698,7 +4698,7 @@ async function checkSharedTrip(token){
 
     openOverlay('importOverlay');
 
-    // ── CTA: auth-aware ──
+    // ── CTA: auth-aware — global `token` is the JWT, shareToken is the URL param ──
     const importBtn=document.getElementById('importBtn');
     const signupBtn=document.getElementById('signupBtn');
     if(token){
@@ -4708,13 +4708,10 @@ async function checkSharedTrip(token){
       importBtn.style.display='flex';
       signupBtn.style.display='none';
     } else {
-      // Guest — Import also goes to signup first, Sign Up button visible
+      // Guest — both buttons open the inline auth form
       importBtn.innerHTML='📥 Import Trip';
       importBtn.style.background='linear-gradient(135deg,#4a9eff,#764ba2)';
-      importBtn.onclick=()=>{
-        closeOverlay('importOverlay');
-        showScreen('loginScreen');
-      };
+      importBtn.onclick=showImportAuthForm;
       importBtn.style.display='flex';
       signupBtn.style.display='flex';
     }
@@ -6184,4 +6181,3 @@ const MAP_STYLE=[
 </script>
 </body>
 </html>
-
