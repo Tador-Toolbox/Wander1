@@ -1254,9 +1254,12 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
     <!-- CTA section -->
     <div style="padding:20px;flex-shrink:0;">
-      <!-- Logged-in user: import directly -->
+      <!-- CTA buttons -->
       <button id="importBtn" onclick="confirmImport()" style="width:100%;padding:16px;border-radius:18px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:16px;font-weight:900;color:#fff;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
         📥 Import Trip to My Wander
+      </button>
+      <button id="signupBtn" onclick="window._pendingImportToken=importToken;closeOverlay('importOverlay');showScreen('loginScreen');" style="width:100%;padding:14px;border-radius:18px;background:#fff;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#1a1a2e;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+        🚀 Sign Up Free
       </button>
       <!-- Branding -->
       <div style="text-align:center;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;color:#aaa;">
@@ -4583,24 +4586,24 @@ async function checkSharedTrip(token){
 
     // ── CTA: auth-aware ──
     const importBtn=document.getElementById('importBtn');
+    const signupBtn=document.getElementById('signupBtn');
     if(token){
-      // Logged in — import directly
+      // Logged in — show Import, hide Sign Up
       importBtn.innerHTML='📥 Import Trip to My Wander';
       importBtn.onclick=confirmImport;
+      importBtn.style.display='flex';
+      signupBtn.style.display='none';
     } else {
-      // Guest — show signup CTA, save token for after auth
-      importBtn.innerHTML='🚀 Create Free Account & Import';
-      importBtn.style.background='linear-gradient(135deg,#ff6b47,#e91e8c)';
+      // Guest — Import also goes to signup first, Sign Up button visible
+      importBtn.innerHTML='📥 Import Trip';
+      importBtn.style.background='linear-gradient(135deg,#4a9eff,#764ba2)';
       importBtn.onclick=()=>{
         window._pendingImportToken=importToken;
         closeOverlay('importOverlay');
         showScreen('loginScreen');
-        // Switch to register tab
-        setTimeout(()=>{
-          const reg=document.getElementById('switchToRegister')||document.querySelector('[onclick*="Register"]')||document.querySelector('[onclick*="isReg=true"]');
-          if(reg) reg.click();
-        },200);
       };
+      importBtn.style.display='flex';
+      signupBtn.style.display='flex';
     }
   } catch{toast('Invalid or expired share link','err');}
 }
@@ -5398,17 +5401,13 @@ function openPlaceInfo(id){
   const navBtns=document.getElementById('piNavBtns');
   if(p.lat&&p.lng){
     document.getElementById('piWaze').href=`https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`;
-    // KakaoMap: /link/to/ = navigate TO destination (not just show on map)
-    document.getElementById('piKakao').href=`https://map.kakao.com/link/to/${encodeURIComponent(p.name)},${p.lat},${p.lng}`;
-    // NaverMap: nmap:// deep link opens app directly; fallback handled by onclick
-    document.getElementById('piNaver').onclick=function(e){
-      e.preventDefault();
-      const appUrl=`nmap://route/public?dlat=${p.lat}&dlng=${p.lng}&dname=${encodeURIComponent(p.name)}&appname=wander`;
-      const webUrl=`https://map.naver.com/index.nhn?elng=${p.lng}&elat=${p.lat}&etext=${encodeURIComponent(p.name)}&menu=route`;
-      // Try app deep link; if not installed fall back to web after delay
-      window.location.href=appUrl;
-      setTimeout(()=>{ window.open(webUrl,'_blank'); },1500);
-    };
+    // KakaoMap: coordinates in path — name is just a display label, not a search term
+    document.getElementById('piKakao').href=`https://map.kakao.com/link/to/${encodeURIComponent(p.name||'destination')},${p.lat},${p.lng}`;
+    // NaverMap v5: destination coordinates in the URL path — no name search involved
+    const naverLabel=encodeURIComponent(p.name||'destination');
+    const naverUrl=`https://map.naver.com/v5/directions/-/${p.lng},${p.lat},${naverLabel},-/car?c=15,0,0,0,dh`;
+    document.getElementById('piNaver').href=naverUrl;
+    document.getElementById('piNaver').onclick=null; // use plain href, no JS tricks
     // Use coordinates for navigation — more accurate, especially for GPS-shared locations
     if(p.placeId) {
       // Has a Google Place ID — use it for direct business page
