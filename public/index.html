@@ -5401,13 +5401,22 @@ function openPlaceInfo(id){
   const navBtns=document.getElementById('piNavBtns');
   if(p.lat&&p.lng){
     document.getElementById('piWaze').href=`https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`;
-    // KakaoMap: coordinates in path — name is just a display label, not a search term
-    document.getElementById('piKakao').href=`https://map.kakao.com/link/to/${encodeURIComponent(p.name||'destination')},${p.lat},${p.lng}`;
-    // NaverMap v5: destination coordinates in the URL path — no name search involved
-    const naverLabel=encodeURIComponent(p.name||'destination');
-    const naverUrl=`https://map.naver.com/v5/directions/-/${p.lng},${p.lat},${naverLabel},-/car?c=15,0,0,0,dh`;
-    document.getElementById('piNaver').href=naverUrl;
-    document.getElementById('piNaver').onclick=null; // use plain href, no JS tricks
+    // KakaoMap: coordinates in path — name is just a display label
+    document.getElementById('piKakao').href=`https://map.kakao.com/link/to/${encodeURIComponent((p.name||'destination').replace(/,/g,' '))},${p.lat},${p.lng}`;
+    // NaverMap: nmap:// deep link uses exact coordinates
+    // If app not installed, fall back to coordinate search on Naver web
+    const naverLabel=encodeURIComponent((p.name||'destination').replace(/,/g,' '));
+    document.getElementById('piNaver').href='#';
+    document.getElementById('piNaver').onclick=function(e){
+      e.preventDefault();
+      const appUrl=`nmap://place?lat=${p.lat}&lng=${p.lng}&name=${naverLabel}&appname=wander`;
+      const webUrl=`https://map.naver.com/v5/search/${p.lat},${p.lng}`;
+      // Try deep link; if app not installed page stays visible → open web fallback
+      window.location.href=appUrl;
+      setTimeout(()=>{
+        if(!document.hidden) window.open(webUrl,'_blank');
+      },1200);
+    };
     // Use coordinates for navigation — more accurate, especially for GPS-shared locations
     if(p.placeId) {
       // Has a Google Place ID — use it for direct business page
