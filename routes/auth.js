@@ -42,6 +42,7 @@ async function sendVerificationEmail(user, token, redirectPath) {
 router.post('/register', async (req, res) => {
   try {
     const { email, password, firstName, lastName, handle, redirect } = req.body;
+    console.log('[auth/register] attempt for:', email);
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
     if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
     const existing = await User.findOne({ email });
@@ -53,7 +54,7 @@ router.post('/register', async (req, res) => {
         existing.verifyToken   = verifyToken;
         existing.verifyExpires = verifyExpires;
         await existing.save();
-        try { await sendVerificationEmail(existing, verifyToken, redirect); } catch(e) { console.error('Email send error:', e.message); }
+        try { await sendVerificationEmail(existing, verifyToken, redirect); console.log('[auth/register] re-sent verification to:', email); } catch(e) { console.error('[auth/register] resend FAILED:', e.message); }
         return res.status(201).json({ message: 'Verification email resent! Please check your inbox.' });
       }
       return res.status(409).json({ error: 'Email already registered' });
@@ -69,7 +70,7 @@ router.post('/register', async (req, res) => {
     });
 
     // Send verification email
-    try { await sendVerificationEmail(user, verifyToken, redirect); } catch(e) { console.error('Email send error:', e.message); }
+    try { await sendVerificationEmail(user, verifyToken, redirect); console.log('[auth/register] verification email sent to:', email); } catch(e) { console.error('[auth/register] email send FAILED:', e.message); }
 
     res.status(201).json({ message: 'Registration successful! Please check your email to verify your account.' });
   } catch(e) { console.error(e); res.status(500).json({ error: 'Server error' }); }
