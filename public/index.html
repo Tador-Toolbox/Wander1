@@ -1254,14 +1254,12 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
     <!-- CTA section -->
     <div id="importCtaSection" style="padding:20px;flex-shrink:0;">
-      <!-- CTA buttons -->
       <button id="importBtn" onclick="confirmImport()" style="width:100%;padding:16px;border-radius:18px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:16px;font-weight:900;color:#fff;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
         📥 Import Trip to My Wander
       </button>
       <button id="signupBtn" onclick="showImportAuthForm()" style="width:100%;padding:14px;border-radius:18px;background:#fff;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#1a1a2e;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
-        🚀 Sign Up Free & Import
+        🚀 New to Wander? Sign Up Free
       </button>
-      <!-- Branding -->
       <div style="text-align:center;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;color:#aaa;">
         ✦ Wander — your social AI travel app
       </div>
@@ -4704,24 +4702,10 @@ async function checkSharedTrip(token){
 
     openOverlay('importOverlay');
 
-    // ── CTA: auth-aware ──
+    // ── CTA: both buttons always visible — onclick decides action based on token ──
     const importBtn=document.getElementById('importBtn');
-    const signupBtn=document.getElementById('signupBtn');
-    console.log('[share] CTA token=', token ? 'LOGGED_IN:'+token.slice(0,10) : 'GUEST_NULL');
-    if(token){
-      // Logged in — show Import, hide Sign Up
-      importBtn.innerHTML='📥 Import Trip to My Wander';
-      importBtn.onclick=confirmImport;
-      importBtn.style.display='flex';
-      signupBtn.style.display='none';
-    } else {
-      // Guest — show Sign Up form
-      importBtn.innerHTML='📥 Import Trip';
-      importBtn.style.background='linear-gradient(135deg,#4a9eff,#764ba2)';
-      importBtn.onclick=showImportAuthForm;
-      importBtn.style.display='flex';
-      signupBtn.style.display='flex';
-    }
+    console.log('[share] token=', token ? 'LOGGED_IN' : 'GUEST');
+    importBtn.onclick = token ? confirmImport : showImportAuthForm;
   } catch{toast('Invalid or expired share link','err');}
 }
 
