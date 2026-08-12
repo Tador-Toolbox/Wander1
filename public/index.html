@@ -4707,6 +4707,7 @@ async function checkSharedTrip(token){
     // ── CTA: auth-aware ──
     const importBtn=document.getElementById('importBtn');
     const signupBtn=document.getElementById('signupBtn');
+    console.log('[share] CTA token=', token ? 'LOGGED_IN:'+token.slice(0,10) : 'GUEST_NULL');
     if(token){
       // Logged in — show Import, hide Sign Up
       importBtn.innerHTML='📥 Import Trip to My Wander';
