@@ -1253,12 +1253,11 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     </div>
 
     <!-- CTA section -->
-    <div id="importCtaSection" style="padding:20px;flex-shrink:0;">
-      <!-- Logged-in: import button -->
+    <div style="padding:20px;flex-shrink:0;">
+      <!-- CTA buttons -->
       <button id="importBtn" onclick="confirmImport()" style="width:100%;padding:16px;border-radius:18px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:16px;font-weight:900;color:#fff;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
         📥 Import Trip to My Wander
       </button>
-      <!-- Guest: sign up button (shown/hidden by checkSharedTrip) -->
       <button id="signupBtn" onclick="showImportAuthForm()" style="width:100%;padding:14px;border-radius:18px;background:#fff;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#1a1a2e;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
         🚀 Sign Up Free & Import
       </button>
@@ -1268,30 +1267,25 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       </div>
     </div>
 
-    <!-- Inline auth form (guest signup/login on share page) — hidden by default -->
-    <div id="importAuthForm" style="display:none;padding:20px;flex-shrink:0;border-top:1px solid #f0f0f4;">
+    <!-- Inline auth form (shown when guest clicks Sign Up / Import) -->
+    <div id="importAuthForm" style="display:none;padding:20px;flex-shrink:0;border-top:1px solid #f0f0f4;background:#fff;">
       <div style="text-align:center;margin-bottom:16px;">
-        <div style="font-family:'Nunito',sans-serif;font-size:17px;font-weight:900;color:#1a1a2e;" id="importAuthTitle">Create your free account</div>
-        <div style="font-family:'Nunito',sans-serif;font-size:13px;color:#888;margin-top:4px;" id="importAuthSub">and import this trip instantly</div>
+        <div id="importAuthTitle" style="font-family:'Nunito',sans-serif;font-size:17px;font-weight:900;color:#1a1a2e;">Create your free account</div>
+        <div id="importAuthSub" style="font-family:'Nunito',sans-serif;font-size:13px;color:#888;margin-top:4px;">and import this trip instantly</div>
       </div>
-      <!-- Tab row -->
       <div style="display:flex;gap:8px;margin-bottom:14px;">
         <button id="importTabReg" onclick="switchImportTab(true)" style="flex:1;padding:9px;border-radius:12px;background:#1a1a2e;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:#fff;cursor:pointer;">Sign Up</button>
         <button id="importTabLog" onclick="switchImportTab(false)" style="flex:1;padding:9px;border-radius:12px;background:#f0f0f4;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:#1a1a2e;cursor:pointer;">Log In</button>
       </div>
-      <!-- Fields -->
-      <div id="importRegFields" style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
         <input id="iaFirst" placeholder="First name" style="padding:12px 14px;border-radius:12px;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;outline:none;width:100%;box-sizing:border-box;">
         <input id="iaEmail" type="email" placeholder="Email" style="padding:12px 14px;border-radius:12px;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;outline:none;width:100%;box-sizing:border-box;">
         <input id="iaPass" type="password" placeholder="Password (min 6 chars)" style="padding:12px 14px;border-radius:12px;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;outline:none;width:100%;box-sizing:border-box;">
       </div>
       <div id="importAuthErr" style="color:#e63946;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;display:none;margin-top:8px;text-align:center;"></div>
       <button id="importAuthSubmit" onclick="doImportAuth()" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:15px;font-weight:900;color:#fff;cursor:pointer;margin-top:12px;">
-        Create Account & Import 🌍
+        Create Account &amp; Import
       </button>
-      <div style="text-align:center;margin-top:10px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:#aaa;">
-        ✦ Wander — your social AI travel app
-      </div>
     </div>
 
   </div>
@@ -1948,6 +1942,15 @@ async function runOnboarding(){
       startSplashAnimation();
       await initApp();
       // Auto-import pending shared trip if user came from a share link
+      if(window._pendingImportToken){
+        const t=window._pendingImportToken;
+        window._pendingImportToken=null;
+        importToken=t;
+        await checkSharedTrip(t);
+        // Override CTA back to import (now logged in)
+        const btn=document.getElementById('importBtn');
+        if(btn){ btn.innerHTML='📥 Import Trip to My Wander'; btn.onclick=confirmImport; }
+      }
     }, 600);
 
   }catch(e){
@@ -4566,31 +4569,31 @@ function exportJSON(){
 }
 
 // ── IMPORT ──
-
 // ── SHARE PAGE INLINE AUTH ──
 let _importAuthIsReg = true;
 
 function showImportAuthForm(){
   document.getElementById('importCtaSection').style.display='none';
   document.getElementById('importAuthForm').style.display='block';
-  document.getElementById('iaFirst').focus();
+  document.getElementById('iaEmail').focus();
 }
 
 function switchImportTab(reg){
   _importAuthIsReg = reg;
-  document.getElementById('importRegFields').querySelector('#iaFirst').style.display = reg ? 'block' : 'none';
+  const firstField = document.getElementById('iaFirst');
+  firstField.style.display = reg ? 'block' : 'none';
   document.getElementById('importAuthTitle').textContent = reg ? 'Create your free account' : 'Sign in to Wander';
-  document.getElementById('importAuthSub').textContent = reg ? 'and import this trip instantly' : 'and import this trip';
-  document.getElementById('importAuthSubmit').textContent = reg ? 'Create Account & Import 🌍' : 'Sign In & Import 🚀';
+  document.getElementById('importAuthSub').textContent   = reg ? 'and import this trip instantly' : 'and import this trip';
+  document.getElementById('importAuthSubmit').textContent = reg ? 'Create Account & Import' : 'Sign In & Import';
   document.getElementById('importTabReg').style.background = reg ? '#1a1a2e' : '#f0f0f4';
-  document.getElementById('importTabReg').style.color = reg ? '#fff' : '#1a1a2e';
+  document.getElementById('importTabReg').style.color      = reg ? '#fff'    : '#1a1a2e';
   document.getElementById('importTabLog').style.background = reg ? '#f0f0f4' : '#1a1a2e';
-  document.getElementById('importTabLog').style.color = reg ? '#1a1a2e' : '#fff';
-  document.getElementById('importAuthErr').style.display = 'none';
+  document.getElementById('importTabLog').style.color      = reg ? '#1a1a2e' : '#fff';
+  document.getElementById('importAuthErr').style.display   = 'none';
 }
 
 async function doImportAuth(){
-  const btn = document.getElementById('importAuthSubmit');
+  const btn   = document.getElementById('importAuthSubmit');
   const errEl = document.getElementById('importAuthErr');
   const email = document.getElementById('iaEmail').value.trim();
   const pass  = document.getElementById('iaPass').value;
@@ -4598,62 +4601,63 @@ async function doImportAuth(){
   errEl.style.display = 'none';
   if(!email || !pass){ errEl.textContent='Please fill in email and password'; errEl.style.display='block'; return; }
   if(_importAuthIsReg && !first){ errEl.textContent='Please enter your first name'; errEl.style.display='block'; return; }
-  btn.disabled = true;
-  btn.textContent = '...';
+  btn.disabled = true; btn.textContent = '...';
   try{
-    const handle = first.toLowerCase().replace(/[^a-z0-9]/g,'_') + Math.floor(Math.random()*999);
-    const body = _importAuthIsReg
-      ? {firstName: first, lastName: '', handle: handle, email: email, password: pass}
-      : {email: email, password: pass};
-    const res = await fetch(_importAuthIsReg ? '/api/auth/register' : '/api/auth/login', {
-      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    if(!res.ok){
-      errEl.textContent = data.error || 'Something went wrong';
-      errEl.style.display = 'block';
-      return;
-    }
-    if(_importAuthIsReg && !data.token){
-      // Email verification required
+    let res, data;
+    if(_importAuthIsReg){
+      const handle = first.toLowerCase().replace(/[^a-z0-9]/g,'') + Math.floor(Math.random()*9999);
+      res  = await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({firstName:first,lastName:'',handle:handle,email:email,password:pass,
+          redirect: window.location.pathname})});  // ← pass share path so verify email links back here
+      data = await res.json();
+      if(!res.ok){ errEl.textContent=data.error||'Registration failed'; errEl.style.display='block'; return; }
+      // No token = email verification required
       document.getElementById('importAuthForm').innerHTML =
-        '<div style="text-align:center;padding:20px 0;">' +
-        '<div style="font-size:48px;margin-bottom:12px;">' + String.fromCodePoint(0x1F4E7) + '</div>' +
+        '<div style="text-align:center;padding:24px 0;">' +
+        '<div style="font-size:44px;margin-bottom:12px;">📧</div>' +
         '<div style="font-family:Nunito,sans-serif;font-size:17px;font-weight:900;color:#1a1a2e;margin-bottom:8px;">Check your email!</div>' +
         '<div style="font-family:Nunito,sans-serif;font-size:13px;color:#666;line-height:1.6;margin-bottom:16px;">' +
-        'We sent a verification link to <strong>' + email + '</strong>.<br>' +
-        'After clicking it, come back here to import your trip.' +
+        'We sent a link to <strong>' + email + '</strong>.<br>' +
+        'Click it to verify — then come back here to sign in and import.' +
         '</div>' +
-        '<div style="background:#f5f5f8;border-radius:12px;padding:12px;font-family:Nunito,sans-serif;font-size:12px;color:#555;font-weight:700;word-break:break-all;">' +
-        'Save this link: ' + window.location.href +
-        '</div></div>';
+        '<div style="background:#f5f5f8;border-radius:12px;padding:10px 14px;font-family:Nunito,sans-serif;font-size:11px;color:#888;font-weight:700;">' +
+        'After verifying, use the Log In tab above' +
+        '</div></div>' +
+        '<div style="display:flex;gap:8px;margin-top:14px;">' +
+        '<button onclick="switchImportTab(false);document.getElementById(\'importAuthForm\').innerHTML=\'\';showImportAuthForm();" ' +
+        'style="flex:1;padding:12px;border-radius:12px;background:#1a1a2e;border:none;font-family:Nunito,sans-serif;font-size:14px;font-weight:800;color:#fff;cursor:pointer;">Log In</button>' +
+        '</div>';
       return;
+    } else {
+      // Login
+      res  = await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({email:email,password:pass})});
+      data = await res.json();
+      if(!res.ok){ errEl.textContent=data.error||'Login failed'; errEl.style.display='block'; return; }
     }
-    // We have a token (login or immediate register) — save and import
+    // We have a token — log in and import
     token = data.token;
     localStorage.setItem('wandr_token', token);
     if(data.user){ localStorage.setItem('wandr_user', JSON.stringify(data.user)); currentUser = data.user; }
-    // Import immediately
     btn.textContent = 'Importing...';
-    const ir = await fetch('/api/share/' + importToken + '/import', {
-      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer ' + token}
-    });
+    const ir = await fetch('/api/share/' + importToken + '/import',
+      {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer ' + token}});
     if(ir.ok){
       const idata = await ir.json();
-      trips.unshift(idata.trip);
-      places = [].concat(idata.places, places);
+      trips.unshift(idata.trip); places = [].concat(idata.places, places);
       populateTripSelect(); updateCount();
       closeOverlay('importOverlay');
       window.history.replaceState(null,'','/');
       await initApp();
-      toast('"' + idata.trip.name + '" imported!', 'ok');
+      toast('"' + idata.trip.name + '" imported!','ok');
       showTrips();
     } else {
-      errEl.textContent = 'Import failed - please try again';
+      const ed = await ir.json().catch(()=>({}));
+      errEl.textContent = (ed.error||'Import failed') + ' (' + ir.status + ')';
       errEl.style.display = 'block';
     }
-  }catch(e){
-    errEl.textContent = 'Network error - please try again';
+  } catch(e){
+    errEl.textContent = 'Network error: ' + e.message;
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
@@ -4661,11 +4665,10 @@ async function doImportAuth(){
   }
 }
 
-
-async function checkSharedTrip(shareToken){
-  importToken=shareToken;
+async function checkSharedTrip(token){
+  importToken=token;
   try{
-    const r=await fetch(`/api/share/${shareToken}`);
+    const r=await fetch(`/api/share/${token}`);
     if(!r.ok) throw new Error();
     const data=await r.json();
     const trip=data.trip;
@@ -4698,7 +4701,7 @@ async function checkSharedTrip(shareToken){
 
     openOverlay('importOverlay');
 
-    // ── CTA: auth-aware — global `token` is the JWT, shareToken is the URL param ──
+    // ── CTA: auth-aware ──
     const importBtn=document.getElementById('importBtn');
     const signupBtn=document.getElementById('signupBtn');
     if(token){
@@ -4708,10 +4711,14 @@ async function checkSharedTrip(shareToken){
       importBtn.style.display='flex';
       signupBtn.style.display='none';
     } else {
-      // Guest — both buttons open the inline auth form
+      // Guest — Import also goes to signup first, Sign Up button visible
       importBtn.innerHTML='📥 Import Trip';
       importBtn.style.background='linear-gradient(135deg,#4a9eff,#764ba2)';
-      importBtn.onclick=showImportAuthForm;
+      importBtn.onclick=()=>{
+        window._pendingImportToken=importToken;
+        closeOverlay('importOverlay');
+        showScreen('loginScreen');
+      };
       importBtn.style.display='flex';
       signupBtn.style.display='flex';
     }
@@ -4719,32 +4726,20 @@ async function checkSharedTrip(shareToken){
 }
 
 async function confirmImport(){
-  if(!importToken){ toast('No import token','err'); return; }
+  if(!importToken)return;
   try{
     const r=await apiFetch(`/api/share/${importToken}/import`,{method:'POST'});
-    if(r.status===401){
-      closeOverlay('importOverlay');
-      if(isReg)toggleMode();
-      showScreen('loginScreen');
-      toast('Session expired — sign in again to import','err');
-      return;
-    }
-    if(!r.ok){
-      let msg='Error importing trip';
-      try{ const d=await r.json(); msg=d.error||msg; }catch{}
-      toast(msg+' ('+r.status+')','err');
-      console.error('[import] server returned',r.status);
-      return;
-    }
+    if(!r.ok) throw new Error();
     const data=await r.json();
     trips.unshift(data.trip);
     places=[...data.places,...places];
     populateTripSelect(); updateCount();
     closeOverlay('importOverlay');
+    // Clean URL
     window.history.replaceState(null,'','/');
     toast(`✅ "${data.trip.name}" imported!`,'ok');
     showTrips();
-  } catch(e){ toast('Error importing trip: '+e.message,'err'); console.error('[import] exception',e); }
+  } catch{toast('Error importing trip','err');}
 }
 
 /* ── PROFILE ── */
@@ -5524,15 +5519,7 @@ function openPlaceInfo(id){
   if(p.lat&&p.lng){
     document.getElementById('piWaze').href=`https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`;
     // KakaoMap: coordinates in path — name is just a display label
-    // KakaoMap: show pin at exact coordinates — routing to unregistered coords not supported
-    document.getElementById('piKakao').href='#';
-    document.getElementById('piKakao').onclick=function(e){
-      e.preventDefault();
-      var kakaoApp='kakaomap://look?p='+p.lat+','+p.lng;
-      var kakaoWeb='https://map.kakao.com/link/map/'+(p.name||'').replace(/,/g,' ')+','+p.lat+','+p.lng;
-      window.location.href=kakaoApp;
-      setTimeout(function(){if(!document.hidden)window.open(kakaoWeb,'_blank');},1200);
-    };
+    document.getElementById('piKakao').href=`https://map.kakao.com/link/to/${encodeURIComponent((p.name||'destination').replace(/,/g,' '))},${p.lat},${p.lng}`;
     // NaverMap: nmap:// deep link uses exact coordinates
     // If app not installed, fall back to coordinate search on Naver web
     const naverLabel=encodeURIComponent((p.name||'destination').replace(/,/g,' '));
