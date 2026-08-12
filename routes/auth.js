@@ -13,8 +13,10 @@ const publicUser = (u) => ({
 });
 
 // Send verification email
-async function sendVerificationEmail(user, token) {
-  const verifyUrl = `${process.env.APP_URL || 'https://wander1.onrender.com'}/api/auth/verify/${token}`;
+async function sendVerificationEmail(user, token, redirectPath) {
+  const base = process.env.APP_URL || 'https://wander1.onrender.com';
+  const redirectParam = redirectPath ? '?redirect=' + encodeURIComponent(redirectPath) : '';
+  const verifyUrl = base + '/api/auth/verify/' + token + redirectParam;
   await resend.emails.send({
     from: 'Wandr <noreply@yovix.com>',
     to:   user.email,
@@ -39,7 +41,7 @@ async function sendVerificationEmail(user, token) {
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, handle } = req.body;
+    const { email, password, firstName, lastName, handle, redirect } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
     if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
     const existing = await User.findOne({ email });
@@ -51,7 +53,7 @@ router.post('/register', async (req, res) => {
         existing.verifyToken   = verifyToken;
         existing.verifyExpires = verifyExpires;
         await existing.save();
-        try { await sendVerificationEmail(existing, verifyToken); } catch(e) { console.error('Email send error:', e); }
+        try { await sendVerificationEmail(existing, verifyToken, redirect); } catch(e) { console.error('Email send error:', e.message); }
         return res.status(201).json({ message: 'Verification email resent! Please check your inbox.' });
       }
       return res.status(409).json({ error: 'Email already registered' });
@@ -67,7 +69,7 @@ router.post('/register', async (req, res) => {
     });
 
     // Send verification email
-    try { await sendVerificationEmail(user, verifyToken); } catch(e) { console.error('Email send error:', e); }
+    try { await sendVerificationEmail(user, verifyToken, redirect); } catch(e) { console.error('Email send error:', e.message); }
 
     res.status(201).json({ message: 'Registration successful! Please check your email to verify your account.' });
   } catch(e) { console.error(e); res.status(500).json({ error: 'Server error' }); }
@@ -92,13 +94,18 @@ router.get('/verify/:token', async (req, res) => {
     user.verifyExpires = null;
     await user.save();
 
+    const redirectTo = req.query.redirect
+      ? (process.env.APP_URL || 'https://wander1.onrender.com') + decodeURIComponent(req.query.redirect)
+      : (process.env.APP_URL || 'https://wander1.onrender.com');
+    const backLink = redirectTo;
+    const backLabel = req.query.redirect ? 'Back to Shared Trip ✈️' : 'Open Wander ✈️';
     res.send(`
       <html><body style="font-family:sans-serif;text-align:center;padding:60px;background:#f7f4ef;">
         <div style="max-width:400px;margin:0 auto;background:#fff;border-radius:24px;padding:40px;box-shadow:0 8px 30px rgba(0,0,0,.08);">
           <div style="font-size:48px;margin-bottom:16px;">✅</div>
           <h2 style="color:#1a1a2e;">Email Verified!</h2>
-          <p style="color:#6b6880;">Your Wandr account is now active. You can close this tab and sign in.</p>
-          <a href="https://wander1.onrender.com" style="display:inline-block;margin-top:20px;padding:12px 24px;background:#4a9eff;color:#fff;text-decoration:none;border-radius:12px;font-weight:700;">Open Wandr ✈️</a>
+          <p style="color:#6b6880;">Your Wander account is now active. Sign in to import your trip.</p>
+          <a href="${backLink}" style="display:inline-block;margin-top:20px;padding:12px 24px;background:#4a9eff;color:#fff;text-decoration:none;border-radius:12px;font-weight:700;">${backLabel}</a>
         </div>
       </body></html>
     `);
