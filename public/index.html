@@ -1254,12 +1254,17 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
     <!-- CTA section -->
     <div id="importCtaSection" style="padding:20px;flex-shrink:0;">
-      <button id="importBtn" onclick="confirmImport()" style="width:100%;padding:16px;border-radius:18px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:16px;font-weight:900;color:#fff;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <button id="importBtn" onclick="handleImportClick()" style="width:100%;padding:16px;border-radius:18px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:16px;font-weight:900;color:#fff;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
         📥 Import Trip to My Wander
       </button>
-      <button id="signupBtn" onclick="showImportAuthForm()" style="width:100%;padding:14px;border-radius:18px;background:#fff;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#1a1a2e;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
-        🚀 New to Wander? Sign Up Free
-      </button>
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <button onclick="showImportAuthForm(true)" style="flex:1;padding:13px;border-radius:16px;background:#fff;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:#1a1a2e;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          🚀 Sign Up
+        </button>
+        <button onclick="showImportAuthForm(false)" style="flex:1;padding:13px;border-radius:16px;background:#1a1a2e;border:2px solid #1a1a2e;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          🔑 Log In
+        </button>
+      </div>
       <div style="text-align:center;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;color:#aaa;">
         ✦ Wander — your social AI travel app
       </div>
@@ -4572,10 +4577,18 @@ function exportJSON(){
 // ── SHARE PAGE INLINE AUTH ──
 let _importAuthIsReg = true;
 
-function showImportAuthForm(){
+function handleImportClick(){
+  if(token) confirmImport();
+  else showImportAuthForm(false); // not logged in — open Log In tab directly
+}
+
+function showImportAuthForm(reg){
+  if(reg===undefined) reg=true;
+  _importAuthIsReg = reg;
   document.getElementById('importCtaSection').style.display='none';
   document.getElementById('importAuthForm').style.display='block';
-  document.getElementById('iaEmail').focus();
+  switchImportTab(reg);
+  document.getElementById(reg ? 'iaFirst' : 'iaEmail').focus();
 }
 
 function switchImportTab(reg){
