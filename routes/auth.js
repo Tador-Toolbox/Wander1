@@ -42,6 +42,7 @@ async function sendVerificationEmail(user, token, redirectPath) {
 router.post('/register', async (req, res) => {
   try {
     const { email, password, firstName, lastName, handle, redirect } = req.body;
+    const email = (req.body.email||'').toLowerCase().trim();
     console.log('[auth/register] attempt for:', email);
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
     if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
@@ -116,7 +117,9 @@ router.get('/verify/:token', async (req, res) => {
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    console.log('[auth/login] attempt for:', (req.body.email||'').toLowerCase().trim());
+    const email = (req.body.email||'').toLowerCase().trim();
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
     const user = await User.findOne({ email });
     if (!user || !(await user.comparePassword(password)))
@@ -154,7 +157,7 @@ router.put('/profile', auth, async (req, res) => {
 // POST /api/auth/resend-verification
 router.post('/resend-verification', async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = (req.body.email||'').toLowerCase().trim();
     const user = await User.findOne({ email });
     if (!user || user.verified) return res.json({ message: 'If this email exists and is unverified, a new link was sent.' });
     const verifyToken   = crypto.randomBytes(32).toString('hex');
@@ -171,7 +174,7 @@ router.post('/resend-verification', async (req, res) => {
 // POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = (req.body.email||'').toLowerCase().trim();
     const user = await User.findOne({ email });
     // Always return success to prevent email enumeration
     if (!user) return res.json({ message: 'If this email exists, a reset link was sent.' });
