@@ -1253,7 +1253,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     </div>
 
     <!-- CTA section -->
-    <div style="padding:20px;flex-shrink:0;">
+    <div id="importCtaSection" style="padding:20px;flex-shrink:0;">
       <!-- CTA buttons -->
       <button id="importBtn" onclick="confirmImport()" style="width:100%;padding:16px;border-radius:18px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:16px;font-weight:900;color:#fff;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
         📥 Import Trip to My Wander
@@ -1637,6 +1637,8 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
 <script>
 let token=localStorage.getItem('wandr_token'),currentUser=JSON.parse(localStorage.getItem('wandr_user')||'null'),places=[],trips=[],gmap=null,infoWin=null,autocomplete=null,editId=null,selTags=[],selRating=0,activeTag='All',pendingCoords=null,fabOpen=false,isReg=false,anthropicKey=null,activeTrip=null,editTripId=null,selEmoji='✈️',selColor='#4a9eff',shareTargetTrip=null,importToken=null;
+// Sanitize bad token values that may have been stored as strings
+if(token==='undefined'||token==='null'||token===''||token==='0'){token=null;localStorage.removeItem('wandr_token');}
 
 /* ── ONBOARDING ── */
 let _obFiles = [];
@@ -4636,6 +4638,7 @@ async function doImportAuth(){
       if(!res.ok){ errEl.textContent=data.error||'Login failed'; errEl.style.display='block'; return; }
     }
     // We have a token — log in and import
+    if(!data.token){ errEl.textContent='No token received'; errEl.style.display='block'; return; }
     token = data.token;
     localStorage.setItem('wandr_token', token);
     if(data.user){ localStorage.setItem('wandr_user', JSON.stringify(data.user)); currentUser = data.user; }
@@ -4711,14 +4714,10 @@ async function checkSharedTrip(token){
       importBtn.style.display='flex';
       signupBtn.style.display='none';
     } else {
-      // Guest — Import also goes to signup first, Sign Up button visible
+      // Guest — show Sign Up form
       importBtn.innerHTML='📥 Import Trip';
       importBtn.style.background='linear-gradient(135deg,#4a9eff,#764ba2)';
-      importBtn.onclick=()=>{
-        window._pendingImportToken=importToken;
-        closeOverlay('importOverlay');
-        showScreen('loginScreen');
-      };
+      importBtn.onclick=showImportAuthForm;
       importBtn.style.display='flex';
       signupBtn.style.display='flex';
     }
