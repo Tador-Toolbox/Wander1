@@ -1214,15 +1214,83 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 </div>
 
 <!-- OVERLAY: IMPORT TRIP (shared link) -->
-<div class="overlay" id="importOverlay">
-  <div class="sheet">
-    <div class="drag-bar"></div>
-    <div class="sheet-title">📥 Import Trip</div>
-    <div class="import-preview" id="importPreview"></div>
-    <div class="act-row">
-      <button class="btn-cancel" onclick="closeOverlay('importOverlay')">Cancel</button>
-      <button class="btn-save" id="importBtn" onclick="confirmImport()">Import Trip 📥</button>
+<div class="overlay" id="importOverlay" style="align-items:stretch;padding:0;background:#000;">
+  <div style="width:100%;max-width:560px;margin:0 auto;height:100%;display:flex;flex-direction:column;background:#f5f6fa;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+
+    <!-- Hero header -->
+    <div id="importHero" style="position:relative;min-height:220px;background:linear-gradient(135deg,#1a1a2e,#16213e);display:flex;flex-direction:column;justify-content:flex-end;padding:24px 20px 20px;flex-shrink:0;">
+      <!-- Close -->
+      <button onclick="closeOverlay('importOverlay');window.history.replaceState(null,'','/');" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;width:34px;height:34px;border-radius:50%;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+      <!-- Wander brand -->
+      <div style="position:absolute;top:18px;left:20px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:900;color:rgba(255,255,255,.7);letter-spacing:.05em;">✦ WANDER</div>
+      <!-- Map preview strip -->
+      <div id="importMapStrip" style="position:absolute;inset:0;overflow:hidden;opacity:.35;">
+        <img id="importMapImg" src="" style="width:100%;height:100%;object-fit:cover;" alt="">
+      </div>
+      <!-- Gradient overlay -->
+      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(22,33,62,.95) 40%,rgba(22,33,62,.3) 100%);"></div>
+      <!-- Trip info -->
+      <div style="position:relative;z-index:1;">
+        <div id="importTripEmoji" style="font-size:36px;margin-bottom:8px;">✈️</div>
+        <div id="importTripName" style="font-family:'Nunito',sans-serif;font-size:26px;font-weight:900;color:#fff;margin-bottom:4px;">Trip</div>
+        <div id="importTripMeta" style="font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:rgba(255,255,255,.65);">Loading…</div>
+      </div>
     </div>
+
+    <!-- Share invite banner -->
+    <div style="background:linear-gradient(90deg,#4a9eff,#764ba2);padding:10px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <span style="font-size:20px;">🗺️</span>
+      <div style="font-family:'Nunito',sans-serif;">
+        <div style="font-size:12px;font-weight:900;color:#fff;">Someone shared their trip with you!</div>
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.75);">Join Wander to save all these places to your account</div>
+      </div>
+    </div>
+
+    <!-- Places list -->
+    <div style="padding:16px 20px 0;flex:1;">
+      <div style="font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">📍 Places in this trip</div>
+      <div id="importPlacesList" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
+    <!-- CTA section -->
+    <div id="importCtaSection" style="padding:20px;flex-shrink:0;">
+      <button id="importBtn" onclick="handleImportClick()" style="width:100%;padding:16px;border-radius:18px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:16px;font-weight:900;color:#fff;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;">
+        📥 Import Trip to My Wander
+      </button>
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <button onclick="showImportAuthForm(true)" style="flex:1;padding:13px;border-radius:16px;background:#fff;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:#1a1a2e;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          🚀 Sign Up
+        </button>
+        <button onclick="showImportAuthForm(false)" style="flex:1;padding:13px;border-radius:16px;background:#1a1a2e;border:2px solid #1a1a2e;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          🔑 Log In
+        </button>
+      </div>
+      <div style="text-align:center;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;color:#aaa;">
+        ✦ Wander — your social AI travel app
+      </div>
+    </div>
+
+    <!-- Inline auth form (shown when guest clicks Sign Up / Import) -->
+    <div id="importAuthForm" style="display:none;padding:20px;flex-shrink:0;border-top:1px solid #f0f0f4;background:#fff;">
+      <div style="text-align:center;margin-bottom:16px;">
+        <div id="importAuthTitle" style="font-family:'Nunito',sans-serif;font-size:17px;font-weight:900;color:#1a1a2e;">Create your free account</div>
+        <div id="importAuthSub" style="font-family:'Nunito',sans-serif;font-size:13px;color:#888;margin-top:4px;">and import this trip instantly</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button id="importTabReg" onclick="switchImportTab(true)" style="flex:1;padding:9px;border-radius:12px;background:#1a1a2e;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:#fff;cursor:pointer;">Sign Up</button>
+        <button id="importTabLog" onclick="switchImportTab(false)" style="flex:1;padding:9px;border-radius:12px;background:#f0f0f4;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:#1a1a2e;cursor:pointer;">Log In</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <input id="iaFirst" placeholder="First name" style="padding:12px 14px;border-radius:12px;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;outline:none;width:100%;box-sizing:border-box;">
+        <input id="iaEmail" type="email" placeholder="Email" style="padding:12px 14px;border-radius:12px;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;outline:none;width:100%;box-sizing:border-box;">
+        <input id="iaPass" type="password" placeholder="Password (min 6 chars)" style="padding:12px 14px;border-radius:12px;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;outline:none;width:100%;box-sizing:border-box;">
+      </div>
+      <div id="importAuthErr" style="color:#e63946;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;display:none;margin-top:8px;text-align:center;"></div>
+      <button id="importAuthSubmit" onclick="doImportAuth()" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:15px;font-weight:900;color:#fff;cursor:pointer;margin-top:12px;">
+        Create Account &amp; Import
+      </button>
+    </div>
+
   </div>
 </div>
 
@@ -1572,6 +1640,8 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 
 <script>
 let token=localStorage.getItem('wandr_token'),currentUser=JSON.parse(localStorage.getItem('wandr_user')||'null'),places=[],trips=[],gmap=null,infoWin=null,autocomplete=null,editId=null,selTags=[],selRating=0,activeTag='All',pendingCoords=null,fabOpen=false,isReg=false,anthropicKey=null,activeTrip=null,editTripId=null,selEmoji='✈️',selColor='#4a9eff',shareTargetTrip=null,importToken=null;
+// Sanitize bad token values that may have been stored as strings
+if(token==='undefined'||token==='null'||token===''||token==='0'){token=null;localStorage.removeItem('wandr_token');}
 
 /* ── ONBOARDING ── */
 let _obFiles = [];
@@ -1872,10 +1942,20 @@ async function runOnboarding(){
     if(fill){fill.style.transition='width .3s ease';fill.style.width='100%';}
 
     // Small pause then enter app
-    setTimeout(()=>{
+    setTimeout(async ()=>{
       showScreen('mapScreen');
       startSplashAnimation();
-    initApp();
+      await initApp();
+      // Auto-import pending shared trip if user came from a share link
+      if(window._pendingImportToken){
+        const t=window._pendingImportToken;
+        window._pendingImportToken=null;
+        importToken=t;
+        await checkSharedTrip(t);
+        // Override CTA back to import (now logged in)
+        const btn=document.getElementById('importBtn');
+        if(btn){ btn.innerHTML='📥 Import Trip to My Wander'; btn.onclick=confirmImport; }
+      }
     }, 600);
 
   }catch(e){
@@ -1891,6 +1971,13 @@ async function runOnboarding(){
 
 window.addEventListener('load',()=>{
   setTimeout(async ()=>{
+    // ── Check for shared trip link FIRST — works for anyone, logged in or not ──
+    const sharePath=window.location.pathname;
+    const shareMatch=sharePath.match(/^\/trip\/([a-f0-9]+)$/);
+    if(shareMatch){
+      await checkSharedTrip(shareMatch[1]);
+    }
+
     if(token){
       // Verify token is still valid
       try{
@@ -1901,7 +1988,11 @@ window.addEventListener('load',()=>{
           const needsOnboarding = await checkAndShowOnboarding();
           if(!needsOnboarding){
             showScreen('mapScreen');
-            initApp().then(()=>{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{if(gmap){gmap.panTo({lat:pos.coords.latitude,lng:pos.coords.longitude});gmap.setZoom(13);}},()=>{},{timeout:5000});});
+            initApp().then(()=>{
+              // Don't request location if user arrived via a share link
+              const onSharePage=!!window.location.pathname.match(/^\/trip\/([a-f0-9]+)$/);
+              if(!onSharePage && navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{if(gmap){gmap.panTo({lat:pos.coords.latitude,lng:pos.coords.longitude});gmap.setZoom(13);}},()=>{},{timeout:5000});
+            });
           }
         }
       } catch {const nb=await checkAndShowOnboarding();if(!nb){showScreen('mapScreen');initApp();}}
@@ -2025,17 +2116,17 @@ async function initApp(){
   checkPendingInvites();
   setInterval(checkPendingInvites,30000);
   try{const r=await apiFetch('/api/config/anthropic-key');const d=await r.json();anthropicKey=d.key;}catch{}
-  // Check if URL has a share token
-  const path=window.location.pathname;
-  const match=path.match(/^\/trip\/([a-f0-9]+)$/);
-  if(match) checkSharedTrip(match[1]);
 }
 async function loadMapsKey(){
   // Use cached key for instant map load
   const cached = localStorage.getItem('wandr_maps_key');
   if(cached){ window._mapsKey=cached; injectMaps(cached); }
   try{
-    const res=await apiFetch('/api/config/maps-key');
+    // Use plain fetch — maps key endpoint may be called before login (e.g. share page preview)
+    const headers={'Content-Type':'application/json'};
+    if(token) headers['Authorization']=`Bearer ${token}`;
+    const res=await fetch('/api/config/maps-key',{headers});
+    if(!res.ok) return; // silently skip if not authed
     const{key}=await res.json();
     window._mapsKey=key;
     localStorage.setItem('wandr_maps_key',key);
@@ -2102,8 +2193,8 @@ function bootMap(){
 
   places.forEach(p=>addMarker(p));
   setupAC();
-  // Zoom to user location on first load
-  if(navigator.geolocation){
+  // Zoom to user location on first load — skip on share pages
+  if(navigator.geolocation && !window.location.pathname.match(/^\/trip\//)){
     navigator.geolocation.getCurrentPosition(pos=>{
       const{latitude:lat,longitude:lng}=pos.coords;
       gmap.panTo({lat,lng}); gmap.setZoom(12);
@@ -2150,7 +2241,11 @@ function cancelDrop(){
 
 async function apiFetch(path,opts={}){
   const res=await fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,...(opts.headers||{})}});
-  if(res.status===401){logout();throw new Error('Unauthorized');}
+  if(res.status===401){
+    // Only logout if user was actually logged in — not for unauthenticated share page visitors
+    if(token){ logout(); }
+    throw new Error('Unauthorized');
+  }
   return res;
 }
 // Splash loading steps
@@ -4479,18 +4574,151 @@ function exportJSON(){
 }
 
 // ── IMPORT ──
+// ── SHARE PAGE INLINE AUTH ──
+let _importAuthIsReg = true;
+
+function handleImportClick(){
+  if(token) confirmImport();
+  else showImportAuthForm(false); // not logged in — open Log In tab directly
+}
+
+function showImportAuthForm(reg){
+  if(reg===undefined) reg=true;
+  _importAuthIsReg = reg;
+  document.getElementById('importCtaSection').style.display='none';
+  document.getElementById('importAuthForm').style.display='block';
+  switchImportTab(reg);
+  document.getElementById(reg ? 'iaFirst' : 'iaEmail').focus();
+}
+
+function switchImportTab(reg){
+  _importAuthIsReg = reg;
+  const firstField = document.getElementById('iaFirst');
+  firstField.style.display = reg ? 'block' : 'none';
+  document.getElementById('importAuthTitle').textContent = reg ? 'Create your free account' : 'Sign in to Wander';
+  document.getElementById('importAuthSub').textContent   = reg ? 'and import this trip instantly' : 'and import this trip';
+  document.getElementById('importAuthSubmit').textContent = reg ? 'Create Account & Import' : 'Sign In & Import';
+  document.getElementById('importTabReg').style.background = reg ? '#1a1a2e' : '#f0f0f4';
+  document.getElementById('importTabReg').style.color      = reg ? '#fff'    : '#1a1a2e';
+  document.getElementById('importTabLog').style.background = reg ? '#f0f0f4' : '#1a1a2e';
+  document.getElementById('importTabLog').style.color      = reg ? '#1a1a2e' : '#fff';
+  document.getElementById('importAuthErr').style.display   = 'none';
+}
+
+async function doImportAuth(){
+  const btn   = document.getElementById('importAuthSubmit');
+  const errEl = document.getElementById('importAuthErr');
+  const email = document.getElementById('iaEmail').value.trim();
+  const pass  = document.getElementById('iaPass').value;
+  const first = document.getElementById('iaFirst').value.trim();
+  errEl.style.display = 'none';
+  if(!email || !pass){ errEl.textContent='Please fill in email and password'; errEl.style.display='block'; return; }
+  if(_importAuthIsReg && !first){ errEl.textContent='Please enter your first name'; errEl.style.display='block'; return; }
+  btn.disabled = true; btn.textContent = '...';
+  try{
+    let res, data;
+    if(_importAuthIsReg){
+      const handle = first.toLowerCase().replace(/[^a-z0-9]/g,'') + Math.floor(Math.random()*9999);
+      res  = await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({firstName:first,lastName:'',handle:handle,email:email,password:pass,
+          redirect: window.location.pathname})});  // ← pass share path so verify email links back here
+      data = await res.json();
+      if(!res.ok){ errEl.textContent=data.error||'Registration failed'; errEl.style.display='block'; return; }
+      // No token = email verification required
+      document.getElementById('importAuthForm').innerHTML =
+        '<div style="text-align:center;padding:24px 0;">' +
+        '<div style="font-size:44px;margin-bottom:12px;">📧</div>' +
+        '<div style="font-family:Nunito,sans-serif;font-size:17px;font-weight:900;color:#1a1a2e;margin-bottom:8px;">Check your email!</div>' +
+        '<div style="font-family:Nunito,sans-serif;font-size:13px;color:#666;line-height:1.6;margin-bottom:16px;">' +
+        'We sent a link to <strong>' + email + '</strong>.<br>' +
+        'Click it to verify — then come back here to sign in and import.' +
+        '</div>' +
+        '<div style="background:#f5f5f8;border-radius:12px;padding:10px 14px;font-family:Nunito,sans-serif;font-size:11px;color:#888;font-weight:700;">' +
+        'After verifying, use the Log In tab above' +
+        '</div></div>' +
+        '<div style="display:flex;gap:8px;margin-top:14px;">' +
+        '<button onclick="switchImportTab(false);document.getElementById(\'importAuthForm\').innerHTML=\'\';showImportAuthForm();" ' +
+        'style="flex:1;padding:12px;border-radius:12px;background:#1a1a2e;border:none;font-family:Nunito,sans-serif;font-size:14px;font-weight:800;color:#fff;cursor:pointer;">Log In</button>' +
+        '</div>';
+      return;
+    } else {
+      // Login
+      res  = await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({email:email,password:pass})});
+      data = await res.json();
+      if(!res.ok){ errEl.textContent=data.error||'Login failed'; errEl.style.display='block'; return; }
+    }
+    // We have a token — log in and import
+    if(!data.token){ errEl.textContent='No token received'; errEl.style.display='block'; return; }
+    token = data.token;
+    localStorage.setItem('wandr_token', token);
+    if(data.user){ localStorage.setItem('wandr_user', JSON.stringify(data.user)); currentUser = data.user; }
+    btn.textContent = 'Importing...';
+    const ir = await fetch('/api/share/' + importToken + '/import',
+      {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer ' + token}});
+    if(ir.ok){
+      const idata = await ir.json();
+      trips.unshift(idata.trip); places = [].concat(idata.places, places);
+      populateTripSelect(); updateCount();
+      closeOverlay('importOverlay');
+      window.history.replaceState(null,'','/');
+      await initApp();
+      toast('"' + idata.trip.name + '" imported!','ok');
+      showTrips();
+    } else {
+      const ed = await ir.json().catch(()=>({}));
+      errEl.textContent = (ed.error||'Import failed') + ' (' + ir.status + ')';
+      errEl.style.display = 'block';
+    }
+  } catch(e){
+    errEl.textContent = 'Network error: ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = _importAuthIsReg ? 'Create Account & Import' : 'Sign In & Import';
+  }
+}
+
 async function checkSharedTrip(token){
   importToken=token;
   try{
     const r=await fetch(`/api/share/${token}`);
     if(!r.ok) throw new Error();
     const data=await r.json();
-    const placesHtml=data.places.slice(0,5).map(p=>`<div class="ipp">📍 ${esc(p.name)}${p.location?' – '+esc(p.location):''}</div>`).join('');
-    document.getElementById('importPreview').innerHTML=`
-      <h3>${data.trip.emoji} ${esc(data.trip.name)}</h3>
-      <p>${data.places.length} places to import</p>
-      <div class="import-places-preview">${placesHtml}${data.places.length>5?`<div class="ipp" style="color:var(--txt3)">...and ${data.places.length-5} more</div>`:''}</div>`;
+    const trip=data.trip;
+    const places=data.places||[];
+
+    // Hero
+    document.getElementById('importTripEmoji').textContent=trip.emoji||'✈️';
+    document.getElementById('importTripName').textContent=trip.name||'Trip';
+    document.getElementById('importTripMeta').textContent=`${places.length} place${places.length!==1?'s':''} · Shared with you`;
+
+    // Hero gradient from trip color
+    if(trip.color){
+      document.getElementById('importHero').style.background=`linear-gradient(135deg,${trip.color}cc,${trip.color}55)`;
+    }
+
+    // Place cards
+    const PICO_IMPORT={Food:'🍜',Beach:'🏖',Nightlife:'🌙',Nature:'🌿',Culture:'🏛',Coffee:'☕',Beauty:'💅',Shopping:'🛍','Night Club':'🎵',Bar:'🍸',Meat:'🥩',Italian:'🍝',Fish:'🐟','Photo Spot':'📸',Fun:'🎉',Hotel:'🏨',Dessert:'🍰'};
+    const placeCards=places.map(p=>{
+      const tagIcon=p.tags?.length ? (PICO_IMPORT[p.tags[0]]||'📍') : '📍';
+      return `<div style="background:#fff;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 6px rgba(0,0,0,.06);">
+        <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#4a9eff22,#764ba222);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${tagIcon}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</div>
+          ${p.location?`<div style="font-family:'Nunito',sans-serif;font-size:11px;font-weight:600;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">📍 ${esc(p.location.split(',').slice(0,2).join(','))}</div>`:''}
+        </div>
+        ${p.tags?.length?`<div style="font-size:10px;font-weight:700;background:#f0f0f5;color:#666;padding:3px 8px;border-radius:20px;flex-shrink:0;">${esc(p.tags[0])}</div>`:''}
+      </div>`;
+    }).join('');
+    document.getElementById('importPlacesList').innerHTML=placeCards;
+
     openOverlay('importOverlay');
+
+    // ── CTA: both buttons always visible — onclick decides action based on token ──
+    const importBtn=document.getElementById('importBtn');
+    console.log('[share] token=', token ? 'LOGGED_IN' : 'GUEST');
+    importBtn.onclick = token ? confirmImport : showImportAuthForm;
   } catch{toast('Invalid or expired share link','err');}
 }
 
@@ -5287,16 +5515,21 @@ function openPlaceInfo(id){
   const navBtns=document.getElementById('piNavBtns');
   if(p.lat&&p.lng){
     document.getElementById('piWaze').href=`https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`;
-    // KakaoMap: /link/to/ = navigate TO destination (not just show on map)
-    document.getElementById('piKakao').href=`https://map.kakao.com/link/to/${encodeURIComponent(p.name)},${p.lat},${p.lng}`;
-    // NaverMap: nmap:// deep link opens app directly; fallback handled by onclick
+    // KakaoMap: coordinates in path — name is just a display label
+    document.getElementById('piKakao').href=`https://map.kakao.com/link/to/${encodeURIComponent((p.name||'destination').replace(/,/g,' '))},${p.lat},${p.lng}`;
+    // NaverMap: nmap:// deep link uses exact coordinates
+    // If app not installed, fall back to coordinate search on Naver web
+    const naverLabel=encodeURIComponent((p.name||'destination').replace(/,/g,' '));
+    document.getElementById('piNaver').href='#';
     document.getElementById('piNaver').onclick=function(e){
       e.preventDefault();
-      const appUrl=`nmap://route/public?dlat=${p.lat}&dlng=${p.lng}&dname=${encodeURIComponent(p.name)}&appname=wander`;
-      const webUrl=`https://map.naver.com/index.nhn?elng=${p.lng}&elat=${p.lat}&etext=${encodeURIComponent(p.name)}&menu=route`;
-      // Try app deep link; if not installed fall back to web after delay
+      const appUrl=`nmap://place?lat=${p.lat}&lng=${p.lng}&name=${naverLabel}&appname=wander`;
+      const webUrl=`https://map.naver.com/v5/search/${p.lat},${p.lng}`;
+      // Try deep link; if app not installed page stays visible → open web fallback
       window.location.href=appUrl;
-      setTimeout(()=>{ window.open(webUrl,'_blank'); },1500);
+      setTimeout(()=>{
+        if(!document.hidden) window.open(webUrl,'_blank');
+      },1200);
     };
     // Use coordinates for navigation — more accurate, especially for GPS-shared locations
     if(p.placeId) {
@@ -5497,8 +5730,13 @@ async function socialItFromInfo(){
 
 /* ── PHOTO GPS EXTRACTION ── */
 async function extractPhotoGPS(input){
-  const file=input.files[0]; if(!file)return;
+  console.log('[GPS] extractPhotoGPS triggered');
+  const file=input.files[0];
+  if(!file){ console.warn('[GPS] No file selected'); return; }
+  console.log('[GPS] File:', file.name, 'size:', file.size, 'type:', file.type);
+
   const result=document.getElementById('igResult');
+  if(!result){ console.error('[GPS] igResult element not found!'); return; }
   result.style.display='none';
 
   // Show loading
@@ -5507,19 +5745,27 @@ async function extractPhotoGPS(input){
   result.style.color='var(--sky)';
   result.innerHTML='🔍 Reading photo location…';
   result.style.display='block';
+  console.log('[GPS] Loading state shown');
 
   try{
+    console.log('[GPS] Calling readExifGPS…');
     const gps=await readExifGPS(file);
+    console.log('[GPS] readExifGPS result:', gps);
+
     if(!gps){
+      console.warn('[GPS] No GPS data found in EXIF');
       result.style.background='var(--amber-light)';
       result.style.borderColor='rgba(245,166,35,.4)';
       result.style.color='#b37c00';
       result.innerHTML='⚠️ <strong>No GPS data in this photo.</strong><br><small style="font-weight:600;opacity:.75">Try a photo taken on your phone with location enabled.</small>';
       input.value=''; return;
     }
-    // Reverse geocode
+
+    console.log('[GPS] GPS found:', gps.lat, gps.lng, '— calling reverse geocode…');
     const geoRes=await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${gps.lat},${gps.lng}&key=${window._mapsKey}`);
+    console.log('[GPS] Geocode HTTP status:', geoRes.status);
     const geoData=await geoRes.json();
+    console.log('[GPS] Geocode response:', geoData.status, geoData.results?.[0]?.formatted_address);
     const address=geoData.results?.[0]?.formatted_address||`${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`;
 
     // Fill form
@@ -5533,92 +5779,124 @@ async function extractPhotoGPS(input){
     result.innerHTML=`📍 <strong>Location found!</strong><br><small style="font-weight:600;opacity:.8">${address}</small><br><small style="font-weight:600;opacity:.65;font-size:10px;">📷 Photo will be saved as cover when you save the place</small>`;
     window._pendingCoverFile=file;
     toast('📍 GPS location extracted!','ok');
+    console.log('[GPS] ✅ Done — address:', address);
 
     // ── AI Place Name Suggestions from image ──
     suggestPlaceNamesFromImage(file, address);
 
   }catch(e){
+    console.error('[GPS] ❌ Exception in extractPhotoGPS:', e);
     result.style.background='var(--coral-light)';
     result.style.borderColor='rgba(255,107,71,.3)';
     result.style.color='var(--coral)';
-    result.innerHTML='❌ <strong>Could not read GPS.</strong> Fill in manually.';
+    result.innerHTML=`❌ <strong>Error: ${e.message}</strong> — check console for details.`;
   }
   input.value='';
 }
 
 async function suggestPlaceNamesFromImage(file, address){
+  console.log('[SUGGEST] Starting — file:', file.name, 'address:', address);
+
   // Show loading chips placeholder
   const existing=document.getElementById('placeNameSuggestions');
   if(existing) existing.remove();
   const nameField=document.getElementById('pName');
+  if(!nameField){ console.error('[SUGGEST] pName field not found!'); return; }
   const suggBox=document.createElement('div');
   suggBox.id='placeNameSuggestions';
   suggBox.style.cssText='margin-top:8px;';
   suggBox.innerHTML=`<div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">✦ AI Name Suggestions</div><div style="display:flex;gap:6px;flex-wrap:wrap;"><div style="font-size:12px;color:var(--txt3);padding:6px 0;">🤖 Identifying place…</div></div>`;
   nameField.parentNode.insertBefore(suggBox, nameField.nextSibling);
+  console.log('[SUGGEST] Loading box inserted into DOM');
 
   try{
     // Convert image to base64
-    const base64=await new Promise(res=>{
+    console.log('[SUGGEST] Converting image to base64…');
+    const base64=await new Promise((res,rej)=>{
       const reader=new FileReader();
-      reader.onload=e=>res(e.target.result.split(',')[1]);
+      reader.onload=e=>{
+        const result=e.target.result;
+        console.log('[SUGGEST] base64 data URL length:', result?.length);
+        res(result.split(',')[1]);
+      };
+      reader.onerror=e=>{ console.error('[SUGGEST] FileReader error:', e); rej(e); };
       reader.readAsDataURL(file);
     });
+    console.log('[SUGGEST] base64 ready, length:', base64?.length, 'mimeType:', file.type);
 
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    console.log('[SUGGEST] Calling backend /api/ai/place-name-suggestions…');
+    const resp=await apiFetch('/api/ai/place-name-suggestions',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:300,
-        messages:[{
-          role:'user',
-          content:[
-            {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:base64}},
-            {type:'text',text:`This photo was taken at: ${address}.\n\nLook at what's in the photo and suggest 3 short, specific place name options the user might want to call this saved place. Think about: what type of place is it (cafe, restaurant, viewpoint, beach, club, hotel, street, etc.), any visible signage or branding, the overall vibe.\n\nRespond ONLY with a JSON array of 3 strings, no other text. Example: ["Rooftop Bar Seoul","Night View Spot","Han River Terrace"]`}
-          ]
-        }]
-      })
+      body:JSON.stringify({imageBase64:base64, mimeType:file.type||'image/jpeg', address})
     });
+    console.log('[SUGGEST] HTTP status:', resp.status, resp.statusText);
+
+    if(!resp.ok){
+      const errText=await resp.text().catch(()=>'');
+      console.error('[SUGGEST] Backend error:', resp.status, errText);
+      throw new Error(`Backend ${resp.status}: ${errText}`);
+    }
+
     const data=await resp.json();
-    const raw=data.content?.[0]?.text||'[]';
-    let suggestions=[];
-    try{ suggestions=JSON.parse(raw.replace(/```json|```/g,'').trim()); }catch{}
-    if(!Array.isArray(suggestions)||!suggestions.length) throw new Error('no suggestions');
+    console.log('[SUGGEST] Response data:', JSON.stringify(data));
+
+    const suggestions=data.suggestions||[];
+    console.log('[SUGGEST] Suggestions array:', suggestions);
+
+    if(!suggestions.length){
+      console.warn('[SUGGEST] Empty suggestions array — removing box');
+      suggBox.innerHTML=`<div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">✦ AI Name Suggestions</div><div style="font-size:11px;color:var(--txt3);">Could not identify place — type a name above</div>`;
+      return;
+    }
 
     const chips=suggestions.map(s=>`<button onclick="document.getElementById('pName').value='${s.replace(/'/g,"\\'")}';this.parentNode.querySelectorAll('button').forEach(b=>b.style.background='');this.style.background='var(--sky-light)';this.style.borderColor='var(--sky)';this.style.color='var(--sky)';" style="padding:6px 12px;border-radius:20px;border:2px solid var(--border);background:#fff;color:var(--txt2);font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;">${s}</button>`).join('');
     suggBox.innerHTML=`<div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">✦ AI Name Suggestions</div><div style="display:flex;gap:6px;flex-wrap:wrap;">${chips}</div><div style="font-size:10px;color:var(--txt3);margin-top:5px;">Tap to use · or type your own above</div>`;
-  }catch{
-    // Silently remove if AI fails — don't block the flow
-    suggBox.remove();
+    console.log('[SUGGEST] ✅ Chips rendered');
+
+  }catch(e){
+    console.error('[SUGGEST] ❌ Exception:', e.message, e);
+    suggBox.innerHTML=`<div style="font-size:11px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">✦ AI Name Suggestions</div><div style="font-size:11px;color:var(--coral);">⚠️ ${e.message}</div>`;
   }
 }
 
 function readExifGPS(file){
   return new Promise((resolve)=>{
+    console.log('[EXIF] Starting FileReader for', file.name);
     const reader=new FileReader();
     reader.onload=e=>{
       try{
         const buf=e.target.result;
+        console.log('[EXIF] Buffer loaded, size:', buf.byteLength);
         const view=new DataView(buf);
-        // Check JPEG SOI marker
-        if(view.getUint16(0)!==0xFFD8){resolve(null);return;}
+        const soi=view.getUint16(0);
+        console.log('[EXIF] SOI marker:', '0x'+soi.toString(16), soi===0xFFD8 ? '✅ JPEG' : '❌ NOT JPEG');
+        if(soi!==0xFFD8){resolve(null);return;}
         let offset=2;
+        let foundApp1=false;
         while(offset<buf.byteLength-2){
           const marker=view.getUint16(offset);
           offset+=2;
-          if(marker===0xFFE1){// APP1 = EXIF
+          if(marker===0xFFE1){
+            foundApp1=true;
+            console.log('[EXIF] Found APP1 (EXIF) at offset', offset);
             const len=view.getUint16(offset);
             const exifData=buf.slice(offset+2,offset+len);
             const gps=parseExifGPS(exifData);
+            console.log('[EXIF] parseExifGPS result:', gps);
             resolve(gps); return;
           }
-          if(marker===0xFFDA) break;// SOS - no more metadata
+          if(marker===0xFFDA){ console.log('[EXIF] Hit SOS marker — no EXIF found'); break; }
+          if(offset+2>buf.byteLength){ console.warn('[EXIF] Offset out of bounds'); break; }
           offset+=view.getUint16(offset);
         }
+        if(!foundApp1) console.warn('[EXIF] No APP1 marker found in JPEG');
         resolve(null);
-      }catch{resolve(null);}
+      }catch(err){
+        console.error('[EXIF] Exception in readExifGPS:', err);
+        resolve(null);
+      }
     };
+    reader.onerror=e=>{ console.error('[EXIF] FileReader error:', e); resolve(null); };
     reader.readAsArrayBuffer(file);
   });
 }
