@@ -1,127 +1,219 @@
-const router = require('express').Router();
-const User   = require('../models/User');
-const Trip   = require('../models/Trip');
-const Place  = require('../models/Place');
+const router         = require('express').Router();
+const User           = require('../models/User');
+const Place          = require('../models/Place');
+const Trip           = require('../models/Trip');
+const ErrorLog       = require('../models/ErrorLog');
+const ClosureReport  = require('../models/ClosureReport');
+const VenueBlacklist = require('../models/VenueBlacklist');
 
-const ADMIN_KEY = process.env.ADMIN_KEY || 'wander-admin-2026';
-
-function authAdmin(req, res, next) {
-  if (req.query.key !== ADMIN_KEY) return res.status(401).send('Unauthorized');
+// Simple middleware — checks ADMIN_PASSWORD env var
+function adminAuth(req, res, next){
+  const pwd = req.headers['x-admin-password'];
+  if(!pwd || pwd !== process.env.ADMIN_PASSWORD){
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   next();
 }
 
-// GET /api/admin/users?key=...
-router.get('/users', authAdmin, async (req, res) => {
+/* GET /api/admin/users — list all users */
+router.get('/users', adminAuth, async (req, res) => {
   try {
-    const users = await User.find({}, 'email firstName lastName verified verifyToken verifyExpires createdAt').sort({ createdAt: -1 });
-    const [tripCount, placeCount] = await Promise.all([
-      Trip.countDocuments(), Place.countDocuments()
-    ]);
-    res.json({ users, stats: { users: users.length, trips: tripCount, places: placeCount } });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+    const users = await User.find({})
+      .select('email firstName lastName handle avatar verified verifyToken verifyExpires createdAt aiProfile')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const withCounts = await Promise.all(users.map(async u => {
+      const [placeCount, tripCount] = await Promise.all([
+        Place.countDocuments({ user: u._id }),
+        Trip.countDocuments({ user: u._id })
+      ]);
+      return { ...u, placeCount, tripCount };
+    }));
+
+    res.json(withCounts);
+  } catch(err) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-// GET /admin?key=... — HTML dashboard
-router.get('/', authAdmin, (req, res) => {
-  const key = req.query.key;
-  res.send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Wander Admin</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; min-height: 100vh; }
-  .header { background: linear-gradient(135deg,#1a1a2e,#4a9eff); color: #fff; padding: 24px 32px; }
-  .header h1 { font-size: 22px; font-weight: 800; }
-  .header p  { font-size: 13px; opacity: .7; margin-top: 4px; }
-  .stats { display: flex; gap: 16px; padding: 24px 32px; flex-wrap: wrap; }
-  .stat { background: #fff; border-radius: 16px; padding: 20px 28px; flex: 1; min-width: 140px;
-          box-shadow: 0 2px 10px rgba(0,0,0,.06); text-align: center; }
-  .stat .n { font-size: 36px; font-weight: 900; color: #1a1a2e; }
-  .stat .l { font-size: 12px; color: #888; font-weight: 700; margin-top: 4px; }
-  .users { padding: 0 32px 32px; }
-  .users h2 { font-size: 16px; font-weight: 800; color: #1a1a2e; margin-bottom: 14px; }
-  table { width: 100%; border-collapse: collapse; background: #fff;
-          border-radius: 16px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
-  th { background: #f8f8fc; padding: 12px 16px; text-align: left; font-size: 12px;
-       font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: .5px; }
-  td { padding: 13px 16px; font-size: 14px; border-top: 1px solid #f0f0f4; color: #1a1a2e; }
-  tr:hover td { background: #fafafe; }
-  .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 800; }
-  .verified   { background: #d1fae5; color: #065f46; }
-  .pending    { background: #fef3c7; color: #92400e; }
-  .expired    { background: #fee2e2; color: #991b1b; }
-  .email-sent { color: #4a9eff; font-size: 12px; }
-  .refresh { float: right; padding: 8px 16px; background: #4a9eff; color: #fff;
-             border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
-</style>
-</head>
-<body>
-<div class="header">
-  <h1>✦ Wander Admin</h1>
-  <p id="ts">Loading...</p>
-</div>
-<div class="stats" id="statsRow"></div>
-<div class="users">
-  <h2>👥 Users <button class="refresh" onclick="load()">↻ Refresh</button></h2>
-  <table>
-    <thead><tr>
-      <th>Name</th><th>Email</th><th>Status</th><th>Email</th><th>Registered</th>
-    </tr></thead>
-    <tbody id="tbody"><tr><td colspan="5" style="text-align:center;color:#aaa;padding:30px;">Loading...</td></tr></tbody>
-  </table>
-</div>
-<script>
-const KEY = '${key}';
-async function load(){
-  const r = await fetch('/api/admin/users?key=' + KEY);
-  const d = await r.json();
-  document.getElementById('ts').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+/* DELETE /api/admin/users/:id — delete user + all their data */
+router.delete('/users/:id', adminAuth, async (req, res) => {
+  try {
+    const userId = req.params.id;
 
-  // Stats
-  const verified = d.users.filter(u => u.verified).length;
-  const pending  = d.users.filter(u => !u.verified && u.verifyToken).length;
-  const noEmail  = d.users.filter(u => !u.verified && !u.verifyToken).length;
-  document.getElementById('statsRow').innerHTML =
-    stat(d.stats.users, 'Total Users') +
-    stat(verified, 'Verified ✅') +
-    stat(pending, 'Pending 📧') +
-    stat(d.stats.trips, 'Trips') +
-    stat(d.stats.places, 'Places');
+    // Delete all user data
+    await Promise.all([
+      Place.deleteMany({ user: userId }),
+      Trip.deleteMany({ user: userId }),
+      User.findByIdAndDelete(userId)
+    ]);
 
-  // Table
-  document.getElementById('tbody').innerHTML = d.users.map(u => {
-    const now = Date.now();
-    let statusBadge, emailBadge;
+    // Try delete posts and messages if models exist
+    try {
+      const Post = require('../models/Post');
+      await Post.deleteMany({ user: userId });
+    } catch {}
+    try {
+      const Message = require('../models/Message');
+      await Message.deleteMany({ $or: [{ sender: userId }, { receiver: userId }] });
+    } catch {}
 
-    if (u.verified) {
-      statusBadge = '<span class="badge verified">✅ Verified</span>';
-      emailBadge  = '<span style="color:#888;font-size:12px;">—</span>';
-    } else if (u.verifyToken && u.verifyExpires && new Date(u.verifyExpires) > now) {
-      statusBadge = '<span class="badge pending">⏳ Pending</span>';
-      emailBadge  = '<span class="email-sent">📧 Sent</span>';
-    } else if (u.verifyToken) {
-      statusBadge = '<span class="badge expired">⚠️ Link Expired</span>';
-      emailBadge  = '<span class="email-sent">📧 Sent (expired)</span>';
-    } else {
-      statusBadge = '<span class="badge expired">❌ No Email</span>';
-      emailBadge  = '<span style="color:#e63946;font-size:12px;">Not sent</span>';
+    res.json({ ok: true });
+  } catch(err) {
+    console.error('Admin delete error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/* GET /api/admin/stats — quick dashboard stats */
+router.get('/stats', adminAuth, async (req, res) => {
+  try {
+    const [users, places, trips] = await Promise.all([
+      User.countDocuments(),
+      Place.countDocuments(),
+      Trip.countDocuments()
+    ]);
+    res.json({ users, places, trips });
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/* ─────────────────────────────────────────
+   POST /api/admin/users/:id/send-reset
+   Send password reset email to a user
+───────────────────────────────────────── */
+router.post('/users/:id/send-reset', adminAuth, async (req, res) => {
+  try {
+    const crypto = require('crypto');
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.verifyToken = resetToken;
+    user.verifyExpires = new Date(Date.now() + 3600000); // 1 hour
+    await user.save();
+
+    const resetUrl = `${process.env.APP_URL || 'https://wander1.onrender.com'}/reset-password?token=${resetToken}`;
+
+    // Send via Resend (same as forgot-password route)
+    const { Resend } = require('resend');
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: 'Wandr <noreply@yovix.com>',
+      to: user.email,
+      subject: 'Reset your Wandr password',
+      html: `<p>Hi ${user.firstName || 'there'},</p>
+             <p>An admin has sent you a password reset link for your Wandr account.</p>
+             <p><a href="${resetUrl}" style="background:#1D9E75;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">Reset Password</a></p>
+             <p>This link expires in 1 hour.</p>
+             <p>If you did not request this, you can ignore this email.</p>`
+    });
+
+    console.log(`Admin sent password reset to ${user.email}`);
+    res.json({ ok: true, message: `Reset link sent to ${user.email}` });
+  } catch(err) {
+    console.error('Admin reset error:', err.message);
+    res.status(500).json({ error: 'Failed to send reset email: ' + err.message });
+  }
+});
+
+/* ─────────────────────────────────────────
+   CLOSURE REPORTS
+───────────────────────────────────────── */
+
+// GET /api/admin/closure-reports
+router.get('/closure-reports', adminAuth, async (req, res) => {
+  try {
+    const reports = await ClosureReport.find()
+      .sort({ createdAt: -1 })
+      .populate('reportedBy', 'firstName lastName handle')
+      .lean();
+    res.json(reports);
+  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+// POST /api/admin/closure-reports/:id/blacklist — approve + add to blacklist
+router.post('/closure-reports/:id/blacklist', adminAuth, async (req, res) => {
+  try {
+    const report = await ClosureReport.findById(req.params.id);
+    if (!report) return res.status(404).json({ error: 'Report not found' });
+
+    // Add to blacklist if not already there
+    const existing = await VenueBlacklist.findOne({
+      venueName: { $regex: new RegExp('^' + report.venueName + '$', 'i') },
+      city: report.city
+    });
+    if (!existing) {
+      await VenueBlacklist.create({
+        venueName: report.venueName,
+        city: report.city,
+        reason: 'Permanently closed — reported by user'
+      });
     }
 
-    const name = (u.firstName + ' ' + (u.lastName||'')).trim() || '—';
-    const date = new Date(u.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-    return '<tr><td><strong>' + name + '</strong></td><td>' + u.email + '</td><td>' +
-           statusBadge + '</td><td>' + emailBadge + '</td><td style="color:#888;font-size:12px;">' + date + '</td></tr>';
-  }).join('');
-}
-function stat(n, l){ return '<div class="stat"><div class="n">' + n + '</div><div class="l">' + l + '</div></div>'; }
-load();
-setInterval(load, 30000);
-</script>
-</body>
-</html>`);
+    report.status = 'blacklisted';
+    await report.save();
+    res.json({ ok: true, message: `${report.venueName} added to blacklist` });
+  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+// POST /api/admin/closure-reports/:id/dismiss
+router.post('/closure-reports/:id/dismiss', adminAuth, async (req, res) => {
+  try {
+    await ClosureReport.findByIdAndUpdate(req.params.id, { status: 'dismissed' });
+    res.json({ ok: true });
+  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+/* ─────────────────────────────────────────
+   VENUE BLACKLIST
+───────────────────────────────────────── */
+
+// GET /api/admin/blacklist
+router.get('/blacklist', adminAuth, async (req, res) => {
+  try {
+    const list = await VenueBlacklist.find().sort({ addedAt: -1 }).lean();
+    res.json(list);
+  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+// POST /api/admin/blacklist — manually add
+router.post('/blacklist', adminAuth, async (req, res) => {
+  try {
+    const { venueName, city, reason } = req.body;
+    if (!venueName) return res.status(400).json({ error: 'venueName required' });
+    const entry = await VenueBlacklist.create({ venueName, city: city||'', reason: reason||'Permanently closed' });
+    res.json(entry);
+  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+// DELETE /api/admin/blacklist/:id
+router.delete('/blacklist/:id', adminAuth, async (req, res) => {
+  try {
+    await VenueBlacklist.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+
+/* GET /api/admin/users/pending — unverified users only */
+router.get('/pending', adminAuth, async (req, res) => {
+  try {
+    const now = new Date();
+    const users = await User.find({ verified: false })
+      .select('email firstName lastName verified verifyToken verifyExpires createdAt')
+      .sort({ createdAt: -1 }).lean();
+
+    const result = users.map(u => ({
+      ...u,
+      emailSent: !!u.verifyToken,
+      linkExpired: u.verifyExpires ? u.verifyExpires < now : false
+    }));
+
+    res.json(result);
+  } catch(err) { res.status(500).json({ error: 'Server error' }); }
 });
 
 module.exports = router;
