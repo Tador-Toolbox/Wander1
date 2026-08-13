@@ -89,7 +89,24 @@ body{font-family:'DM Sans',sans-serif;background:#0f0f14;color:#e0ddd8;min-heigh
 <div id="mainPanel">
   <div class="panel-header">
     <h1>✦ Wandr Admin</h1>
-    <button onclick="logout()">Logout</button>
+    <div style="display:flex;gap:10px;">
+      <button onclick="openInvite()" style="background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;color:#fff;border-radius:10px;padding:8px 16px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">✉️ Send Invite</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- Invite Modal -->
+  <div id="inviteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;align-items:center;justify-content:center;">
+    <div style="background:#16161e;border-radius:20px;padding:28px;width:90%;max-width:400px;border:1px solid #2a2a35;">
+      <div style="font-size:17px;font-weight:800;color:#fff;margin-bottom:20px;">✉️ Send Invite</div>
+      <input id="inviteEmail" type="email" placeholder="Email address" style="width:100%;padding:13px 16px;background:#0f0f14;border:1.5px solid #2a2a35;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;color:#fff;outline:none;margin-bottom:12px;box-sizing:border-box;">
+      <input id="inviteName" type="text" placeholder="Name (optional)" style="width:100%;padding:13px 16px;background:#0f0f14;border:1.5px solid #2a2a35;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;color:#fff;outline:none;margin-bottom:16px;box-sizing:border-box;">
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeInvite()" style="flex:1;padding:12px;background:#1a1a22;border:1px solid #2a2a35;color:#999;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;">Cancel</button>
+        <button onclick="sendInvite()" id="inviteBtn" style="flex:2;padding:12px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;color:#fff;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Send Invite ✈️</button>
+      </div>
+      <div id="inviteMsg" style="margin-top:12px;font-size:13px;text-align:center;"></div>
+    </div>
   </div>
 
   <div class="stats-row">
@@ -239,6 +256,47 @@ function toggleAdminPwd(){
 document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('pwdInput').focus();
 });
+
+function openInvite(){
+  document.getElementById('inviteModal').style.display='flex';
+  document.getElementById('inviteEmail').value='';
+  document.getElementById('inviteName').value='';
+  document.getElementById('inviteMsg').textContent='';
+  setTimeout(()=>document.getElementById('inviteEmail').focus(),100);
+}
+function closeInvite(){
+  document.getElementById('inviteModal').style.display='none';
+}
+async function sendInvite(){
+  const email = document.getElementById('inviteEmail').value.trim();
+  const name  = document.getElementById('inviteName').value.trim();
+  const msg   = document.getElementById('inviteMsg');
+  const btn   = document.getElementById('inviteBtn');
+  if(!email){ msg.style.color='#e63946'; msg.textContent='Please enter an email'; return; }
+  btn.disabled=true; btn.textContent='Sending...';
+  try{
+    const r = await fetch('/api/admin/invite',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-password':adminPwd},
+      body: JSON.stringify({email,name})
+    });
+    const d = await r.json();
+    if(r.ok){
+      msg.style.color='#10b981';
+      msg.textContent='✅ Invite sent to ' + email;
+      btn.textContent='Sent!';
+      setTimeout(closeInvite, 2000);
+    } else {
+      msg.style.color='#e63946';
+      msg.textContent='Error: ' + d.error;
+      btn.disabled=false; btn.textContent='Send Invite ✈️';
+    }
+  }catch(e){
+    msg.style.color='#e63946'; msg.textContent='Network error';
+    btn.disabled=false; btn.textContent='Send Invite ✈️';
+  }
+}
+
 </script>
 </body>
 </html>
