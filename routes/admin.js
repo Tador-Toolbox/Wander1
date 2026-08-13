@@ -19,7 +19,7 @@ function adminAuth(req, res, next){
 router.get('/users', adminAuth, async (req, res) => {
   try {
     const users = await User.find({})
-      .select('email firstName lastName handle avatar verified createdAt aiProfile')
+      .select('email firstName lastName handle avatar verified verifyToken verifyExpires createdAt aiProfile')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -195,6 +195,75 @@ router.delete('/blacklist/:id', adminAuth, async (req, res) => {
     await VenueBlacklist.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
   } catch(err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+
+/* GET /api/admin/users/pending — unverified users only */
+router.get('/pending', adminAuth, async (req, res) => {
+  try {
+    const now = new Date();
+    const users = await User.find({ verified: false })
+      .select('email firstName lastName verified verifyToken verifyExpires createdAt')
+      .sort({ createdAt: -1 }).lean();
+
+    const result = users.map(u => ({
+      ...u,
+      emailSent: !!u.verifyToken,
+      linkExpired: u.verifyExpires ? u.verifyExpires < now : false
+    }));
+
+    res.json(result);
+  } catch(err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+
+/* ─────────────────────────────────────────
+   POST /api/admin/invite — send invite email
+───────────────────────────────────────── */
+router.post('/invite', adminAuth, async (req, res) => {
+  try {
+    const { email, name } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required' });
+
+    const appUrl = process.env.APP_URL || 'https://wander1.onrender.com';
+    const { Resend } = require('resend');
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    await resend.emails.send({
+      from: 'Wander <noreply@yovix.com>',
+      to: email,
+      subject: "You're invited to Wander ✈️",
+      html: `
+        <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);">
+          <div style="background:linear-gradient(135deg,#1a1a2e,#4a9eff);padding:40px 32px;text-align:center;">
+            <div style="font-size:40px;margin-bottom:8px;">✦</div>
+            <div style="color:#fff;font-size:26px;font-weight:800;letter-spacing:-0.5px;">Wander</div>
+            <div style="color:rgba(255,255,255,.7);font-size:14px;margin-top:4px;">your social AI travel app</div>
+          </div>
+          <div style="padding:36px 32px;">
+            <p style="font-size:18px;font-weight:700;color:#1a1a2e;margin:0 0 12px;">
+              Hi${name ? ' ' + name : ''}! 👋
+            </p>
+            <p style="font-size:15px;color:#555;line-height:1.6;margin:0 0 24px;">
+              You've been invited to join <strong>Wander</strong> — save your favourite places, build travel maps, and share trips with friends.
+            </p>
+            <a href="${appUrl}" style="display:block;text-align:center;background:linear-gradient(135deg,#4a9eff,#764ba2);color:#fff;text-decoration:none;padding:15px 24px;border-radius:14px;font-size:16px;font-weight:800;">
+              Join Wander ✈️
+            </a>
+            <p style="font-size:12px;color:#aaa;text-align:center;margin-top:20px;">
+              Tap the button above to create your free account.
+            </p>
+          </div>
+        </div>
+      `
+    });
+
+    console.log('[admin/invite] sent invite to:', email);
+    res.json({ ok: true, message: 'Invite sent to ' + email });
+  } catch(err) {
+    console.error('[admin/invite] failed:', err.message);
+    res.status(500).json({ error: 'Failed to send: ' + err.message });
+  }
 });
 
 module.exports = router;
