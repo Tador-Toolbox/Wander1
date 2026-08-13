@@ -41,7 +41,7 @@ async function sendVerificationEmail(user, token, redirectPath) {
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, handle, redirect } = req.body;
+    const { password, firstName, lastName, handle, redirect } = req.body;
     const email = (req.body.email||'').toLowerCase().trim();
     console.log('[auth/register] attempt for:', email);
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
