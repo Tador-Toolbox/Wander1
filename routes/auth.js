@@ -121,7 +121,7 @@ router.post('/login', async (req, res) => {
     console.log('[auth/login] attempt for:', (req.body.email||'').toLowerCase().trim());
     const email = (req.body.email||'').toLowerCase().trim();
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ $or: [{ email }, { handle: email }] });
     if (!user || !(await user.comparePassword(password)))
       return res.status(401).json({ error: 'Invalid credentials' });
     // Allow users created before verification was added (no verifyToken means old user)
@@ -158,7 +158,7 @@ router.put('/profile', auth, async (req, res) => {
 router.post('/resend-verification', async (req, res) => {
   try {
     const email = (req.body.email||'').toLowerCase().trim();
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ $or: [{ email }, { handle: email }] });
     if (!user || user.verified) return res.json({ message: 'If this email exists and is unverified, a new link was sent.' });
     const verifyToken   = crypto.randomBytes(32).toString('hex');
     const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -175,7 +175,7 @@ router.post('/resend-verification', async (req, res) => {
 router.post('/forgot-password', async (req, res) => {
   try {
     const email = (req.body.email||'').toLowerCase().trim();
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ $or: [{ email }, { handle: email }] });
     // Always return success to prevent email enumeration
     if (!user) return res.json({ message: 'If this email exists, a reset link was sent.' });
 
