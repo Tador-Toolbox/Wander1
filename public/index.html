@@ -1505,6 +1505,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div style="font-size:13px;font-weight:800;color:var(--txt);display:flex;align-items:center;gap:6px;"><span style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">✦ AI Profile</span></div>
         <div style="display:flex;gap:6px;">
           <button onclick="openAIAgent()" style="background:#f8f5ff;border:2px solid #764ba2;color:#764ba2;border-radius:10px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">+ Add photos</button>
+          <button onclick="sessionStorage.removeItem('ob_skipped');showOnboarding()" id="buildProfileBtn" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;color:#fff;border-radius:10px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">✦ Build Profile</button>
           <button onclick="resetAIProfile()" id="resetAIBtn" style="display:none;background:var(--coral-light);border:2px solid rgba(255,107,71,.3);color:var(--coral);border-radius:10px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">Reset</button>
         </div>
       </div>
@@ -1650,6 +1651,8 @@ if(token==='undefined'||token==='null'||token===''||token==='0'){token=null;loca
 let _obFiles = [];
 
 async function checkAndShowOnboarding(){
+  // If user previously skipped, don't show again this session
+  if(sessionStorage.getItem('ob_skipped')) return false;
   try{
     const r = await apiFetch('/api/ai/profile');
     const d = await r.json();
@@ -1663,6 +1666,13 @@ async function checkAndShowOnboarding(){
     showOnboarding();
     return true;
   }
+}
+
+function skipOnboarding(){
+  sessionStorage.setItem('ob_skipped','1');
+  showScreen('mapScreen');
+  startSplashAnimation();
+  initApp();
 }
 
 function showOnboarding(){
@@ -1764,6 +1774,7 @@ function renderOnboardingUpload(){
 
       <div style="height:20px;"></div>
       <button class="ob-analyze-btn" id="obAnalyzeBtn" onclick="runOnboarding()" disabled>✦ Build My Profile</button>
+      <button onclick="skipOnboarding()" style="display:block;margin:12px auto 0;background:none;border:none;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;color:var(--txt3);cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Skip for now →</button>
       <div style="margin-top:14px;text-align:center;font-size:11px;color:var(--txt3);line-height:1.6;">Your photos are analyzed privately and never stored.<br>Only the insights are saved to your profile.</div>
     </div>`;
 }
