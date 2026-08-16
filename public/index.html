@@ -108,7 +108,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans'
 .fg label{display:block;font-size:10px;font-weight:800;color:var(--txt2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px;}
 .fg input{width:100%;padding:13px 16px;background:var(--bg);border:2px solid var(--border);border-radius:16px;color:var(--txt);font-family:'Nunito',sans-serif;font-size:15px;font-weight:600;outline:none;transition:var(--tr);}
 .fg input:focus{border-color:var(--sky);box-shadow:0 0 0 4px var(--sky-glow);background:#fff;}
-.pwd-wrap{position:relative;}
+.pwd-wrap{position:relative;direction:ltr;}
 .pwd-wrap input{padding-right:44px;width:100%;}
 .pwd-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink3);padding:4px;display:flex;align-items:center;justify-content:center;transition:color .15s;}
 .pwd-eye:hover{color:var(--ink);}
@@ -1286,6 +1286,9 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <input id="iaPass" type="password" placeholder="Password (min 6 chars)" style="padding:12px 14px;border-radius:12px;border:2px solid #e0e0e8;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;outline:none;width:100%;box-sizing:border-box;">
       </div>
       <div id="importAuthErr" style="color:#e63946;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;display:none;margin-top:8px;text-align:center;"></div>
+      <div id="importForgotRow" style="text-align:right;margin-top:6px;display:none;">
+        <span onclick="doForgotPassword()" style="font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:#4a9eff;cursor:pointer;text-decoration:underline;">Forgot password?</span>
+      </div>
       <button id="importAuthSubmit" onclick="doImportAuth()" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#4a9eff,#764ba2);border:none;font-family:'Nunito',sans-serif;font-size:15px;font-weight:900;color:#fff;cursor:pointer;margin-top:12px;">
         Create Account &amp; Import
       </button>
@@ -2138,7 +2141,7 @@ function injectMaps(key){if(window.google){bootMap();return;}window.__mapsReady=
 function bootMap(){
   infoWin=new google.maps.InfoWindow();
   gmap=new google.maps.Map(document.getElementById('gmap'),{
-    center:{lat:25,lng:15},zoom:2,disableDefaultUI:true,zoomControl:false,styles:MAP_STYLE
+    center:{lat:25,lng:15},zoom:2,disableDefaultUI:true,zoomControl:false,gestureHandling:'greedy',styles:MAP_STYLE
   });
 
   // Blue dot - poll location every 10 seconds for better iPhone support
@@ -3258,7 +3261,7 @@ async function showExplore(){
   document.getElementById('btnExplore').classList.add('on');
   if(!exploreMap){
     exploreMap=new google.maps.Map(document.getElementById('exploreMap'),{
-      center:{lat:25,lng:15},zoom:2,disableDefaultUI:true,
+      center:{lat:25,lng:15},zoom:2,disableDefaultUI:true,gestureHandling:'greedy',
       zoomControl:true,zoomControlOptions:{position:google.maps.ControlPosition.LEFT_BOTTOM},
       styles:MAP_STYLE
     });
@@ -4603,6 +4606,8 @@ function switchImportTab(reg){
   document.getElementById('importTabLog').style.background = reg ? '#f0f0f4' : '#1a1a2e';
   document.getElementById('importTabLog').style.color      = reg ? '#1a1a2e' : '#fff';
   document.getElementById('importAuthErr').style.display   = 'none';
+  const forgotRow = document.getElementById('importForgotRow');
+  if(forgotRow) forgotRow.style.display = reg ? 'none' : 'block';
 }
 
 async function doImportAuth(){
