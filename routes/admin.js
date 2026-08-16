@@ -266,4 +266,28 @@ router.post('/invite', adminAuth, async (req, res) => {
   }
 });
 
+/* POST /api/admin/create-user — create account without email */
+router.post('/create-user', adminAuth, async (req, res) => {
+  try {
+    const { handle, firstName, email, password } = req.body;
+    if (!handle || !firstName || !password)
+      return res.status(400).json({ error: 'handle, firstName and password required' });
+    const existing = await User.findOne({ $or: [{ handle }, ...(email ? [{ email }] : [])] });
+    if (existing) return res.status(409).json({ error: 'Handle or email already taken' });
+    const user = await User.create({
+      handle, firstName, lastName: '',
+      email: email || (handle + '@wander.local'),
+      password,
+      verified: true,
+      verifyToken: null,
+      verifyExpires: null
+    });
+    console.log('[admin/create-user] created:', handle, user._id);
+    res.status(201).json({ ok: true, userId: user._id, handle });
+  } catch(e) {
+    console.error('[admin/create-user]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
