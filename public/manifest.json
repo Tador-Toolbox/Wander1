@@ -1,0 +1,14 @@
+{
+  "name": "Wander",
+  "short_name": "Wander",
+  "description": "Your social AI travel map",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0ece3",
+  "theme_color": "#1a1a2e",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
