@@ -109,7 +109,10 @@ body{font-family:'DM Sans',sans-serif;background:#0f0f14;color:#e0ddd8;min-heigh
       <input id="cuHandle" placeholder="Username (handle) *" style="width:100%;padding:13px 16px;background:#0f0f14;border:1.5px solid #2a2a35;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;color:#fff;outline:none;margin-bottom:10px;box-sizing:border-box;">
       <input id="cuFirst" placeholder="First name *" style="width:100%;padding:13px 16px;background:#0f0f14;border:1.5px solid #2a2a35;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;color:#fff;outline:none;margin-bottom:10px;box-sizing:border-box;">
       <input id="cuEmail" type="email" placeholder="Email (optional)" style="width:100%;padding:13px 16px;background:#0f0f14;border:1.5px solid #2a2a35;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;color:#fff;outline:none;margin-bottom:10px;box-sizing:border-box;">
-      <input id="cuPass" type="password" placeholder="Password *" style="width:100%;padding:13px 16px;background:#0f0f14;border:1.5px solid #2a2a35;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;color:#fff;outline:none;margin-bottom:16px;box-sizing:border-box;">
+      <div style="position:relative;margin-bottom:16px;direction:ltr;">
+        <input id="cuPass" type="password" placeholder="Password *" style="width:100%;padding:13px 44px 13px 16px;background:#0f0f14;border:1.5px solid #2a2a35;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;color:#fff;outline:none;box-sizing:border-box;">
+        <button onclick="const i=document.getElementById('cuPass');const b=this;i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈';" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:0;line-height:1;">👁</button>
+      </div>
       <div id="cuErr" style="color:#e63946;font-size:13px;display:none;margin-bottom:12px;text-align:center;"></div>
       <div style="display:flex;gap:10px;">
         <button onclick="document.getElementById('createUserModal').style.display='none'" style="flex:1;padding:12px;background:#1a1a22;border:1px solid #2a2a35;color:#999;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;">Cancel</button>
