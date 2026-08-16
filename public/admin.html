@@ -79,9 +79,9 @@ body{font-family:'DM Sans',sans-serif;background:#0f0f14;color:#e0ddd8;min-heigh
   <div class="login-card">
     <h1>Wandr ✦</h1>
     <p>Admin Panel</p>
-    <div style="position:relative;">
+    <div style="position:relative;direction:ltr;">
       <input type="password" id="pwdInput" placeholder="Admin password" onkeydown="if(event.key==='Enter')login()" style="padding-right:44px;width:100%;">
-      <button type="button" onclick="toggleAdminPwd()" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#555;padding:4px;display:flex;align-items:center;">
+      <button type="button" onclick="toggleAdminPwd()" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;padding:4px;display:flex;align-items:center;">
         <svg id="adminEye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>
     </div>
@@ -111,7 +111,9 @@ body{font-family:'DM Sans',sans-serif;background:#0f0f14;color:#e0ddd8;min-heigh
       <input id="cuEmail" type="email" placeholder="Email (optional)" style="width:100%;padding:13px 16px;background:#0f0f14;border:1.5px solid #2a2a35;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;color:#fff;outline:none;margin-bottom:10px;box-sizing:border-box;">
       <div style="position:relative;margin-bottom:16px;direction:ltr;">
         <input id="cuPass" type="password" placeholder="Password *" style="width:100%;padding:13px 44px 13px 16px;background:#0f0f14;border:1.5px solid #2a2a35;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;color:#fff;outline:none;box-sizing:border-box;">
-        <button onclick="const i=document.getElementById('cuPass');const b=this;i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈';" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:0;line-height:1;">👁</button>
+        <button type="button" onclick="const i=document.getElementById('cuPass');i.type=i.type==='password'?'text':'password';this.querySelector('svg').style.opacity=i.type==='text'?'1':'0.5';" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#aaa;padding:4px;display:flex;align-items:center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
       </div>
       <div id="cuErr" style="color:#e63946;font-size:13px;display:none;margin-bottom:12px;text-align:center;"></div>
       <div style="display:flex;gap:10px;">
