@@ -51,18 +51,18 @@ nav.tabs .tab.on{color:var(--blue);font-weight:700}
 .chip{flex:none;background:#fff;font-size:14px;font-weight:600;padding:9px 14px;border-radius:999px;box-shadow:0 1px 4px rgba(18,32,58,.15);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .chip.on{background:var(--ink);color:#fff}
 .dot{width:10px;height:10px;border-radius:50%;border:2px solid}
-#locBtn{position:absolute;right:16px;bottom:96px;width:48px;height:48px;border-radius:50%;background:#fff;color:var(--blue);box-shadow:0 2px 10px rgba(18,32,58,.2);display:flex;align-items:center;justify-content:center;z-index:5}
-#summary{position:absolute;left:12px;right:12px;bottom:12px;background:#fff;border-radius:18px;padding:12px 14px;box-shadow:0 4px 18px rgba(18,32,58,.15);display:flex;align-items:center;gap:12px;z-index:5;text-align:left;width:auto}
-.sumIcon{width:44px;height:44px;border-radius:12px;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center}
-#summary b{display:block;font-size:15px}#summary small{font-size:13px;color:var(--muted)}
-#summary .go{margin-left:auto;color:var(--blue);font-weight:700;font-size:14px}
+#locBtn{position:absolute;right:16px;bottom:20px;width:48px;height:48px;border-radius:50%;background:#fff;color:var(--blue);box-shadow:0 2px 10px rgba(18,32,58,.2);display:flex;align-items:center;justify-content:center;z-index:5}
 
 /* sheets */
 #scrim{position:fixed;inset:0;background:rgba(18,32,58,.3);z-index:30;opacity:0;pointer-events:none;transition:opacity .2s}
 #scrim.on{opacity:1;pointer-events:auto}
-.sheet{position:fixed;left:0;right:0;bottom:0;max-height:88vh;overflow:auto;background:#fff;border-radius:24px 24px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));z-index:31;transform:translateY(105%);transition:transform .25s ease;display:flex;flex-direction:column;gap:16px;max-width:640px;margin:0 auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:82vh;overflow:auto;background:#fff;border-radius:24px 24px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));z-index:31;transform:translateY(105%);transition:transform .25s ease;display:flex;flex-direction:column;gap:16px;max-width:640px;margin:0 auto}
 .sheet.on{transform:none}
 .grab{width:40px;height:5px;border-radius:3px;background:var(--line);align-self:center;flex:none}
+.sheetTop{position:sticky;top:-10px;margin:-10px -20px 0;padding:10px 12px 0;background:#fff;display:flex;justify-content:center;align-items:center;min-height:30px;z-index:2;touch-action:none}
+.xBtn{position:absolute;right:12px;top:8px;width:36px;height:36px;border-radius:50%;background:var(--soft);display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.sheet.drag{transition:none}
+.thumbImg{width:52px;height:52px;border-radius:12px;background:#DDE3EA center/cover no-repeat;flex:none}
 .sheet h2{font-family:'Bricolage Grotesque',sans-serif;font-size:24px;line-height:1.15}
 .sub{color:var(--muted);font-size:14px;margin-top:4px}
 .eyebrow{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
@@ -83,11 +83,11 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .pageSub{margin:0 20px 14px;color:var(--muted);font-size:14px}
 #tripList{padding:0 16px 24px;display:flex;flex-direction:column;gap:14px}
 .trip{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 1px 6px rgba(18,32,58,.08)}
-.trip .cover{height:84px;width:100%;display:block}
+.trip .cover{width:64px;height:64px;border-radius:14px;background:#DDE3EA center/cover no-repeat;flex:none;display:block;padding:0}
 .trip .body{padding:14px 16px;display:flex;align-items:center;gap:12px}
 .trip .open{flex:1;text-align:left}
 .trip h3{font-size:17px;display:flex;align-items:center;gap:8px}
-.badge{font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-soft);padding:3px 8px;border-radius:999px;font-family:Manrope}
+.badge{white-space:nowrap;font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-soft);padding:3px 8px;border-radius:999px;font-family:Manrope}
 .trip small{display:block;margin-top:3px;font-size:13px;color:var(--muted)}
 .sq{width:44px;height:44px;border-radius:12px;background:var(--soft);display:flex;align-items:center;justify-content:center}
 .empty{padding:40px 24px;text-align:center;color:var(--muted)}
@@ -137,11 +137,6 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
       <div class="chips" id="chips"></div>
     </div>
     <button id="locBtn" aria-label="Center on my location" onclick="locate(true)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
-    <button id="summary" onclick="openList()">
-      <span class="sumIcon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg></span>
-      <span><b id="sumTitle">Loading…</b><small id="sumSub"></small></span>
-      <span class="go">View list</span>
-    </button>
   </section>
 
   <section id="vTrips" class="view hidden">
@@ -275,8 +270,6 @@ function renderMarkers(){
     m.addListener('click',function(){openPlace(p)});markers.push(m);
   });
   var been=list.filter(function(p){return p.status==='been'}).length;
-  $('sumTitle').textContent=list.length+(list.length===1?' place':' places')+(tripFilter?' in '+tripName(tripFilter):' on your map');
-  $('sumSub').textContent=list.length?been+' visited · '+(list.length-been)+' want to go':'Tap + to add your first place';
 }
 function tripName(id){var t=trips.find(function(t){return t._id===id});return t?t.name:''}
 function renderChips(){
@@ -293,13 +286,21 @@ function pickTrip(){
   if(!trips.length){toast('No trips yet — create one in Trips');return}
   var h='<div class="grab"></div><h2>Show a trip</h2>';
   trips.forEach(function(t){h+='<button class="listItem" onclick="showTrip(\''+t._id+'\')"><span class="sq" style="background:'+colorFor(t)+'"></span><span><b>'+esc(t.name)+'</b><small>'+countFor(t._id)+' places</small></span></button>'});
-  openSheet(h);
+  openSheet(h);loadTripPhotos();
 }
 function showTrip(id){tripFilter=id;closeSheet();go('vMap');renderChips();renderMarkers();fitAll()}
 
 /* ---------- sheets ---------- */
-function openSheet(h){$('sheet').innerHTML=h;$('sheet').classList.add('on');$('scrim').classList.add('on')}
-function closeSheet(){$('sheet').classList.remove('on');$('scrim').classList.remove('on');cur=null}
+function openSheet(h){
+  h=h.replace('<div class="grab"></div>','');
+  var top='<div class="sheetTop" id="sheetTop"><div class="grab"></div><button class="xBtn" aria-label="Close" onclick="closeSheet()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>';
+  var sh=$('sheet');sh.innerHTML=top+h;sh.scrollTop=0;sh.style.transform='';sh.classList.add('on');$('scrim').classList.add('on');
+  var y0=null,dy=0,t=$('sheetTop');
+  t.addEventListener('touchstart',function(e){y0=e.touches[0].clientY;dy=0;sh.classList.add('drag')},{passive:true});
+  t.addEventListener('touchmove',function(e){if(y0==null)return;dy=Math.max(0,e.touches[0].clientY-y0);sh.style.transform='translateY('+dy+'px)'},{passive:true});
+  t.addEventListener('touchend',function(){sh.classList.remove('drag');sh.style.transform='';if(dy>80)closeSheet();y0=null});
+}
+function closeSheet(){$('sheet').style.transform='';$('sheet').classList.remove('on');$('scrim').classList.remove('on');cur=null}
 function tripOptions(sel){
   var h='<option value="">No trip</option>';
   trips.forEach(function(t){h+='<option value="'+t._id+'"'+(String(sel)===t._id?' selected':'')+'>'+esc(t.name)+'</option>'});
@@ -310,7 +311,58 @@ function segHtml(status,fn){
     '<button class="'+(status==='been'?'been':'')+'" onclick="'+fn+'(\'been\')">✓ Visited</button>'+
     '<button class="'+(status!=='been'?'tobe':'')+'" onclick="'+fn+'(\'tobe\')">Want to go</button></div>';
 }
-function startAdd(){go('vMap');closeSheet();$('search').focus();toast('Search for a place to add')}
+function startAdd(){
+  go('vMap');
+  openSheet('<h2>Add a place</h2>'+
+    '<button class="aiBtn" onclick="closeSheet();$(\'search\').focus()"><span class="aiIco" style="background:var(--blue-soft);color:var(--blue)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><span><b>Search</b><small>Type a place name</small></span></button>'+
+    '<label class="aiBtn" style="cursor:pointer"><input type="file" accept="image/*" style="display:none" onchange="fromPhoto(this.files[0])"><span class="aiIco" style="background:#FFF3E0;color:#C2551A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><b>From a photo</b><small>We find where it was taken</small></span></label>'+
+    '<button class="aiBtn" onclick="addHere()"><span class="aiIco" style="background:#E7F4EC;color:#1E7A45"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg></span><span><b>Where I am now</b><small>Places around you</small></span></button>');
+}
+function loadExifr(){
+  return new Promise(function(res,rej){
+    if(window.exifr)return res(window.exifr);
+    var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/exifr@7/dist/full.umd.js';
+    s.onload=function(){res(window.exifr)};s.onerror=function(){rej(new Error('Could not load photo reader'))};document.head.appendChild(s);
+  });
+}
+var photoUrl='';
+async function fromPhoto(file){
+  if(!file)return;
+  openSheet('<h2>Reading photo…</h2><div class="loading"><div class="spin"></div>Finding where it was taken</div>');
+  try{
+    var ex=await loadExifr();var g=await ex.gps(file).catch(function(){return null});
+    if(!g||g.latitude==null){
+      openSheet('<h2>No location in this photo</h2><p class="sub" style="font-size:15px;line-height:1.5">This photo has no GPS data.<br><br>On iPhone: when picking the photo, tap <b>Options</b> at the top and turn on <b>Location</b>, then try again.</p><button class="btn soft" onclick="startAdd()">Back</button>');
+      return;
+    }
+    photoUrl=URL.createObjectURL(file);
+    nearbyPicker({lat:g.latitude,lng:g.longitude},'Where was this photo taken?',photoUrl);
+  }catch(e){openSheet('<h2>Something went wrong</h2><p class="sub">'+esc(e.message)+'</p>')}
+}
+function addHere(){
+  photoUrl='';
+  openSheet('<h2>Finding your location…</h2><div class="loading"><div class="spin"></div></div>');
+  getPos().then(function(pos){
+    if(!pos){openSheet('<h2>Location is blocked</h2><p class="sub">Allow location for this site in your browser settings.</p>');return}
+    nearbyPicker(pos,'Where are you?','');
+  });
+}
+var nearList=[];
+function nearbyPicker(pos,title,img){
+  map.panTo(pos);map.setZoom(17);
+  new google.maps.places.PlacesService(map).nearbySearch({location:pos,rankBy:google.maps.places.RankBy.DISTANCE,type:'point_of_interest'},function(r,st){
+    nearList=(st==='OK'&&r?r:[]).slice(0,8).map(function(p){return {name:p.name,location:p.vicinity||'',placeId:p.place_id,lat:p.geometry.location.lat(),lng:p.geometry.location.lng(),photo:img||(p.photos&&p.photos[0]?p.photos[0].getUrl({maxWidth:800}):'')}});
+    var h=(img?'<div class="photo" style="background-image:url(\''+img+'\')"></div>':'')+'<h2>'+esc(title)+'</h2>';
+    nearList.forEach(function(p,i){h+='<button class="listItem" onclick="pickNear('+i+')"><span><b>'+esc(p.name)+'</b><small>'+esc(p.location)+'</small></span></button>'});
+    h+='<button class="listItem" onclick="pickSpot('+pos.lat+','+pos.lng+')"><span><b>📍 Just this spot</b><small>Save the exact location</small></span></button>';
+    openSheet(h);
+  });
+}
+function pickNear(i){pending=Object.assign({},nearList[i]);openAdd()}
+function pickSpot(lat,lng){
+  var n=prompt('Name this place','My spot');if(!n)return;
+  pending={name:n,location:'',placeId:'',lat:lat,lng:lng,photo:photoUrl};openAdd();
+}
 function openAdd(){
   pending.status='tobe';pending.trip=tripFilter||'';
   drawAdd();
@@ -388,17 +440,34 @@ function openList(){
 function focusPlace(i){var p=window._list[i];map.panTo({lat:p.lat,lng:p.lng});map.setZoom(16);openPlace(p)}
 
 /* ---------- trips ---------- */
+var tripPhotos={};
+function tripThumb(t,cls){return '<span class="'+cls+'" data-tp="'+t._id+'" style="background-color:'+colorFor(t)+(tripPhotos[t._id]?';background-image:url(\''+tripPhotos[t._id]+'\')':'')+'"></span>'}
+function loadTripPhotos(){
+  if(!window.google||!map)return;
+  var svc=new google.maps.places.PlacesService(map);
+  trips.forEach(function(t){
+    if(tripPhotos[t._id]!==undefined)return;tripPhotos[t._id]='';
+    var q=t.name.replace(/\b(19|20)\d\d\b/g,'').trim()||t.name;
+    svc.textSearch({query:q},function(r,st){
+      var ph=null;
+      if(st==='OK'&&r)for(var i=0;i<r.length&&!ph;i++)if(r[i].photos&&r[i].photos[0])ph=r[i].photos[0].getUrl({maxWidth:400});
+      if(!ph)return;
+      tripPhotos[t._id]=ph;
+      document.querySelectorAll('[data-tp="'+t._id+'"]').forEach(function(el){el.style.backgroundImage='url("'+ph+'")'});
+    });
+  });
+}
 function colorFor(t){var s=String(t._id||'');var n=0;for(var i=0;i<s.length;i++)n+=s.charCodeAt(i);return t.color&&t.color!=='#4a9eff'?t.color:COLORS[n%COLORS.length]}
 function countFor(id){return places.filter(function(p){return String(p.trip)===id}).length}
 function renderTrips(){
   if(!trips.length){$('tripList').innerHTML='<div class="empty">No trips yet.<br>Create one, add places to it, and share it with a link.</div>';return}
   $('tripList').innerHTML=trips.map(function(t){
     var n=countFor(t._id),v=places.filter(function(p){return String(p.trip)===t._id&&p.status==='been'}).length;
-    return '<article class="trip"><button class="cover" style="background:'+colorFor(t)+'" onclick="showTrip(\''+t._id+'\')" aria-label="Open '+esc(t.name)+' on map"></button>'+
-      '<div class="body"><button class="open" onclick="showTrip(\''+t._id+'\')"><h3>'+esc(t.name)+(t.shareToken?' <span class="badge">Link on</span>':'')+'</h3><small>'+n+' places · '+v+' visited</small></button>'+
+    return '<article class="trip"><div class="body"><button style="padding:0;flex:none" onclick="showTrip(\''+t._id+'\')" aria-label="Open '+esc(t.name)+' on map">'+tripThumb(t,'cover')+'</button><button class="open" onclick="showTrip(\''+t._id+'\')"><h3>'+esc(t.name)+(t.shareToken?' <span class="badge">Link on</span>':'')+'</h3><small>'+n+' places · '+v+' visited</small></button>'+
       '<button class="sq" aria-label="Share trip" onclick="shareTrip(\''+t._id+'\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/></svg></button>'+
       '<button class="sq" aria-label="Trip options" onclick="tripMenu(\''+t._id+'\')">⋯</button></div></article>';
   }).join('');
+  loadTripPhotos();
 }
 async function newTrip(){
   var n=prompt('Trip name');if(!n)return;
