@@ -93,20 +93,23 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .empty{padding:40px 24px;text-align:center;color:var(--muted)}
 
 /* ai */
-#vAI{display:flex;flex-direction:column;overflow:hidden}
-#vAI .pageHead{background:#fff;border-bottom:1px solid #E3E6EB;display:block;padding-bottom:12px}
-#chat{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
-.me{align-self:flex-end;max-width:80%;background:var(--ink);color:#fff;padding:12px 14px;border-radius:16px 16px 4px 16px;font-size:15px}
-.bot{max-width:88%;background:#fff;padding:12px 14px;border-radius:16px 16px 16px 4px;font-size:15px;box-shadow:0 1px 4px rgba(18,32,58,.08)}
-.sug{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #E3E6EB;border-radius:14px;background:#fff}
-.sug .t{flex:1;min-width:0;text-align:left}.sug b{display:block;font-size:15px}.sug small{font-size:13px;color:var(--muted)}
+#vAI .pageHead{display:block}
+#aiHome{padding:0 16px 24px;display:flex;flex-direction:column;gap:12px}
+.aiBtn{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:#fff;border-radius:18px;padding:16px;box-shadow:0 1px 6px rgba(18,32,58,.08);border:1px solid #E9ECF1}
+.aiBtn:active{transform:scale(.98)}
+.aiIco{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex:none}
+.aiBtn b{display:block;font-size:17px}.aiBtn small{display:block;margin-top:2px;font-size:14px;color:var(--muted)}
+.aiBtn .chev{margin-left:auto;color:#A0A8B5}
+#aiRes{padding:0 16px 24px;display:flex;flex-direction:column;gap:12px}
+.back{display:flex;align-items:center;gap:6px;font-weight:700;color:var(--blue);font-size:15px;padding:4px 0;align-self:flex-start}
+.sug{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:#fff;box-shadow:0 1px 6px rgba(18,32,58,.08)}
+.sug .thumb{width:56px;height:56px;border-radius:12px;background:#DDE3EA center/cover no-repeat;flex:none}
+.sug .t{flex:1;min-width:0;text-align:left}.sug b{display:block;font-size:15px}.sug small{display:block;font-size:13px;color:var(--muted);margin-top:2px}
 .add{height:36px;border-radius:10px;background:var(--blue-soft);color:var(--blue);font-weight:700;font-size:13px;padding:0 12px;flex:none}
 .add[disabled]{background:#E7F4EC;color:#1E7A45}
-#askBar{padding:10px 16px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
-.askRow{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:0 6px 0 14px;height:52px}
-.askRow input{border:0;outline:none;flex:1;font-size:16px;background:transparent;min-width:0}
-.send{width:40px;height:40px;border-radius:10px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center}
-.typing{color:var(--muted);font-size:14px}
+.loading{padding:40px 0;text-align:center;color:var(--muted);font-weight:600}
+.spin{width:28px;height:28px;border:3px solid var(--blue-soft);border-top-color:var(--blue);border-radius:50%;margin:0 auto 12px;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
 #toast{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none}
 #toast.on{opacity:1}
 .pac-container{z-index:100;border-radius:12px;margin-top:6px;font-family:Manrope,sans-serif}
@@ -148,16 +151,13 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
   </section>
 
   <section id="vAI" class="view hidden">
-    <div class="pageHead"><h1>Ask AI</h1><div class="sub">Ideas based on your map and where you are</div></div>
-    <div id="chat"><div class="bot">Hi! Ask me for places to eat, things to do, or ideas for a trip. Tap <b>+ Add</b> to save any suggestion to your map.</div></div>
-    <div id="askBar">
-      <div class="chips">
-        <button class="chip" onclick="ask('Good places to eat near me right now')">Eat near me</button>
-        <button class="chip" onclick="ask('Hidden gems near me that tourists miss')">Hidden gems</button>
-        <button class="chip" onclick="ask('Plan a fun day near me')">Plan a day</button>
-      </div>
-      <form class="askRow" onsubmit="event.preventDefault();ask()"><input id="askIn" placeholder="Ask anything…" aria-label="Ask AI"><button class="send" aria-label="Send"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button></form>
+    <div class="pageHead"><h1>Ask AI</h1><div class="sub">One tap. Ideas picked for you.</div></div>
+    <div id="aiHome">
+      <button class="aiBtn" onclick="aiNow()"><span class="aiIco" style="background:#FFF3E0;color:#C2551A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7Z"/></svg></span><span><b>What to do now</b><small>3 ideas near you</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+      <button class="aiBtn" onclick="aiEvents()"><span class="aiIco" style="background:#FDECEF;color:#B4234A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></span><span><b>Events near you</b><small>Top picks for today</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+      <button class="aiBtn" onclick="aiTripPick()"><span class="aiIco" style="background:var(--blue-soft);color:var(--blue)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 16l20-8-6 14-3-6-6-2Z"/></svg></span><span><b>Ideas for my trip</b><small>Places to add to a trip</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
     </div>
+    <div id="aiRes" class="hidden"></div>
   </section>
 
   <nav class="tabs">
@@ -438,32 +438,117 @@ async function shareUrl(url,title){
 }
 
 /* ---------- AI ---------- */
-var aiResults=[];
-async function ask(q){
-  q=q||$('askIn').value.trim();if(!q)return;$('askIn').value='';
-  var chat=$('chat');
-  chat.insertAdjacentHTML('beforeend','<div class="me">'+esc(q)+'</div><div class="typing" id="typing">Thinking…</div>');
-  chat.scrollTop=chat.scrollHeight;
-  try{
-    var body={question:q};if(myPos){body.lat=myPos.lat;body.lng=myPos.lng}
-    var r=await api('/ai/ask',{method:'POST',body:body});
-    $('typing').remove();
-    var h='<div class="bot">'+esc(r.reply||'Here are some ideas:')+'</div>';
-    (r.places||[]).forEach(function(p){
-      var i=aiResults.push(p)-1;
-      var saved=places.some(function(x){return x.placeId&&x.placeId===p.placeId});
-      h+='<div class="sug"><button class="t" onclick="aiShow('+i+')"><b>'+esc(p.name)+'</b><small>'+esc(p.why||p.address)+'</small></button>'+
-        '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')"'+(saved?' disabled>Saved':'>+ Add')+'</button></div>';
-    });
-    chat.insertAdjacentHTML('beforeend',h);
-  }catch(e){var t=$('typing');if(t)t.remove();chat.insertAdjacentHTML('beforeend','<div class="bot">Sorry — '+esc(e.message)+'</div>')}
-  chat.scrollTop=chat.scrollHeight;
+var aiResults=[],aiTrip=null;
+function aiBack(){$('aiRes').classList.add('hidden');$('aiHome').classList.remove('hidden')}
+function aiLoading(t){
+  $('aiHome').classList.add('hidden');var r=$('aiRes');r.classList.remove('hidden');
+  r.innerHTML='<button class="back" onclick="aiBack()">‹ Back</button><div class="loading"><div class="spin"></div>'+esc(t)+'</div>';
 }
+function aiShowResults(title,items){
+  aiResults=items;
+  var h='<button class="back" onclick="aiBack()">‹ Back</button><h2 class="display" style="font-size:22px">'+esc(title)+'</h2>';
+  if(!items.length)h+='<div class="loading">Nothing found right now. Try again later.</div>';
+  items.forEach(function(p,i){
+    var saved=p.placeId&&places.some(function(x){return x.placeId===p.placeId});
+    h+='<div class="sug"><span class="thumb" id="aiTh'+i+'"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></span>'+
+      '<button class="t" onclick="aiShow('+i+')"><b>'+esc(p.name)+'</b><small>'+esc(p.why||p.address||'')+'</small></button>'+
+      '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')"'+(saved?' disabled>Saved':'>+ Add')+'</button></div>';
+  });
+  $('aiRes').innerHTML=h;
+  items.forEach(function(p,i){
+    if(p.photo||!p.placeId||!window.google)return;
+    new google.maps.places.PlacesService(map).getDetails({placeId:p.placeId,fields:['photos']},function(r){
+      var el=$('aiTh'+i);if(el&&r&&r.photos&&r.photos[0])el.style.backgroundImage='url("'+r.photos[0].getUrl({maxWidth:300})+'")';
+    });
+  });
+}
+function aiErr(e){$('aiRes').innerHTML='<button class="back" onclick="aiBack()">‹ Back</button><div class="loading">Sorry, '+esc(e.message||e)+'</div>'}
+function getPos(){
+  return new Promise(function(res){
+    if(myPos)return res(myPos);
+    if(!navigator.geolocation)return res(null);
+    navigator.geolocation.getCurrentPosition(function(p){myPos={lat:p.coords.latitude,lng:p.coords.longitude};res(myPos)},function(){res(null)},{timeout:8000});
+  });
+}
+function cityName(pos){
+  return new Promise(function(res){
+    if(!pos)return res('');
+    new google.maps.Geocoder().geocode({location:pos},function(r,st){
+      if(st!=='OK'||!r||!r.length)return res('');
+      var city='',country='';
+      r[0].address_components.forEach(function(c){if(c.types.indexOf('locality')>=0)city=c.long_name;if(c.types.indexOf('country')>=0)country=c.long_name});
+      res([city,country].filter(Boolean).join(', '));
+    });
+  });
+}
+function placeSearch(query,pos){
+  return new Promise(function(res){
+    var req={query:query};if(pos){req.location=pos;req.radius=8000}
+    new google.maps.places.PlacesService(map).textSearch(req,function(r,st){
+      if(st!=='OK'||!r||!r.length)return res(null);
+      var p=r[0];
+      res({name:p.name,address:p.formatted_address||'',placeId:p.place_id,lat:p.geometry.location.lat(),lng:p.geometry.location.lng(),photo:p.photos&&p.photos[0]?p.photos[0].getUrl({maxWidth:300}):''});
+    });
+  });
+}
+function timeInfo(){
+  var h=new Date().getHours();
+  var label=h<11?'morning':h<15?'afternoon':h<18?'late afternoon':h<22?'evening':'night';
+  return {hour:h,timeLabel:label};
+}
+async function aiNow(){
+  aiTripId=null;aiLoading('Finding ideas near you…');
+  try{
+    var pos=await getPos(),city=await cityName(pos),t=timeInfo();
+    var r=await api('/ai/right-now',{method:'POST',body:{lat:pos&&pos.lat,lng:pos&&pos.lng,locationStr:city||'your current location',timeLabel:t.timeLabel,hour:t.hour}});
+    var items=await Promise.all((r.ideas||[]).map(async function(idea){
+      var p=await placeSearch(idea.searchQuery||idea.title,pos);
+      if(!p)return null;p.why=idea.title;return p;
+    }));
+    aiShowResults('What to do now',items.filter(Boolean));
+  }catch(e){aiErr(e)}
+}
+async function aiEvents(){
+  aiTripId=null;aiLoading('Looking for events near you…');
+  try{
+    var pos=await getPos(),city=await cityName(pos);
+    if(!city){city=prompt('Where are you? (city)');if(!city){aiBack();return}}
+    var now=new Date(),t=timeInfo();
+    var r=await api('/ai/event-discover',{method:'POST',body:{lat:pos&&pos.lat,lng:pos&&pos.lng,locationStr:city,timeLabel:t.timeLabel,hour:t.hour,
+      dayOfWeek:now.toLocaleDateString('en-US',{weekday:'long'}),dateStr:now.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}});
+    var evs=(r.events||[]).concat(r.weekendEvents||[]).slice(0,5);
+    var items=await Promise.all(evs.map(async function(ev){
+      var p=await placeSearch((ev.venueName||ev.name)+' '+city,pos);
+      if(!p)return null;
+      p.name=ev.name||p.name;p.why=[ev.date,ev.time,ev.venueName&&ev.venueName!==ev.name?ev.venueName:''].filter(Boolean).join(' · ');
+      if(ev.photoUrl)p.photo=ev.photoUrl;return p;
+    }));
+    aiShowResults('Events near you',items.filter(Boolean));
+  }catch(e){aiErr(e)}
+}
+function aiTripPick(){
+  if(!trips.length){toast('Create a trip first');go('vTrips');return}
+  var h='<div class="grab"></div><h2>Pick a trip</h2>';
+  trips.forEach(function(t){h+='<button class="listItem" onclick="aiTrip(\''+t._id+'\')"><span class="sq" style="background:'+colorFor(t)+'"></span><span><b>'+esc(t.name)+'</b><small>'+countFor(t._id)+' places</small></span></button>'});
+  openSheet(h);
+}
+async function aiTrip(id){
+  closeSheet();aiTripId=id;var t=trips.find(function(x){return x._id===id});
+  aiLoading('Finding places for '+t.name+'…');
+  try{
+    var inTrip=places.filter(function(p){return String(p.trip)===id}).map(function(p){return p.name+(p.location?' ('+p.location+')':'')});
+    var q='Suggest 5 great places to add to my trip "'+t.name+'".'+(inTrip.length?' Places already in this trip (do not repeat them, suggest places in the same area): '+inTrip.join('; ')+'.':'');
+    var r=await api('/ai/ask',{method:'POST',body:{question:q}});
+    aiShowResults('Ideas for '+t.name,(r.places||[]));
+  }catch(e){aiErr(e)}
+}
+var aiTripId=null;
 async function aiAdd(i){
   var p=aiResults[i],b=$('aiAdd'+i);b.disabled=true;b.textContent='Saving…';
+  var onTrip=!!aiTripId;
   try{
-    var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai'}});
-    places.unshift(s);renderMarkers();b.textContent='Saved';toast('Added to Want to go');
+    var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai',trip:onTrip?aiTripId:null}});
+    places.unshift(s);renderMarkers();b.textContent='Saved';toast(onTrip?'Added to your trip':'Added to Want to go');
   }catch(e){b.disabled=false;b.textContent='+ Add';toast(e.message)}
 }
 function aiShow(i){var p=aiResults[i];go('vMap');map.panTo({lat:p.lat,lng:p.lng});map.setZoom(16)}
