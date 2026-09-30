@@ -1140,7 +1140,7 @@ Return ONLY valid JSON:
         name: venue.name,
         venueName: venue.name,
         date: dateStr,
-        time: hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : hour < 21 ? 'Evening' : 'Night',
+        time: hour < 5 ? 'Tonight' : hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : hour < 21 ? 'Evening' : 'Tonight',
         price: venue.priceLevel,
         matchScore: Math.min(100, s.matchScore||75),
         hoursUntil: s.hoursUntil||6,

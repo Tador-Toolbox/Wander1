@@ -58,6 +58,7 @@ nav.tabs .tab.on{color:var(--blue);font-weight:700}
 #scrim.on{opacity:1;pointer-events:auto}
 .sheet{position:fixed;left:0;right:0;bottom:0;max-height:82vh;overflow:auto;background:#fff;border-radius:24px 24px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));z-index:31;transform:translateY(105%);transition:transform .25s ease;display:flex;flex-direction:column;gap:16px;max-width:640px;margin:0 auto}
 .sheet.on{transform:none}
+.sheet>*{flex-shrink:0}
 .grab{width:40px;height:5px;border-radius:3px;background:var(--line);align-self:center;flex:none}
 .sheetTop{position:sticky;top:-10px;margin:-10px -20px 0;padding:10px 12px 0;background:#fff;display:flex;justify-content:center;align-items:center;min-height:30px;z-index:2;touch-action:none}
 .xBtn{position:absolute;right:12px;top:8px;width:36px;height:36px;border-radius:50%;background:var(--soft);display:flex;align-items:center;justify-content:center;color:var(--ink)}
@@ -105,6 +106,11 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .sug{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:#fff;box-shadow:0 1px 6px rgba(18,32,58,.08)}
 .sug .thumb{width:56px;height:56px;border-radius:12px;background:#DDE3EA center/cover no-repeat;flex:none}
 .sug .t{flex:1;min-width:0;text-align:left}.sug b{display:block;font-size:15px}.sug small{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.match{display:inline-block;margin:6px 6px 0 0;font-size:12px;font-weight:800;color:#1E7A45;background:#E7F4EC;padding:3px 8px;border-radius:999px}
+.ppl{display:inline-block;margin:6px 0 0 0;font-size:12px;font-weight:700;color:var(--muted);background:var(--soft);padding:3px 8px;border-radius:999px}
+.evBox{background:#F3F1FB;border-radius:14px;padding:14px;font-size:15px;line-height:1.5;font-style:italic;color:#2E2A4A}
+.tagRow{display:flex;flex-wrap:wrap;gap:6px}.tagRow span{font-size:13px;font-weight:700;color:var(--blue);background:var(--blue-soft);padding:4px 10px;border-radius:999px}
+.insta{background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);color:#fff;text-decoration:none}
 .add{height:36px;border-radius:10px;background:var(--blue-soft);color:var(--blue);font-weight:700;font-size:13px;padding:0 12px;flex:none}
 .add[disabled]{background:#E7F4EC;color:#1E7A45}
 .loading{padding:40px 0;text-align:center;color:var(--muted);font-weight:600}
@@ -520,7 +526,7 @@ function aiShowResults(title,items){
   items.forEach(function(p,i){
     var saved=p.placeId&&places.some(function(x){return x.placeId===p.placeId});
     h+='<div class="sug"><span class="thumb" id="aiTh'+i+'"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></span>'+
-      '<button class="t" onclick="aiShow('+i+')"><b>'+esc(p.name)+'</b><small>'+esc(p.why||p.address||'')+'</small></button>'+
+      '<button class="t" onclick="aiShow('+i+')"><b>'+esc(p.name)+'</b><small>'+esc(p.why||p.address||'')+'</small>'+(p.ev&&p.ev.match?'<span class="match">'+p.ev.match+'% match</span>'+(p.ev.people?'<span class="ppl">~'+p.ev.people+' people</span>':''):'')+'</button>'+
       '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')"'+(saved?' disabled>Saved':'>+ Add')+'</button></div>';
   });
   $('aiRes').innerHTML=h;
@@ -592,7 +598,9 @@ async function aiEvents(){
       var p=await placeSearch((ev.venueName||ev.name)+' '+city,pos);
       if(!p)return null;
       p.name=ev.name||p.name;p.why=[ev.date,ev.time,ev.venueName&&ev.venueName!==ev.name?ev.venueName:''].filter(Boolean).join(' · ');
-      if(ev.photoUrl)p.photo=ev.photoUrl;return p;
+      if(ev.photoUrl)p.photo=ev.photoUrl;
+      p.ev={match:ev.matchScore||0,people:ev.estimatedCapacity||0,price:ev.price||'',note:ev.conciergeNote||'',insta:ev.instagramUrl||'',web:ev.websiteUrl||'',tags:ev.tags||[],verified:!!ev.openConfirmed,unverified:!!ev.unverified};
+      return p;
     }));
     aiShowResults('Events near you',items.filter(Boolean));
   }catch(e){aiErr(e)}
@@ -622,10 +630,28 @@ async function aiAdd(i,fromSheet){
     places.unshift(s);renderMarkers();b.textContent='Saved';if(sb){sb.textContent='✓ Saved';sb.className='btn soft'}toast(onTrip?'Added to your trip':'Added to Want to go');
   }catch(e){b.disabled=false;b.textContent='+ Add';if(sb){sb.disabled=false;sb.textContent='+ Add to my map'}toast(e.message)}
 }
+function evBlock(e){
+  if(!e)return '';
+  var h='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+  if(e.match)h+='<span class="match" style="font-size:15px;padding:6px 12px;margin:0">'+e.match+'% match</span>';
+  if(e.people)h+='<span class="ppl" style="font-size:14px;padding:6px 12px;margin:0">👥 ~'+e.people+' people</span>';
+  if(e.price)h+='<span class="ppl" style="font-size:14px;padding:6px 12px;margin:0">💰 '+esc(e.price)+'</span>';
+  h+='</div>';
+  if(e.verified)h+='<div style="color:#1E7A45;font-weight:700;font-size:14px">✓ Verified open</div>';
+  else if(e.unverified)h+='<div style="color:#B45309;font-weight:700;font-size:14px">⚠ Verify before going</div>';
+  if(e.tags&&e.tags.length)h+='<div class="tagRow">'+e.tags.slice(0,5).map(function(t){return '<span>'+esc(t)+'</span>'}).join('')+'</div>';
+  if(e.note)h+='<div class="evBox">'+esc(e.note)+'</div>';
+  var links='';
+  if(e.insta)links+='<a class="btn insta" target="_blank" href="'+esc(e.insta)+'">Instagram</a>';
+  if(e.web)links+='<a class="btn soft" style="text-decoration:none" target="_blank" href="'+esc(e.web)+'">Website</a>';
+  if(links)h+=(e.insta&&e.web)?'<div class="two">'+links+'</div>':links;
+  return h;
+}
 function aiShow(i){
   var p=aiResults[i];
   openSheet('<div class="photo" id="dtPhoto"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></div>'+
     '<div><h2>'+esc(p.name)+'</h2>'+(p.why?'<div class="sub" style="color:var(--ink);font-weight:600">'+esc(p.why)+'</div>':'')+'<div class="sub" id="dtAddr">'+esc(p.address||'')+'</div></div>'+
+    evBlock(p.ev)+
     '<div id="dtInfo" class="sub">Loading details…</div>'+
     '<button class="btn blue" id="dtAdd" onclick="aiAdd('+i+',true)">+ Add to my map</button>'+
     '<div class="two"><a class="btn dark" style="text-decoration:none" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+(p.placeId?'&destination_place_id='+encodeURIComponent(p.placeId):'')+'">Navigate</a>'+
