@@ -929,6 +929,8 @@ Structure your 3 ideas as:
 
 Rules:
 - All ideas must be appropriate for ${timeLabel} (don't suggest morning coffee at midnight, don't suggest clubs at 8am)
+- Hour 0-5 is the middle of the night: suggest ONLY things open at this exact hour (late bars, clubs, 24/7 food, a night walk or viewpoint). Never sunrise, breakfast, or daytime activities
+- Every idea must be something the person can start within the next 30 minutes
 - Suggest ACTIVITY TYPES — NOT specific venue names (e.g. "karting" not "TopSpeed Kart")
 - The EXPERIENCE idea should feel exciting and spontaneous — pick something genuinely fun
 - Match their taste profile throughout

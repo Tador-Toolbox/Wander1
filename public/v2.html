@@ -550,9 +550,9 @@ function cityName(pos){
     });
   });
 }
-function placeSearch(query,pos){
+function placeSearch(query,pos,openNow){
   return new Promise(function(res){
-    var req={query:query};if(pos){req.location=pos;req.radius=8000}
+    var req={query:query};if(pos){req.location=pos;req.radius=8000}if(openNow)req.openNow=true;
     new google.maps.places.PlacesService(map).textSearch(req,function(r,st){
       if(st!=='OK'||!r||!r.length)return res(null);
       var p=r[0];
@@ -561,9 +561,11 @@ function placeSearch(query,pos){
   });
 }
 function timeInfo(){
-  var h=new Date().getHours();
-  var label=h<11?'morning':h<15?'afternoon':h<18?'late afternoon':h<22?'evening':'night';
-  return {hour:h,timeLabel:label};
+  var d=new Date(),h=d.getHours();
+  var part=h<5?'late night, after midnight':h<11?'morning':h<15?'afternoon':h<18?'late afternoon':h<22?'evening':'night';
+  var clock=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  var day=d.toLocaleDateString('en-US',{weekday:'long'});
+  return {hour:h,timeLabel:part+' ('+clock+' on '+day+')'};
 }
 async function aiNow(){
   aiTripId=null;aiLoading('Finding ideas near you…');
@@ -571,7 +573,7 @@ async function aiNow(){
     var pos=await getPos(),city=await cityName(pos),t=timeInfo();
     var r=await api('/ai/right-now',{method:'POST',body:{lat:pos&&pos.lat,lng:pos&&pos.lng,locationStr:city||'your current location',timeLabel:t.timeLabel,hour:t.hour}});
     var items=await Promise.all((r.ideas||[]).map(async function(idea){
-      var p=await placeSearch(idea.searchQuery||idea.title,pos);
+      var p=await placeSearch(idea.searchQuery||idea.title,pos,true);
       if(!p)return null;p.why=idea.title;return p;
     }));
     aiShowResults('What to do now',items.filter(Boolean));
@@ -612,15 +614,40 @@ async function aiTrip(id){
   }catch(e){aiErr(e)}
 }
 var aiTripId=null;
-async function aiAdd(i){
-  var p=aiResults[i],b=$('aiAdd'+i);b.disabled=true;b.textContent='Saving…';
+async function aiAdd(i,fromSheet){
+  var p=aiResults[i],b=$('aiAdd'+i)||{};b.disabled=true;b.textContent='Saving…';var sb=$('dtAdd');if(sb){sb.disabled=true;sb.textContent='Saving…'}
   var onTrip=!!aiTripId;
   try{
     var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai',trip:onTrip?aiTripId:null}});
-    places.unshift(s);renderMarkers();b.textContent='Saved';toast(onTrip?'Added to your trip':'Added to Want to go');
-  }catch(e){b.disabled=false;b.textContent='+ Add';toast(e.message)}
+    places.unshift(s);renderMarkers();b.textContent='Saved';if(sb){sb.textContent='✓ Saved';sb.className='btn soft'}toast(onTrip?'Added to your trip':'Added to Want to go');
+  }catch(e){b.disabled=false;b.textContent='+ Add';if(sb){sb.disabled=false;sb.textContent='+ Add to my map'}toast(e.message)}
 }
-function aiShow(i){var p=aiResults[i];go('vMap');map.panTo({lat:p.lat,lng:p.lng});map.setZoom(16)}
+function aiShow(i){
+  var p=aiResults[i];
+  openSheet('<div class="photo" id="dtPhoto"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></div>'+
+    '<div><h2>'+esc(p.name)+'</h2>'+(p.why?'<div class="sub" style="color:var(--ink);font-weight:600">'+esc(p.why)+'</div>':'')+'<div class="sub" id="dtAddr">'+esc(p.address||'')+'</div></div>'+
+    '<div id="dtInfo" class="sub">Loading details…</div>'+
+    '<button class="btn blue" id="dtAdd" onclick="aiAdd('+i+',true)">+ Add to my map</button>'+
+    '<div class="two"><a class="btn dark" style="text-decoration:none" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+(p.placeId?'&destination_place_id='+encodeURIComponent(p.placeId):'')+'">Navigate</a>'+
+    '<button class="btn soft" onclick="closeSheet();go(\'vMap\');map.panTo({lat:'+p.lat+',lng:'+p.lng+'});map.setZoom(16)">Show on map</button></div>');
+  var b=$('aiAdd'+i);if(b&&b.disabled){$('dtAdd').disabled=true;$('dtAdd').textContent='✓ Saved';$('dtAdd').className='btn soft'}
+  if(!p.placeId){$('dtInfo').textContent='';return}
+  new google.maps.places.PlacesService(map).getDetails({placeId:p.placeId,fields:['formatted_address','rating','user_ratings_total','opening_hours','utc_offset_minutes','formatted_phone_number','website','url','photos','price_level']},function(d,st){
+    var el=$('dtInfo');if(!el)return;
+    if(st!=='OK'||!d){el.textContent='';return}
+    if(d.formatted_address)$('dtAddr').textContent=d.formatted_address;
+    if(!p.photo&&d.photos&&d.photos[0])$('dtPhoto').style.backgroundImage='url("'+d.photos[0].getUrl({maxWidth:800})+'")';
+    var open=null;try{open=d.opening_hours&&d.opening_hours.isOpen?d.opening_hours.isOpen():null}catch(e){}
+    var rows=[];
+    if(d.rating)rows.push('<b style="color:var(--ink)">★ '+d.rating+'</b> ('+(d.user_ratings_total||0)+' reviews)'+(d.price_level?' · '+'$'.repeat(d.price_level):''));
+    if(open!=null)rows.push('<b style="color:'+(open?'#1E7A45':'#B42318')+'">'+(open?'Open now':'Closed now')+'</b>');
+    if(d.opening_hours&&d.opening_hours.weekday_text){var wd=(new Date().getDay()+6)%7;rows.push('Today: '+esc((d.opening_hours.weekday_text[wd]||'').replace(/^[^:]+:\s*/,'')))}
+    if(d.formatted_phone_number)rows.push('<a href="tel:'+esc(d.formatted_phone_number)+'" style="color:var(--blue);font-weight:600">'+esc(d.formatted_phone_number)+'</a>');
+    if(d.website)rows.push('<a href="'+esc(d.website)+'" target="_blank" style="color:var(--blue);font-weight:600">Website</a>');
+    if(d.url)rows.push('<a href="'+esc(d.url)+'" target="_blank" style="color:var(--blue);font-weight:600">Open in Google Maps</a>');
+    el.innerHTML=rows.join('<br>');el.style.lineHeight='1.9';el.style.fontSize='15px';
+  });
+}
 
 /* ---------- settings ---------- */
 function openSettings(){
