@@ -441,7 +441,6 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .fab-btn:hover{border-color:var(--sky);transform:scale(1.1);box-shadow:0 6px 18px rgba(74,158,255,.25);}
 
 /* ── LIST VIEW ── */
-#listView{display:none;position:fixed;top:108px;left:0;right:0;bottom:0;background:var(--bg);flex-direction:column;overflow:hidden;z-index:2;}
 .list-top{padding:14px 18px 0;flex-shrink:0;}
 .search-wrap{display:flex;align-items:center;gap:9px;background:#fff;border:2px solid var(--border);border-radius:18px;padding:11px 15px;margin-bottom:12px;box-shadow:var(--sh);transition:var(--tr);}
 .search-wrap:focus-within{border-color:var(--sky);box-shadow:0 2px 16px rgba(74,158,255,.15);}
@@ -741,7 +740,6 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 .up-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .up-back{background:none;border:none;font-size:20px;cursor:pointer;padding:0 4px;color:var(--txt2);}
 /* ── SOCIAL FEED ── */
-#socialFeed{padding:12px 16px 20px;overflow-y:auto;flex:1;}
 .post-card{background:#fff;border:2px solid var(--border);border-radius:24px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.04);animation:riseUp .3s ease;}
 .post-header{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;}
 .post-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--sky),var(--sky-dark));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;overflow:hidden;flex-shrink:0;}
@@ -837,7 +835,6 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
 /* Adjust app content for bottom nav */
 .app-content{flex:1;position:relative;overflow:hidden;padding-bottom:0;}
 #mapContainer{top:108px!important;bottom:calc(68px + env(safe-area-inset-bottom))!important;}
-#listView{top:60px!important;bottom:calc(62px + env(safe-area-inset-bottom))!important;}
 #tripsView{top:60px!important;bottom:calc(62px + env(safe-area-inset-bottom))!important;}
 #exploreView{top:60px!important;bottom:calc(62px + env(safe-area-inset-bottom))!important;}
 .fab{bottom:calc(72px + env(safe-area-inset-bottom) + 10px)!important;}
@@ -1010,7 +1007,6 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
   <!-- Map/List/Social toggle bar -->
   <div id="mapViewToggle" style="position:fixed;top:60px;left:0;right:0;z-index:199;background:rgba(250,248,244,.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;gap:6px;">
     <button onclick="showMap()" id="toggleMap" class="map-toggle-btn active">🗺 Map</button>
-    <button onclick="showList()" id="toggleSocial" class="map-toggle-btn">🌐 Feed</button>
     <button onclick="showSearch()" id="toggleSearch" class="map-toggle-btn">🔍 Search</button>
     <button onclick="showMessages()" id="toggleMessages" class="map-toggle-btn" style="position:relative;">💬 Messages<span id="msgBadge" style="display:none;position:absolute;top:2px;right:6px;width:7px;height:7px;background:var(--coral);border-radius:50%;"></span></button>
   </div>
@@ -1020,13 +1016,6 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
     <!-- Locate Me Button -->
     <button id="locateBtn" onclick="locateMe()" style="position:fixed;bottom:calc(40px + env(safe-area-inset-bottom));left:20px;z-index:9999;width:50px;height:50px;border-radius:50%;border:2px solid var(--border);background:#fff;font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;transition:var(--tr);">📍</button>
     <div id="zoomBtns" style="display:none;"></div>
-    <div id="listView" style="flex-direction:column;">
-      <div style="padding:16px 18px 8px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:var(--txt);">🌐 Social Feed</div>
-        <div style="font-size:11px;font-weight:700;color:var(--txt3);" id="feedCount"></div>
-      </div>
-      <div id="socialFeed"></div>
-    </div>
     <div class="fab" id="fab" style="position:fixed;bottom:80px;right:20px;z-index:9999;">
       <div class="fab-menu" id="fabMenu">
         <div class="fab-row"><div class="fab-lbl">📍 Add by My Location</div><button class="fab-btn" onclick="quickGPSDirect()">📍</button></div>
@@ -1467,7 +1456,6 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
       <button id="btnDelete" class="btn-del" onclick="deletePlace()" style="display:none">🗑</button>
       <button class="btn-save" id="btnSave" onclick="savePlace()">Save 📍</button>
     </div>
-    <button id="btnSocialIt" onclick="socialIt()" style="display:none;width:100%;margin-top:10px;padding:14px;border-radius:16px;border:2px solid var(--purple);background:rgba(155,109,255,.1);color:var(--purple);font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:var(--tr);">🌐 Social It!</button>
     <button id="btnDonePlace" onclick="closeOverlay('addOverlay')" style="display:none;width:100%;margin-top:8px;padding:14px;border-radius:16px;border:none;background:#1a1a1a;color:#fff;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;">✓ Done</button>
   </div>
 </div>
@@ -1512,7 +1500,7 @@ button.gm-ui-hover-effect span{background-color:var(--txt2)!important;}
         <div style="font-size:13px;font-weight:800;color:var(--txt);display:flex;align-items:center;gap:6px;"><span style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">✦ AI Profile</span></div>
         <div style="display:flex;gap:6px;">
           <button onclick="openAIAgent()" style="background:#f8f5ff;border:2px solid #764ba2;color:#764ba2;border-radius:10px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">+ Add photos</button>
-          <button onclick="sessionStorage.removeItem('ob_skipped');showOnboarding()" id="buildProfileBtn" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;color:#fff;border-radius:10px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">✦ Build Profile</button>
+          <button onclick="showOnboarding()" id="buildProfileBtn" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;color:#fff;border-radius:10px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">✦ Build Profile</button>
           <button onclick="resetAIProfile()" id="resetAIBtn" style="display:none;background:var(--coral-light);border:2px solid rgba(255,107,71,.3);color:var(--coral);border-radius:10px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;">Reset</button>
         </div>
       </div>
@@ -1657,35 +1645,73 @@ if(token==='undefined'||token==='null'||token===''||token==='0'){token=null;loca
 /* ── ONBOARDING ── */
 let _obFiles = [];
 
-async function checkAndShowOnboarding(){
-  // If user previously skipped, don't show again this session
-  if(sessionStorage.getItem('ob_skipped')) return false;
-  try{
-    const r = await apiFetch('/api/ai/profile');
-    const d = await r.json();
-    if(!d.profile || !d.profile.analyzedAt){
-      showOnboarding();
-      return true; // no profile — show onboarding
-    }
-    return false; // has profile — go to app
-  }catch{
-    // If API fails, show onboarding to be safe
-    showOnboarding();
-    return true;
-  }
+/* ── AI PROFILE: optional, prompted after a few saved places ── */
+function aiPromptKey(s){
+  const u=(currentUser&&(currentUser._id||currentUser.id||currentUser.handle))||'me';
+  return 'wander_aiPrompt_'+s+'_'+u;
 }
 
 function skipOnboarding(){
-  sessionStorage.setItem('ob_skipped','1');
   showScreen('mapScreen');
-  startSplashAnimation();
-  initApp();
+  if(!gmap){
+    (async()=>{ startSplashAnimation(); await initApp(); stopSplashAnimation(); })();
+  } else if(typeof showMap==='function'){
+    showMap();
+  }
 }
 
 function showOnboarding(){
   showScreen('onboardingScreen');
   _obFiles = [];
   renderOnboardingUpload();
+}
+
+function closeAIProfilePrompt(){
+  const e=document.getElementById('aiProfilePrompt');
+  if(e) e.remove();
+}
+function aiPromptAccept(){ closeAIProfilePrompt(); showOnboarding(); }
+function aiPromptLater(){
+  closeAIProfilePrompt();
+  try{ localStorage.setItem(aiPromptKey('snooze'), String(Date.now()+7*24*3600*1000)); }catch{}
+}
+function aiPromptNever(){
+  closeAIProfilePrompt();
+  try{ localStorage.setItem(aiPromptKey('never'),'1'); }catch{}
+}
+
+function showAIProfilePrompt(){
+  if(document.getElementById('aiProfilePrompt')) return;
+  const el=document.createElement('div');
+  el.id='aiProfilePrompt';
+  el.style.cssText="position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:10050;background:#fff;border:2px solid var(--border);border-radius:22px;padding:18px 18px 12px;box-shadow:0 12px 40px rgba(0,0,0,.18);font-family:'Nunito',sans-serif;max-width:460px;margin:0 auto;";
+  el.innerHTML=
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'+
+      '<span style="font-size:22px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">✦</span>'+
+      '<div style="font-size:16px;font-weight:900;color:var(--txt);">Get picks made for you</div>'+
+    '</div>'+
+    '<div style="font-size:13px;font-weight:600;color:var(--txt2);line-height:1.5;margin-bottom:14px;">'+
+      'You have '+places.length+' places saved. Add a few photos and Wander\'s AI will learn your taste and suggest places, nightlife and trip ideas.'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;">'+
+      '<button onclick="aiPromptLater()" style="flex:1;padding:12px;border-radius:14px;border:2px solid var(--border);background:#fff;color:var(--txt2);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;">Maybe later</button>'+
+      '<button onclick="aiPromptAccept()" style="flex:2;padding:12px;border-radius:14px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-family:inherit;font-size:14px;font-weight:900;cursor:pointer;">✦ Build my profile</button>'+
+    '</div>'+
+    '<div style="text-align:center;margin-top:10px;"><button onclick="aiPromptNever()" style="background:none;border:none;color:var(--txt3);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Don\'t ask again</button></div>';
+  document.body.appendChild(el);
+}
+
+async function maybePromptAIProfile(){
+  try{
+    if(places.length<3) return;
+    if(localStorage.getItem(aiPromptKey('never'))) return;
+    if(Date.now()<Number(localStorage.getItem(aiPromptKey('snooze'))||0)) return;
+    if(document.getElementById('aiProfilePrompt')) return;
+    const r=await apiFetch('/api/ai/profile');
+    const d=await r.json();
+    if(d.profile&&d.profile.analyzedAt){ localStorage.setItem(aiPromptKey('never'),'1'); return; }
+    showAIProfilePrompt();
+  }catch{}
 }
 
 function renderOnboardingUpload(){
@@ -2009,18 +2035,14 @@ window.addEventListener('load',()=>{
         const r=await fetch('/api/places',{headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'}});
         if(r.status===401){localStorage.removeItem('wandr_token');showScreen('loginScreen');}
         else{
-          // Check if user needs onboarding first
-          const needsOnboarding = await checkAndShowOnboarding();
-          if(!needsOnboarding){
             showScreen('mapScreen');
             initApp().then(()=>{
               // Don't request location if user arrived via a share link
               const onSharePage=!!window.location.pathname.match(/^\/trip\/([a-f0-9]+)$/);
               if(!onSharePage && navigator.geolocation)navigator.geolocation.getCurrentPosition(pos=>{if(gmap){gmap.panTo({lat:pos.coords.latitude,lng:pos.coords.longitude});gmap.setZoom(13);}},()=>{},{timeout:5000});
             });
-          }
         }
-      } catch {const nb=await checkAndShowOnboarding();if(!nb){showScreen('mapScreen');initApp();}}
+      } catch {showScreen('mapScreen');initApp();}
     } else {
       showScreen('loginScreen');
     }
@@ -2075,8 +2097,7 @@ async function doAuth(){
       return;
     }
     token=data.token;localStorage.setItem('wandr_token',token);if(data.user){localStorage.setItem('wandr_user',JSON.stringify(data.user));currentUser=data.user;}
-    const needsOnboarding = await checkAndShowOnboarding();
-    if(!needsOnboarding){ showScreen('mapScreen'); startSplashAnimation(); await initApp(); stopSplashAnimation(); }
+    showScreen('mapScreen'); startSplashAnimation(); await initApp(); stopSplashAnimation();
   }catch{showAuthErr('Network error – is the server running?');}
   finally{btn.disabled=false;btn.textContent=isReg?'Create Account 🌍':'Sign In 🚀';}
 }
@@ -2249,7 +2270,6 @@ function openFullFromDrop(lat,lng){
   document.getElementById('uploadContent').style.display='block';
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='none';
-  document.getElementById('btnSocialIt').style.display='none';
   document.getElementById('btnDonePlace').style.display='none';
   document.getElementById('coverPhotoSection').style.display='block';
   document.getElementById('gallerySection').style.display='none';
@@ -2375,7 +2395,7 @@ function openIW(place,marker){
 function setupAC(){const input=document.getElementById('pLocation');autocomplete=new google.maps.places.Autocomplete(input,{fields:['geometry','name','formatted_address','place_id']});autocomplete.addListener('place_changed',()=>{const pl=autocomplete.getPlace();if(!pl.geometry)return;pendingCoords={lat:pl.geometry.location.lat(),lng:pl.geometry.location.lng()};if(!document.getElementById('pName').value.trim())document.getElementById('pName').value=pl.name||'';});}
 
 function _setToggleActive(btnId){
-  ['toggleMap','toggleSocial','toggleSearch','toggleMessages'].forEach(b=>{
+  ['toggleMap','toggleSearch','toggleMessages'].forEach(b=>{
     const e=document.getElementById(b);if(e)e.classList.remove('active');
   });
   const el=document.getElementById(btnId);if(el)el.classList.add('active');
@@ -2683,7 +2703,7 @@ async function openRightNow(){
 
 async function showAIScreen(){
   // Hide map views
-  ['mapContainer','listView','tripsView','exploreView','messagesView','chatView','userProfileView','searchView'].forEach(id=>{
+  ['mapContainer','tripsView','exploreView','messagesView','chatView','userProfileView','searchView'].forEach(id=>{
     const e=document.getElementById(id);if(e)e.style.display='none';
   });
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
@@ -2731,93 +2751,13 @@ async function showAIScreen(){
 function showMap(){
   document.getElementById('aiScreen').style.display='none';
   ['mapContainer'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='block';});
-  ['listView','tripsView','exploreView','messagesView','chatView','userProfileView','searchView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  ['tripsView','exploreView','messagesView','chatView','userProfileView','searchView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=id==='fab'?'block':'flex';});
   document.getElementById('mapViewToggle').style.display='flex';
   _setNavActive('btnMap');
   _setToggleActive('toggleMap');
   if(gmap)google.maps.event.trigger(gmap,'resize');
 }
-function showList(){
-  document.getElementById('aiScreen').style.display='none';
-  ['mapContainer','tripsView','exploreView','searchView','messagesView','chatView','userProfileView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
-  document.getElementById('listView').style.display='flex';
-  ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
-  document.getElementById('mapViewToggle').style.display='flex';
-  _setNavActive('btnMap');
-  _setToggleActive('toggleSocial');
-  loadSocialFeed();
-}
-
-let socialPosts=[];
-async function loadSocialFeed(){
-  const feed=document.getElementById('socialFeed');
-  feed.innerHTML='<div style="text-align:center;padding:40px;color:var(--txt3);font-weight:600;">Loading feed…</div>';
-  try{
-    const res=await apiFetch('/api/posts');
-    const allPosts=await res.json();
-    // Frontend safety filter — only show posts from last 24 hours
-    const cutoff = Date.now() - 24*60*60*1000;
-    socialPosts=allPosts.filter(p => new Date(p.createdAt).getTime() > cutoff);
-    renderFeed();
-  }catch{feed.innerHTML='<div class="no-posts"><div class="ni">⚠️</div><p>Could not load feed</p></div>';}
-}
-
-function renderFeed(){
-  const feed=document.getElementById('socialFeed');
-  const count=document.getElementById('feedCount');
-  if(!socialPosts.length){
-    feed.innerHTML=`<div class="no-posts"><div class="ni">🌐</div><p>No posts in the last 24 hours.<br>Add a place and press <strong>Social It!</strong> to share with Wandr.</p></div>`;
-    if(count) count.textContent='';
-    return;
-  }
-  if(count) count.textContent=`${socialPosts.length} post${socialPosts.length!==1?'s':''}`;
-  const userId=currentUser?currentUser._id:'';
-  feed.innerHTML=socialPosts.map(p=>{
-    const myLike=currentUser&&p.likes&&p.likes.includes(currentUser._id||'');
-    const stars=p.rating?[1,2,3,4,5].map(i=>`<span style="color:${i<=p.rating?'#f5a623':'#ddd'}">★</span>`).join(''):'';
-    const tags=(p.tags||[]).map(t=>`<span class="tp tp-${t}">${t}</span>`).join('');
-    const statusBadge=p.status==='been'?'<span class="post-status-badge been">✅ Been There</span>':p.status==='tobe'?'<span class="post-status-badge tobe">🗺️ To Be There</span>':'';
-    const avatarContent=p.authorAvatar?`<img src="${esc(p.authorAvatar)}" style="width:100%;height:100%;object-fit:cover;">`:(p.authorName?p.authorName[0].toUpperCase():'?');
-    const ismine=p.user===userId||p.user===(currentUser&&currentUser._id);
-    const timeAgo=formatTimeAgo(p.createdAt);
-    const hoursLeft = Math.max(0, Math.ceil((new Date(p.createdAt).getTime() + 24*60*60*1000 - Date.now()) / (60*60*1000)));
-    const expiryBar = hoursLeft <= 6 ? `<div style="height:2px;background:linear-gradient(90deg,#f87171,#fca5a5);border-radius:1px;width:${(hoursLeft/24*100)}%;margin-bottom:8px;" title="${hoursLeft}h left"></div>` : '';
-    const expiryLabel = hoursLeft <= 6 ? `<span style="font-size:10px;color:#f87171;font-weight:700;">⏱ ${hoursLeft}h left</span>` : `<span style="font-size:10px;color:var(--txt3);">⏱ ${timeAgo}</span>`;
-    return `<div class="post-card">${expiryBar}
-      <div class="post-header">
-        <div class="post-avatar" onclick="openUserProfile('${p.user}')" style="cursor:pointer;">${avatarContent}</div>
-        <div class="post-author">
-          <div class="post-author-name">${esc(p.authorName||'Wandr User')}</div>
-          ${p.authorHandle?`<div class="post-author-handle">@${esc(p.authorHandle)}</div>`:''}
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div class="post-time">${expiryLabel}</div>
-          ${ismine?`<button class="post-del-btn" onclick="deletePost('${p._id}')">✕</button>`:''}
-        </div>
-      </div>
-      ${p.coverPhoto?`<img src="${esc(p.coverPhoto)}" class="post-cover" loading="lazy" onerror="this.style.display='none'">`:''}
-      <div class="post-body">
-        <div class="post-place-name">${esc(p.placeName)}</div>
-        ${p.location?`<div class="post-location">📍 ${esc(p.location)}</div>`:''}
-        ${p.notes?`<div class="post-notes">${esc(p.notes)}</div>`:''}
-        <div class="post-footer">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            ${sourceBadge}
-            ${statusBadge}
-            ${stars?`<div>${stars}</div>`:''}
-            ${tags?`<div class="post-tags">${tags}</div>`:''}
-          </div>
-          <button onclick="toggleLike('${p._id}',this)" style="display:flex;align-items:center;gap:5px;background:none;border:2px solid ${myLike?'var(--coral)':'var(--border)'};border-radius:20px;padding:5px 12px;cursor:pointer;transition:var(--tr);font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;color:${myLike?'var(--coral)':'var(--txt2)'};">
-            <span>${myLike?'❤️':'🤍'}</span>
-            <span id="likes-${p._id}">${p.likes?p.likes.length:0}</span>
-          </button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
 function formatTimeAgo(dateStr){
   const d=new Date(dateStr), now=new Date();
   const diff=Math.floor((now-d)/1000);
@@ -2827,56 +2767,11 @@ function formatTimeAgo(dateStr){
   return Math.floor(diff/86400)+'d ago';
 }
 
-async function socialIt(){
-  if(!editId){toast('Save the place first, then Social It!','err');return;}
-  // Save current edits first, then post
-  try{
-    const postRes=await apiFetch('/api/posts',{method:'POST',body:JSON.stringify({placeId:editId})});
-    if(!postRes.ok)throw new Error();
-    const newPost=await postRes.json();
-    // Update or prepend in local feed
-    const idx=socialPosts.findIndex(p=>p._id===newPost._id);
-    if(idx>=0) socialPosts[idx]=newPost; else socialPosts.unshift(newPost);
-    toast('🌐 Posted to Social Feed!','ok');
-    closeOverlay('addOverlay');
-  }catch{toast('Could not post 😢','err');}
-}
-
-async function deletePost(id){
-  if(!confirm('Remove this post from the feed?'))return;
-  try{
-    await apiFetch(`/api/posts/${id}`,{method:'DELETE'});
-    socialPosts=socialPosts.filter(p=>p._id!==id);
-    renderFeed();
-    toast('Post removed','');
-  }catch{toast('Error removing post','err');}
-}
-
-async function toggleLike(postId, btn){
-  try{
-    const res=await apiFetch(`/api/posts/${postId}/like`,{method:'POST'});
-    if(!res.ok)throw new Error();
-    const{likes,liked}=await res.json();
-    // Update UI
-    btn.style.borderColor=liked?'var(--coral)':'var(--border)';
-    btn.style.color=liked?'var(--coral)':'var(--txt2)';
-    btn.querySelector('span').textContent=liked?'❤️':'🤍';
-    document.getElementById('likes-'+postId).textContent=likes;
-    // Update local data
-    const p=socialPosts.find(x=>x._id===postId);
-    if(p){
-      if(!p.likes) p.likes=[];
-      if(liked) p.likes.push(currentUser._id||'');
-      else p.likes=p.likes.filter(l=>l!==(currentUser._id||''));
-    }
-  }catch{toast('Could not like post','err');}
-}
-
 function toggleFab(){fabOpen=!fabOpen;document.getElementById('fabMenu').classList.toggle('open',fabOpen);document.getElementById('fabMain').classList.toggle('open',fabOpen);}
 function closeFab(){fabOpen=false;document.getElementById('fabMenu').classList.remove('open');document.getElementById('fabMain').classList.remove('open');}
 
 function openOverlay(id){document.getElementById(id).style.display='flex';closeFab();}
-function closeOverlay(id){document.getElementById(id).style.display='none';}
+function closeOverlay(id){document.getElementById(id).style.display='none';if(id==='addOverlay'&&window._promptAIAfterSave){window._promptAIAfterSave=false;setTimeout(maybePromptAIProfile,700);}}
 
 // Direct GPS save from FAB — no menu needed
 function quickGPSDirect(){
@@ -2957,7 +2852,6 @@ function openFull(pre={}){window._pendingCoverFile=null; window._googlePhotoSet=
   document.getElementById('uploadContent').style.display='block';
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='none';
-  document.getElementById('btnSocialIt').style.display='none';
   document.getElementById('btnDonePlace').style.display='none';
   document.getElementById('coverPhotoSection').style.display='block';
   document.getElementById('gallerySection').style.display='none';
@@ -2981,7 +2875,6 @@ function editPlace(id){
   document.getElementById('uploadContent').style.display='block';
   document.getElementById('scanLoading').style.display='none';
   document.getElementById('btnDelete').style.display='block';
-  document.getElementById('btnSocialIt').style.display='block';
   // Rating
   selRating=Number(p.rating)||0;
   syncVisibility(!!p.isPublic);
@@ -3013,11 +2906,11 @@ async function savePlace(){
       const updated=await res.json();places=places.map(p=>p._id===editId?updated:p);removeMarker(editId);addMarker(updated);toast('✅ Place updated!','ok');
     }else{
       const res=await apiFetch('/api/places',{method:'POST',body:JSON.stringify(body)});if(!res.ok)throw new Error();
-      const created=await res.json();places.unshift(created);addMarker(created);if(gmap)gmap.panTo({lat:created.lat,lng:created.lng});toast('📍 Place saved! Now you can Social It 🌐','ok');
-      // Show Social It for the newly created place
+      const created=await res.json();places.unshift(created);addMarker(created);if(gmap)gmap.panTo({lat:created.lat,lng:created.lng});toast('📍 Place saved!','ok');
+      // Keep the form open for photos; offer the AI profile prompt once it closes
       editId=created._id;
+      window._promptAIAfterSave=true;
       document.getElementById('btnDelete').style.display='block';
-      document.getElementById('btnSocialIt').style.display='block';
       document.getElementById('btnDonePlace').style.display='block';
       document.getElementById('addTitle').textContent='✏️ Edit Place';
       document.getElementById('gallerySection').style.display='block';
@@ -3052,8 +2945,8 @@ async function savePlace(){
       }
       window._pendingCoverFile=null;
     }
-    if(editId&&document.getElementById('btnSocialIt').style.display==='block'){
-      // Stay open so user can Social It or add photos
+    if(editId&&document.getElementById('btnDelete').style.display==='block'){
+      // Stay open so user can add photos
     } else {
       closeOverlay('addOverlay');
     }
@@ -3267,7 +3160,7 @@ function populateTripSelect(){
 function showTrips(){
   document.getElementById('aiScreen').style.display='none';
   document.getElementById('mapViewToggle').style.display='none';
-  ['mapContainer','listView','tripsView','exploreView','searchView','messagesView','chatView','userProfileView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  ['mapContainer','tripsView','exploreView','searchView','messagesView','chatView','userProfileView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('tripsView').style.display='flex';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   _setNavActive('btnTrips');
@@ -3276,7 +3169,7 @@ function showTrips(){
 
 let exploreMap=null;
 async function showExplore(){
-  ['mapContainer','listView','tripsView','exploreView','searchView','messagesView','chatView','userProfileView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  ['mapContainer','tripsView','exploreView','searchView','messagesView','chatView','userProfileView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('exploreView').style.display='block';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   _setNavActive('btnProfile');
@@ -4936,7 +4829,7 @@ let _allUsers=[], _searchDebounce=null;
 
 async function showSearch(){
   document.getElementById('aiScreen').style.display='none';
-  ['mapContainer','listView','tripsView','exploreView','userProfileView','messagesView','chatView'].forEach(id=>{
+  ['mapContainer','tripsView','exploreView','userProfileView','messagesView','chatView'].forEach(id=>{
     const e=document.getElementById(id); if(e) e.style.display='none';
   });
   document.getElementById('searchView').style.display='flex';
@@ -4997,7 +4890,7 @@ let _chatPartnerId=null, _chatPollInterval=null;
 
 function showMessages(){
   document.getElementById('aiScreen').style.display='none';
-  ['mapContainer','listView','tripsView','exploreView','userProfileView','chatView'].forEach(id=>{
+  ['mapContainer','tripsView','exploreView','userProfileView','chatView'].forEach(id=>{
     const e=document.getElementById(id); if(e) e.style.display='none';
   });
   document.getElementById('messagesView').style.display='flex';
@@ -5042,7 +4935,7 @@ async function loadConversations(){
 async function openChatWith(partnerId){
   _chatPartnerId=partnerId;
   // Hide other views, show chat
-  ['mapContainer','listView','tripsView','exploreView','userProfileView','messagesView'].forEach(id=>{
+  ['mapContainer','tripsView','exploreView','userProfileView','messagesView'].forEach(id=>{
     const e=document.getElementById(id); if(e) e.style.display='none';
   });
   document.getElementById('chatView').style.display='flex';
@@ -5199,7 +5092,7 @@ async function declineTripInvite(tripId, bannerId){
 let _upData=null, _upTab='photos', _upUserId=null;
 
 function showAllViews(show, hide=[]){
-  ['mapContainer','listView','tripsView','exploreView','userProfileView'].forEach(id=>{
+  ['mapContainer','tripsView','exploreView','userProfileView'].forEach(id=>{
     const e=document.getElementById(id); if(!e)return;
     e.style.display=hide.includes(id)?'none':(show===id?'flex':'none');
   });
@@ -5226,7 +5119,7 @@ async function openUserProfile(userId){
   _setNavActive('btnProfile');
   document.getElementById('mapViewToggle').style.display='none';
   // Show view
-  ['mapContainer','listView','tripsView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  ['mapContainer','tripsView','exploreView'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   document.getElementById('userProfileView').style.display='flex';
   ['fab','locateBtn','zoomBtns'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   ['btnMap','btnList','btnTrips','btnExplore','btnMessages','btnSearch'].forEach(b=>{const e=document.getElementById(b);if(e)e.classList.remove('on');});
@@ -5744,15 +5637,6 @@ function closeLightbox(){
 function editFromInfo(){
   closeOverlay('placeInfoOverlay');
   setTimeout(()=>editPlace(window._piPlaceId),150);
-}
-
-async function socialItFromInfo(){
-  if(!window._piPlaceId){return;}
-  try{
-    const res=await apiFetch('/api/posts',{method:'POST',body:JSON.stringify({placeId:window._piPlaceId})});
-    if(!res.ok)throw new Error();
-    toast('🌐 Posted to Social Feed!','ok');
-  }catch{toast('Could not post 😢','err');}
 }
 
 /* ── PHOTO GPS EXTRACTION ── */
