@@ -1754,3 +1754,45 @@ router.post('/place-name-suggestions', auth, async (req, res) => {
     res.status(500).json({ error: 'AI suggestion failed', suggestions: [] });
   }
 });
+
+/* ─────────────────────────────────────────
+   POST /api/ai/ask  (V2 chat)
+   { question, lat?, lng? } → { reply, places:[{name, why, address, lat, lng, placeId}] }
+───────────────────────────────────────── */
+router.post('/ask', auth, async (req, res) => {
+  try {
+    const { question = '', lat, lng } = req.body;
+    if (!question.trim()) return res.status(400).json({ error: 'Question required' });
+    const User  = require('../models/User');
+    const Place = require('../models/Place');
+    const [user, saved] = await Promise.all([
+      User.findById(req.userId).select('aiProfile'),
+      Place.find({ user: req.userId }, 'name location status').sort({ createdAt: -1 }).limit(40)
+    ]);
+    const tags = user?.aiProfile?.tags?.join(', ') || 'unknown';
+    const savedList = saved.map(p => `${p.name} (${p.status === 'been' ? 'visited' : 'want to go'})`).join('; ') || 'none yet';
+    const where = (lat != null && lng != null) ? `User is near coordinates ${Number(lat).toFixed(3)}, ${Number(lng).toFixed(3)}.` : '';
+    const prompt = `You are Wander, a friendly travel assistant. Answer the user's question briefly.
+${where}
+User taste tags: ${tags}
+User's saved places: ${savedList}
+
+Question: ${question}
+
+If the question asks for places, suggest up to 4 REAL, specific places that exist on Google Maps.
+Reply ONLY with valid JSON, no markdown:
+{"reply":"1-3 short sentences","places":[{"name":"exact place name","city":"city, country","why":"max 8 words"}]}`;
+    const result = extractJSON(await callGemini(prompt));
+    if (!result) return res.status(500).json({ error: 'AI could not answer. Try again.' });
+    const key = process.env.GOOGLE_MAPS_API_KEY;
+    const places = (await Promise.all((result.places || []).slice(0, 4).map(async p => {
+      const r = (await searchGooglePlaces(`${p.name} ${p.city || ''}`, key))[0];
+      if (!r) return null;
+      return { name: r.name, why: p.why || '', address: r.formatted_address || '', lat: r.geometry.location.lat, lng: r.geometry.location.lng, placeId: r.place_id };
+    }))).filter(Boolean);
+    res.json({ reply: result.reply || '', places });
+  } catch (err) {
+    console.error('[ai/ask]', err);
+    res.status(500).json({ error: 'AI failed' });
+  }
+});

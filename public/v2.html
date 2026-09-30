@@ -1,137 +1,481 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#FFFFFF">
 <title>Wander</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
-*{box-sizing:border-box;margin:0}
-body{font-family:-apple-system,system-ui,sans-serif;background:#fff;color:#111;height:100dvh;overflow:hidden}
-button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 14px;background:#111;color:#fff}
-button.ghost{background:#eee;color:#111}
-input{font:inherit;width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;margin-bottom:10px}
-#login{display:flex;flex-direction:column;justify-content:center;height:100%;padding:28px;max-width:380px;margin:auto}
-#login h1{margin-bottom:18px}#err{color:#c00;margin:6px 0;min-height:18px;font-size:14px}
-#app{display:none;height:100%;position:relative}
+:root{--ink:#12203A;--blue:#1F5FD6;--blue-soft:#E8EEFB;--orange:#C2551A;--orange-soft:#FDF1EA;--bg:#F5F6F8;--muted:#5A6475;--line:#D5D9E0;--soft:#EEF1F5}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:Manrope,system-ui,sans-serif;background:var(--bg);color:var(--ink);overflow:hidden}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+h1,.display{font-family:'Bricolage Grotesque',sans-serif}
+.hidden{display:none!important}
+.btn{height:50px;border-radius:14px;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 16px}
+.btn.dark{background:var(--ink);color:#fff}.btn.blue{background:var(--blue);color:#fff}.btn.soft{background:var(--soft)}
+.btn.danger{background:#fff;color:#B42318;border:1px solid #F1C4BF}
+.field{width:100%;height:50px;border:1px solid var(--line);border-radius:12px;padding:0 14px;font-size:16px;background:#fff;outline:none}
+.field:focus{border-color:var(--blue)}
+.lbl{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--muted)}
+svg{flex:none}
+
+/* login */
+#login{height:100%;display:flex;flex-direction:column;justify-content:center;padding:32px 24px;max-width:420px;margin:auto;gap:12px}
+#login h1{font-size:40px;margin-bottom:4px}
+#login p{color:var(--muted);margin-bottom:12px}
+#err{color:#B42318;font-size:14px;min-height:18px}
+
+/* shell */
+#app{height:100%;position:relative}
+.view{position:absolute;inset:0 0 84px 0;overflow:auto}
+#vMap{overflow:hidden}
 #map{position:absolute;inset:0}
-#top{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top)) 10px 8px;z-index:5;background:linear-gradient(#fffe,#fff0)}
-#search{box-shadow:0 2px 8px #0002;margin-bottom:8px}
-#chips{display:flex;gap:6px;overflow-x:auto}
-.chip{flex:none;background:#fff;color:#111;box-shadow:0 1px 4px #0003;padding:7px 12px;border-radius:99px;font-size:14px}
-.chip.on{background:#111;color:#fff}
-#sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -4px 16px #0003;z-index:6;padding:12px 16px calc(14px + env(safe-area-inset-bottom));max-height:45dvh;overflow:auto;display:none}
-#sheet h3{margin-bottom:4px}#sheet .sub{color:#666;font-size:14px;margin-bottom:10px}
-.row{display:flex;gap:8px;flex-wrap:wrap}
-#menu{position:absolute;right:12px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:4;display:flex;flex-direction:column;gap:8px}
-#menu button{border-radius:99px;box-shadow:0 2px 8px #0004}
-.pac-container{z-index:10000}
+nav.tabs{position:absolute;left:0;right:0;bottom:0;height:calc(72px + env(safe-area-inset-bottom));padding:6px 12px env(safe-area-inset-bottom);background:#fff;border-top:1px solid #E3E6EB;display:flex;align-items:flex-start;gap:4px;z-index:20}
+nav.tabs .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;color:var(--muted);font-size:12px;font-weight:600}
+nav.tabs .tab.on{color:var(--blue);font-weight:700}
+#fab{width:56px;height:56px;margin-top:-26px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(18,32,58,.35)}
+.view{bottom:calc(72px + env(safe-area-inset-bottom))}
+
+/* map overlays */
+#mapTop{position:absolute;top:0;left:0;right:0;padding:calc(14px + env(safe-area-inset-top)) 16px 0;display:flex;flex-direction:column;gap:10px;z-index:5;pointer-events:none}
+#mapTop>*{pointer-events:auto}
+.searchRow{display:flex;gap:10px}
+.search{flex:1;display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:0 14px;height:50px;box-shadow:0 2px 10px rgba(18,32,58,.15);color:var(--muted)}
+.search input{border:0;outline:none;flex:1;font-size:16px;background:transparent;color:var(--ink);min-width:0}
+.iconBtn{width:50px;height:50px;border-radius:14px;background:#fff;box-shadow:0 2px 10px rgba(18,32,58,.15);display:flex;align-items:center;justify-content:center}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;background:#fff;font-size:14px;font-weight:600;padding:9px 14px;border-radius:999px;box-shadow:0 1px 4px rgba(18,32,58,.15);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.chip.on{background:var(--ink);color:#fff}
+.dot{width:10px;height:10px;border-radius:50%;border:2px solid}
+#locBtn{position:absolute;right:16px;bottom:96px;width:48px;height:48px;border-radius:50%;background:#fff;color:var(--blue);box-shadow:0 2px 10px rgba(18,32,58,.2);display:flex;align-items:center;justify-content:center;z-index:5}
+#summary{position:absolute;left:12px;right:12px;bottom:12px;background:#fff;border-radius:18px;padding:12px 14px;box-shadow:0 4px 18px rgba(18,32,58,.15);display:flex;align-items:center;gap:12px;z-index:5;text-align:left;width:auto}
+.sumIcon{width:44px;height:44px;border-radius:12px;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center}
+#summary b{display:block;font-size:15px}#summary small{font-size:13px;color:var(--muted)}
+#summary .go{margin-left:auto;color:var(--blue);font-weight:700;font-size:14px}
+
+/* sheets */
+#scrim{position:fixed;inset:0;background:rgba(18,32,58,.3);z-index:30;opacity:0;pointer-events:none;transition:opacity .2s}
+#scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:88vh;overflow:auto;background:#fff;border-radius:24px 24px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));z-index:31;transform:translateY(105%);transition:transform .25s ease;display:flex;flex-direction:column;gap:16px;max-width:640px;margin:0 auto}
+.sheet.on{transform:none}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);align-self:center;flex:none}
+.sheet h2{font-family:'Bricolage Grotesque',sans-serif;font-size:24px;line-height:1.15}
+.sub{color:var(--muted);font-size:14px;margin-top:4px}
+.eyebrow{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+.photo{height:150px;border-radius:16px;background:#DDE3EA center/cover no-repeat;flex:none}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg button{height:46px;border-radius:12px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:6px}
+.seg button.been{border-color:var(--blue);background:var(--blue);color:#fff}
+.seg button.tobe{border-color:var(--orange);background:var(--orange-soft);color:var(--orange)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+textarea.field{height:70px;padding:10px 14px;resize:none}
+select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2312203A' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 14px center no-repeat;font-weight:600}
+.listItem{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #EEF0F3;text-align:left;width:100%}
+.listItem b{display:block;font-size:15px}.listItem small{color:var(--muted);font-size:13px}
+
+/* trips */
+.pageHead{padding:calc(22px + env(safe-area-inset-top)) 20px 8px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pageHead h1{font-size:30px}
+.pageSub{margin:0 20px 14px;color:var(--muted);font-size:14px}
+#tripList{padding:0 16px 24px;display:flex;flex-direction:column;gap:14px}
+.trip{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 1px 6px rgba(18,32,58,.08)}
+.trip .cover{height:84px;width:100%;display:block}
+.trip .body{padding:14px 16px;display:flex;align-items:center;gap:12px}
+.trip .open{flex:1;text-align:left}
+.trip h3{font-size:17px;display:flex;align-items:center;gap:8px}
+.badge{font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-soft);padding:3px 8px;border-radius:999px;font-family:Manrope}
+.trip small{display:block;margin-top:3px;font-size:13px;color:var(--muted)}
+.sq{width:44px;height:44px;border-radius:12px;background:var(--soft);display:flex;align-items:center;justify-content:center}
+.empty{padding:40px 24px;text-align:center;color:var(--muted)}
+
+/* ai */
+#vAI{display:flex;flex-direction:column;overflow:hidden}
+#vAI .pageHead{background:#fff;border-bottom:1px solid #E3E6EB;display:block;padding-bottom:12px}
+#chat{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.me{align-self:flex-end;max-width:80%;background:var(--ink);color:#fff;padding:12px 14px;border-radius:16px 16px 4px 16px;font-size:15px}
+.bot{max-width:88%;background:#fff;padding:12px 14px;border-radius:16px 16px 16px 4px;font-size:15px;box-shadow:0 1px 4px rgba(18,32,58,.08)}
+.sug{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #E3E6EB;border-radius:14px;background:#fff}
+.sug .t{flex:1;min-width:0;text-align:left}.sug b{display:block;font-size:15px}.sug small{font-size:13px;color:var(--muted)}
+.add{height:36px;border-radius:10px;background:var(--blue-soft);color:var(--blue);font-weight:700;font-size:13px;padding:0 12px;flex:none}
+.add[disabled]{background:#E7F4EC;color:#1E7A45}
+#askBar{padding:10px 16px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.askRow{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:0 6px 0 14px;height:52px}
+.askRow input{border:0;outline:none;flex:1;font-size:16px;background:transparent;min-width:0}
+.send{width:40px;height:40px;border-radius:10px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center}
+.typing{color:var(--muted);font-size:14px}
+#toast{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.on{opacity:1}
+.pac-container{z-index:100;border-radius:12px;margin-top:6px;font-family:Manrope,sans-serif}
 </style></head><body>
-<div id="login">
-  <h1>🧭 Wander</h1>
-  <input id="em" placeholder="Email or username" autocapitalize="none">
-  <input id="pw" type="password" placeholder="Password">
+
+<!-- LOGIN -->
+<div id="login" class="hidden">
+  <h1>Wander</h1>
+  <p>Your places, your trips, one map.</p>
+  <label class="lbl">Email or username<input id="em" class="field" autocapitalize="none" autocomplete="username"></label>
+  <label class="lbl">Password<input id="pw" class="field" type="password" autocomplete="current-password"></label>
   <div id="err"></div>
-  <button onclick="login()">Log in</button>
-  <p style="margin-top:16px;font-size:14px;color:#666">No account? <a href="/">Sign up in the main app</a></p>
+  <button class="btn blue" onclick="login()">Log in</button>
+  <p style="font-size:14px;margin-top:8px">No account yet? <a href="/" style="color:var(--blue);font-weight:700">Sign up</a></p>
 </div>
-<div id="app">
-  <div id="map"></div>
-  <div id="top"><input id="search" placeholder="Search a place to add…"><div id="chips"></div></div>
-  <div id="sheet"></div>
-  <div id="menu">
-    <button onclick="newTrip()">+ Trip</button>
-    <button class="ghost" onclick="shareTrip()">Share trip</button>
-    <button class="ghost" onclick="logout()">Log out</button>
-  </div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <section id="vMap" class="view">
+    <div id="map"></div>
+    <div id="mapTop">
+      <div class="searchRow">
+        <label class="search"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="search" placeholder="Search a place to add" aria-label="Search a place"></label>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <button id="locBtn" aria-label="Center on my location" onclick="locate(true)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+    <button id="summary" onclick="openList()">
+      <span class="sumIcon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg></span>
+      <span><b id="sumTitle">Loading…</b><small id="sumSub"></small></span>
+      <span class="go">View list</span>
+    </button>
+  </section>
+
+  <section id="vTrips" class="view hidden">
+    <div class="pageHead"><h1>Trips</h1><button class="btn dark" style="height:44px;font-size:14px" onclick="newTrip()">+ New trip</button></div>
+    <p class="pageSub">Group places into a trip, then share it with one link.</p>
+    <div id="tripList"></div>
+  </section>
+
+  <section id="vAI" class="view hidden">
+    <div class="pageHead"><h1>Ask AI</h1><div class="sub">Ideas based on your map and where you are</div></div>
+    <div id="chat"><div class="bot">Hi! Ask me for places to eat, things to do, or ideas for a trip. Tap <b>+ Add</b> to save any suggestion to your map.</div></div>
+    <div id="askBar">
+      <div class="chips">
+        <button class="chip" onclick="ask('Good places to eat near me right now')">Eat near me</button>
+        <button class="chip" onclick="ask('Hidden gems near me that tourists miss')">Hidden gems</button>
+        <button class="chip" onclick="ask('Plan a fun day near me')">Plan a day</button>
+      </div>
+      <form class="askRow" onsubmit="event.preventDefault();ask()"><input id="askIn" placeholder="Ask anything…" aria-label="Ask AI"><button class="send" aria-label="Send"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button></form>
+    </div>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab on" data-v="vMap" onclick="go('vMap')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Map</button>
+    <button class="tab" data-v="vTrips" onclick="go('vTrips')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7h18v12H3z"/><path d="M8 7V5h8v2"/></svg>Trips</button>
+    <button id="fab" aria-label="Add a place" onclick="startAdd()"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="tab" data-v="vAI" onclick="go('vAI')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8Z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8Z"/></svg>Ask AI</button>
+    <button class="tab" onclick="openSettings()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Me</button>
+  </nav>
 </div>
+
+<div id="scrim" onclick="closeSheet()"></div>
+<div id="sheet" class="sheet" role="dialog" aria-modal="true"></div>
+<div id="toast"></div>
+
 <script>
-const $=id=>document.getElementById(id);
-let token=localStorage.getItem('wandr_token'),places=[],trips=[],tripId='all',map,markers=[],sel=null,pending=null;
-async function api(p,o={}){
-  const r=await fetch('/api'+p,{...o,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:o.body?JSON.stringify(o.body):undefined});
-  const d=await r.json().catch(()=>({}));
-  if(r.status===401&&token){logout();}
-  if(!r.ok)throw new Error(d.error||'Error');return d;
+var $=function(id){return document.getElementById(id)};
+var token=localStorage.getItem('wandr_token');
+var places=[],trips=[],filter='all',tripFilter='',map=null,markers=[],meMarker=null,myPos=null,cur=null,pending=null,user=null;
+var COLORS=['#9DB8E8','#E9B894','#A9CDB8','#D4B3E0','#E8D08F','#9FD3D6'];
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function toast(t){var e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove('on')},2200)}
+async function api(p,o){
+  o=o||{};
+  var r=await fetch('/api'+p,{method:o.method||'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:o.body?JSON.stringify(o.body):undefined});
+  var d=await r.json().catch(function(){return{}});
+  if(r.status===401){logout();throw new Error('Please log in again')}
+  if(!r.ok)throw new Error(d.error||'Something went wrong');
+  return d;
 }
+
+/* ---------- auth ---------- */
 async function login(){
   $('err').textContent='';
   try{
-    const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('em').value,password:$('pw').value})});
-    const d=await r.json();if(!r.ok)throw new Error(d.error);
+    var r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('em').value,password:$('pw').value})});
+    var d=await r.json();if(!r.ok)throw new Error(d.error||'Login failed');
     token=d.token;localStorage.setItem('wandr_token',token);start();
   }catch(e){$('err').textContent=e.message}
 }
-function logout(){localStorage.removeItem('wandr_token');token=null;location.reload()}
+$('pw').addEventListener('keydown',function(e){if(e.key==='Enter')login()});
+function logout(){localStorage.removeItem('wandr_token');location.reload()}
+
 async function start(){
-  $('login').style.display='none';$('app').style.display='block';
-  const k=await (await fetch('/api/config/maps-key')).json();
-  window.boot=initMap;
-  const s=document.createElement('script');
-  s.src='https://maps.googleapis.com/maps/api/js?key='+k.key+'&libraries=places&callback=boot';document.head.appendChild(s);
+  $('login').classList.add('hidden');$('app').classList.remove('hidden');
+  api('/auth/me').then(function(u){user=u.user||u}).catch(function(){});
+  var k=await (await fetch('/api/config/maps-key')).json();
+  window.__boot=initMap;
+  var s=document.createElement('script');
+  s.src='https://maps.googleapis.com/maps/api/js?key='+k.key+'&libraries=places&callback=__boot';s.async=true;
+  document.head.appendChild(s);
+}
+
+/* ---------- navigation ---------- */
+function go(v){
+  ['vMap','vTrips','vAI'].forEach(function(id){$(id).classList.toggle('hidden',id!==v)});
+  document.querySelectorAll('nav.tabs .tab').forEach(function(t){t.classList.toggle('on',t.dataset.v===v)});
+  if(v==='vTrips')renderTrips();
+}
+
+/* ---------- map ---------- */
+function pinIcon(status){
+  var c=status==='been'?'#1F5FD6':status==='tobe'?'#C2551A':'#12203A';
+  var filled=status!=='tobe';
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="30" height="38" viewBox="0 0 30 38"><path d="M15 37C15 37 2 22 2 14a13 13 0 0 1 26 0c0 8-13 23-13 23Z" fill="'+(filled?c:'#fff')+'" stroke="'+c+'" stroke-width="2.5"/><circle cx="15" cy="14" r="5" fill="'+(filled?'#fff':c)+'"/></svg>';
+  return {url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg),scaledSize:new google.maps.Size(30,38),anchor:new google.maps.Point(15,37)};
 }
 async function initMap(){
-  map=new google.maps.Map($('map'),{center:{lat:20,lng:0},zoom:2,disableDefaultUI:true,gestureHandling:'greedy',clickableIcons:false});
-  const ac=new google.maps.places.Autocomplete($('search'),{fields:['name','geometry','formatted_address','place_id']});
-  ac.addListener('place_changed',()=>{
-    const p=ac.getPlace();if(!p.geometry)return;
-    pending={name:p.name,location:p.formatted_address,placeId:p.place_id,lat:p.geometry.location.lat(),lng:p.geometry.location.lng()};
-    map.panTo(p.geometry.location);map.setZoom(15);showSheet(pending,true);$('search').value='';
+  map=new google.maps.Map($('map'),{center:{lat:32.08,lng:34.78},zoom:12,disableDefaultUI:true,gestureHandling:'greedy',clickableIcons:false,
+    styles:[{featureType:'poi',stylers:[{visibility:'off'}]},{featureType:'transit',stylers:[{visibility:'off'}]}]});
+  var ac=new google.maps.places.Autocomplete($('search'),{fields:['name','geometry','formatted_address','place_id','photos']});
+  if(myPos)ac.setBounds(new google.maps.Circle({center:myPos,radius:30000}).getBounds());
+  ac.addListener('place_changed',function(){
+    var p=ac.getPlace();if(!p||!p.geometry)return;
+    pending={name:p.name,location:p.formatted_address||'',placeId:p.place_id,lat:p.geometry.location.lat(),lng:p.geometry.location.lng(),
+      photo:p.photos&&p.photos[0]?p.photos[0].getUrl({maxWidth:800}):''};
+    $('search').value='';$('search').blur();
+    map.panTo(p.geometry.location);map.setZoom(16);
+    openAdd();
   });
-  await load();
+  try{ var r=await Promise.all([api('/places'),api('/trips')]); places=r[0];trips=r[1].filter(function(t){return !t.isShared}); }
+  catch(e){toast(e.message)}
+  renderChips();renderMarkers();
+  locate(false);
 }
-async function load(){
-  [places,trips]=await Promise.all([api('/places'),api('/trips')]);
-  renderChips();render(true);
+function locate(userAsked){
+  if(!navigator.geolocation){if(!myPos)fitAll();return}
+  navigator.geolocation.getCurrentPosition(function(pos){
+    myPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    if(!meMarker)meMarker=new google.maps.Marker({map:map,position:myPos,zIndex:999,clickable:false,
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:'#1F5FD6',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}});
+    else meMarker.setPosition(myPos);
+    map.panTo(myPos);map.setZoom(15);
+  },function(){ if(userAsked)toast('Location is blocked. Allow it in your browser settings.'); else fitAll(); },{enableHighAccuracy:true,timeout:8000});
 }
+function visible(){
+  return places.filter(function(p){
+    if(filter==='been'&&p.status!=='been')return false;
+    if(filter==='tobe'&&p.status==='been')return false;
+    if(tripFilter&&String(p.trip)!==tripFilter)return false;
+    return true;
+  });
+}
+function fitAll(){
+  var list=visible();if(!list.length)return;
+  var b=new google.maps.LatLngBounds();list.forEach(function(p){b.extend({lat:p.lat,lng:p.lng})});
+  map.fitBounds(b,80);if(list.length===1)map.setZoom(15);
+}
+function renderMarkers(){
+  markers.forEach(function(m){m.setMap(null)});markers=[];
+  var list=visible();
+  list.forEach(function(p){
+    var m=new google.maps.Marker({map:map,position:{lat:p.lat,lng:p.lng},title:p.name,icon:pinIcon(p.status)});
+    m.addListener('click',function(){openPlace(p)});markers.push(m);
+  });
+  var been=list.filter(function(p){return p.status==='been'}).length;
+  $('sumTitle').textContent=list.length+(list.length===1?' place':' places')+(tripFilter?' in '+tripName(tripFilter):' on your map');
+  $('sumSub').textContent=list.length?been+' visited · '+(list.length-been)+' want to go':'Tap + to add your first place';
+}
+function tripName(id){var t=trips.find(function(t){return t._id===id});return t?t.name:''}
 function renderChips(){
-  $('chips').innerHTML='<button class="chip '+(tripId==='all'?'on':'')+'" onclick="pick(\'all\')">All</button>'+
-   trips.filter(t=>!t.isShared).map(t=>'<button class="chip '+(tripId===t._id?'on':'')+'" onclick="pick(\''+t._id+'\')">'+(t.emoji||'')+' '+esc(t.name)+'</button>').join('');
-}
-function pick(id){tripId=id;renderChips();render(true);hideSheet()}
-function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
-function render(fit){
-  markers.forEach(m=>m.setMap(null));markers=[];
-  const list=places.filter(p=>tripId==='all'||p.trip===tripId);
-  const b=new google.maps.LatLngBounds();
-  list.forEach(p=>{
-    const m=new google.maps.Marker({map,position:{lat:p.lat,lng:p.lng},title:p.name});
-    m.addListener('click',()=>showSheet(p,false));markers.push(m);b.extend(m.getPosition());
+  var h='';
+  [['all','All',''],['been','Visited','<span class="dot" style="background:#1F5FD6;border-color:#1F5FD6"></span>'],['tobe','Want to go','<span class="dot" style="background:#fff;border-color:#C2551A"></span>']].forEach(function(c){
+    h+='<button class="chip'+(filter===c[0]?' on':'')+'" onclick="setFilter(\''+c[0]+'\')">'+c[2]+c[1]+'</button>';
   });
-  if(fit&&list.length){map.fitBounds(b,60);if(list.length===1)map.setZoom(14)}
+  h+='<button class="chip'+(tripFilter?' on':'')+'" onclick="pickTrip()">'+(tripFilter?esc(tripName(tripFilter))+' ✕':'Trip ▾')+'</button>';
+  $('chips').innerHTML=h;
 }
-function showSheet(p,isNew){
-  sel=p;const s=$('sheet');s.style.display='block';
-  const opts='<option value="">No trip</option>'+trips.filter(t=>!t.isShared).map(t=>'<option value="'+t._id+'"'+(p.trip===t._id?' selected':'')+'>'+esc(t.name)+'</option>').join('');
-  s.innerHTML='<h3>'+esc(p.name)+'</h3><div class="sub">'+esc(p.location||'')+'</div>'+
-   '<select id="tsel" style="width:100%;padding:10px;margin-bottom:10px;border-radius:10px">'+opts+'</select>'+
-   '<div class="row">'+(isNew?'<button onclick="savePlace()">Save</button>':'<button onclick="moveTo()">Update trip</button><button class="ghost" onclick="delPlace()">Delete</button>')+
-   '<a href="https://www.google.com/maps/search/?api=1&query='+p.lat+','+p.lng+'" target="_blank"><button class="ghost">Open in Maps</button></a>'+
-   '<button class="ghost" onclick="hideSheet()">Close</button></div>';
-  if(isNew&&tripId!=='all')$('tsel').value=tripId;
+function setFilter(f){filter=f;renderChips();renderMarkers()}
+function pickTrip(){
+  if(tripFilter){tripFilter='';renderChips();renderMarkers();return}
+  if(!trips.length){toast('No trips yet — create one in Trips');return}
+  var h='<div class="grab"></div><h2>Show a trip</h2>';
+  trips.forEach(function(t){h+='<button class="listItem" onclick="showTrip(\''+t._id+'\')"><span class="sq" style="background:'+colorFor(t)+'"></span><span><b>'+esc(t.name)+'</b><small>'+countFor(t._id)+' places</small></span></button>'});
+  openSheet(h);
 }
-function hideSheet(){$('sheet').style.display='none';sel=null}
-async function savePlace(){
-  const p=await api('/places',{method:'POST',body:{...pending,trip:$('tsel').value||null}});
-  places.unshift(p);hideSheet();render(false);
+function showTrip(id){tripFilter=id;closeSheet();go('vMap');renderChips();renderMarkers();fitAll()}
+
+/* ---------- sheets ---------- */
+function openSheet(h){$('sheet').innerHTML=h;$('sheet').classList.add('on');$('scrim').classList.add('on')}
+function closeSheet(){$('sheet').classList.remove('on');$('scrim').classList.remove('on');cur=null}
+function tripOptions(sel){
+  var h='<option value="">No trip</option>';
+  trips.forEach(function(t){h+='<option value="'+t._id+'"'+(String(sel)===t._id?' selected':'')+'>'+esc(t.name)+'</option>'});
+  return h+'<option value="__new">+ New trip…</option>';
 }
-async function moveTo(){
-  const p=await api('/places/'+sel._id,{method:'PUT',body:{trip:$('tsel').value||''}});
-  Object.assign(sel,p);hideSheet();render(false);
+function segHtml(status,fn){
+  return '<div class="seg" role="group" aria-label="Status">'+
+    '<button class="'+(status==='been'?'been':'')+'" onclick="'+fn+'(\'been\')">✓ Visited</button>'+
+    '<button class="'+(status!=='been'?'tobe':'')+'" onclick="'+fn+'(\'tobe\')">Want to go</button></div>';
 }
-async function delPlace(){
-  if(!confirm('Delete this place?'))return;
-  await api('/places/'+sel._id,{method:'DELETE'});
-  places=places.filter(x=>x._id!==sel._id);hideSheet();render(false);
+function startAdd(){go('vMap');closeSheet();$('search').focus();toast('Search for a place to add')}
+function openAdd(){
+  pending.status='tobe';pending.trip=tripFilter||'';
+  drawAdd();
+}
+function drawAdd(){
+  var p=pending;
+  openSheet('<div class="grab"></div>'+
+    (p.photo?'<div class="photo" style="background-image:url(\''+esc(p.photo)+'\')"></div>':'')+
+    '<div><div class="eyebrow">New place</div><h2>'+esc(p.name)+'</h2><div class="sub">'+esc(p.location)+'</div></div>'+
+    segHtml(p.status,'setPendingStatus')+
+    '<label class="lbl">Trip<select class="field" id="addTrip" onchange="tripChange(this,\'add\')">'+tripOptions(p.trip)+'</select></label>'+
+    '<button class="btn blue" onclick="savePending()">Save to my map</button>');
+}
+function setPendingStatus(s){pending.status=s;pending.trip=$('addTrip').value;drawAdd()}
+async function savePending(){
+  try{
+    var body={name:pending.name,location:pending.location,placeId:pending.placeId,lat:pending.lat,lng:pending.lng,status:pending.status,trip:$('addTrip').value||null};
+    var p=await api('/places',{method:'POST',body:body});
+    places.unshift(p);closeSheet();renderMarkers();toast('Saved to your map');
+  }catch(e){toast(e.message)}
+}
+async function tripChange(sel,mode){
+  if(sel.value!=='__new'){ if(mode==='edit')updatePlace({trip:sel.value}); return; }
+  var n=prompt('New trip name');
+  if(!n){sel.value='';return}
+  var t=await api('/trips',{method:'POST',body:{name:n}});trips.unshift(t);
+  sel.innerHTML=tripOptions(t._id);
+  if(mode==='edit')updatePlace({trip:t._id});
+}
+function openPlace(p){
+  cur=p;
+  openSheet('<div class="grab"></div>'+
+    '<div class="photo" id="plPhoto"></div>'+
+    '<div><h2>'+esc(p.name)+'</h2><div class="sub">'+esc(p.location||'')+'</div></div>'+
+    segHtml(p.status,'setStatus')+
+    '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
+    '<label class="lbl">Notes<textarea class="field" id="plNotes" placeholder="Add a note…" onblur="saveNotes()">'+esc(p.notes||'')+'</textarea></label>'+
+    '<div class="two"><a class="btn dark" style="text-decoration:none" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+(p.placeId?'&destination_place_id='+encodeURIComponent(p.placeId):'')+'">Navigate</a>'+
+    '<button class="btn soft" onclick="sharePlace()">Share</button></div>'+
+    '<button class="btn danger" onclick="deletePlace()">Delete place</button>');
+  var ph=(p.coverPhoto)||(p.photos&&p.photos[0]&&(p.photos[0].url||p.photos[0]));
+  if(ph)$('plPhoto').style.backgroundImage='url("'+ph+'")';
+  else if(p.placeId&&window.google){
+    new google.maps.places.PlacesService(map).getDetails({placeId:p.placeId,fields:['photos']},function(r){
+      var el=$('plPhoto');if(!el)return;
+      if(r&&r.photos&&r.photos[0])el.style.backgroundImage='url("'+r.photos[0].getUrl({maxWidth:800})+'")';else el.remove();
+    });
+  } else $('plPhoto').remove();
+}
+async function updatePlace(fields){
+  if(!cur)return;
+  try{var p=await api('/places/'+cur._id,{method:'PUT',body:fields});Object.assign(cur,p);renderMarkers();}
+  catch(e){toast(e.message)}
+}
+async function setStatus(s){await updatePlace({status:s});var p=cur;openPlace(p)}
+function saveNotes(){var v=$('plNotes').value;if(cur&&v!==(cur.notes||''))updatePlace({notes:v})}
+async function sharePlace(){
+  var url='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(cur.name)+(cur.placeId?'&query_place_id='+cur.placeId:'');
+  shareUrl(url,cur.name);
+}
+async function deletePlace(){
+  if(!confirm('Delete "'+cur.name+'"?'))return;
+  try{await api('/places/'+cur._id,{method:'DELETE'});places=places.filter(function(x){return x._id!==cur._id});closeSheet();renderMarkers();toast('Deleted')}
+  catch(e){toast(e.message)}
+}
+function openList(){
+  var list=visible();
+  var h='<div class="grab"></div><h2>'+(tripFilter?esc(tripName(tripFilter)):'Your places')+'</h2>';
+  if(!list.length)h+='<div class="empty">Nothing here yet. Tap + to add a place.</div>';
+  list.forEach(function(p,i){
+    h+='<button class="listItem" onclick="focusPlace('+i+')"><span class="dot" style="width:12px;height:12px;background:'+(p.status==='been'?'#1F5FD6':'#fff')+';border-color:'+(p.status==='been'?'#1F5FD6':'#C2551A')+'"></span><span><b>'+esc(p.name)+'</b><small>'+esc(p.location||'')+'</small></span></button>';
+  });
+  window._list=list;openSheet(h);
+}
+function focusPlace(i){var p=window._list[i];map.panTo({lat:p.lat,lng:p.lng});map.setZoom(16);openPlace(p)}
+
+/* ---------- trips ---------- */
+function colorFor(t){var s=String(t._id||'');var n=0;for(var i=0;i<s.length;i++)n+=s.charCodeAt(i);return t.color&&t.color!=='#4a9eff'?t.color:COLORS[n%COLORS.length]}
+function countFor(id){return places.filter(function(p){return String(p.trip)===id}).length}
+function renderTrips(){
+  if(!trips.length){$('tripList').innerHTML='<div class="empty">No trips yet.<br>Create one, add places to it, and share it with a link.</div>';return}
+  $('tripList').innerHTML=trips.map(function(t){
+    var n=countFor(t._id),v=places.filter(function(p){return String(p.trip)===t._id&&p.status==='been'}).length;
+    return '<article class="trip"><button class="cover" style="background:'+colorFor(t)+'" onclick="showTrip(\''+t._id+'\')" aria-label="Open '+esc(t.name)+' on map"></button>'+
+      '<div class="body"><button class="open" onclick="showTrip(\''+t._id+'\')"><h3>'+esc(t.name)+(t.shareToken?' <span class="badge">Link on</span>':'')+'</h3><small>'+n+' places · '+v+' visited</small></button>'+
+      '<button class="sq" aria-label="Share trip" onclick="shareTrip(\''+t._id+'\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/></svg></button>'+
+      '<button class="sq" aria-label="Trip options" onclick="tripMenu(\''+t._id+'\')">⋯</button></div></article>';
+  }).join('');
 }
 async function newTrip(){
-  const n=prompt('Trip name');if(!n)return;
-  const t=await api('/trips',{method:'POST',body:{name:n}});
-  trips.unshift(t);tripId=t._id;renderChips();render(true);
+  var n=prompt('Trip name');if(!n)return;
+  try{var t=await api('/trips',{method:'POST',body:{name:n}});trips.unshift(t);renderTrips();renderChips();toast('Trip created')}
+  catch(e){toast(e.message)}
 }
-async function shareTrip(){
-  if(tripId==='all'){alert('Pick a trip first');return}
-  const r=await api('/trips/'+tripId+'/share',{method:'POST'});
-  const url=location.origin+'/trip/'+r.token;
-  if(navigator.share){try{await navigator.share({url,title:'Trip'});return}catch{}}
-  try{await navigator.clipboard.writeText(url);alert('Link copied:\n'+url)}catch{prompt('Copy link',url)}
+async function shareTrip(id){
+  try{
+    var r=await api('/trips/'+id+'/share',{method:'POST'});
+    var t=trips.find(function(x){return x._id===id});if(t)t.shareToken=r.token;renderTrips();
+    shareUrl(location.origin+'/trip/'+r.token,t?t.name:'Trip');
+  }catch(e){toast(e.message)}
 }
-if(token)start();
-</script></body></html>
+function tripMenu(id){
+  var t=trips.find(function(x){return x._id===id});
+  openSheet('<div class="grab"></div><h2>'+esc(t.name)+'</h2>'+
+    '<button class="btn soft" onclick="renameTrip(\''+id+'\')">Rename</button>'+
+    (t.shareToken?'<button class="btn soft" onclick="stopShare(\''+id+'\')">Turn off share link</button>':'')+
+    '<button class="btn danger" onclick="deleteTrip(\''+id+'\')">Delete trip (keeps the places)</button>');
+}
+async function renameTrip(id){
+  var t=trips.find(function(x){return x._id===id});var n=prompt('Trip name',t.name);if(!n)return;
+  try{var u=await api('/trips/'+id,{method:'PUT',body:{name:n}});t.name=u.name||n;closeSheet();renderTrips();renderChips()}catch(e){toast(e.message)}
+}
+async function stopShare(id){
+  try{await api('/trips/'+id+'/share',{method:'DELETE'});var t=trips.find(function(x){return x._id===id});t.shareToken=null;closeSheet();renderTrips();toast('Share link turned off')}catch(e){toast(e.message)}
+}
+async function deleteTrip(id){
+  if(!confirm('Delete this trip? Your places stay on the map.'))return;
+  try{await api('/trips/'+id,{method:'DELETE'});trips=trips.filter(function(x){return x._id!==id});
+    places.forEach(function(p){if(String(p.trip)===id)p.trip=null});
+    if(tripFilter===id)tripFilter='';closeSheet();renderTrips();renderChips();renderMarkers()}catch(e){toast(e.message)}
+}
+async function shareUrl(url,title){
+  if(navigator.share){try{await navigator.share({title:title,url:url});return}catch(e){if(e.name==='AbortError')return}}
+  try{await navigator.clipboard.writeText(url);toast('Link copied')}catch(e){prompt('Copy this link',url)}
+}
+
+/* ---------- AI ---------- */
+var aiResults=[];
+async function ask(q){
+  q=q||$('askIn').value.trim();if(!q)return;$('askIn').value='';
+  var chat=$('chat');
+  chat.insertAdjacentHTML('beforeend','<div class="me">'+esc(q)+'</div><div class="typing" id="typing">Thinking…</div>');
+  chat.scrollTop=chat.scrollHeight;
+  try{
+    var body={question:q};if(myPos){body.lat=myPos.lat;body.lng=myPos.lng}
+    var r=await api('/ai/ask',{method:'POST',body:body});
+    $('typing').remove();
+    var h='<div class="bot">'+esc(r.reply||'Here are some ideas:')+'</div>';
+    (r.places||[]).forEach(function(p){
+      var i=aiResults.push(p)-1;
+      var saved=places.some(function(x){return x.placeId&&x.placeId===p.placeId});
+      h+='<div class="sug"><button class="t" onclick="aiShow('+i+')"><b>'+esc(p.name)+'</b><small>'+esc(p.why||p.address)+'</small></button>'+
+        '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')"'+(saved?' disabled>Saved':'>+ Add')+'</button></div>';
+    });
+    chat.insertAdjacentHTML('beforeend',h);
+  }catch(e){var t=$('typing');if(t)t.remove();chat.insertAdjacentHTML('beforeend','<div class="bot">Sorry — '+esc(e.message)+'</div>')}
+  chat.scrollTop=chat.scrollHeight;
+}
+async function aiAdd(i){
+  var p=aiResults[i],b=$('aiAdd'+i);b.disabled=true;b.textContent='Saving…';
+  try{
+    var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai'}});
+    places.unshift(s);renderMarkers();b.textContent='Saved';toast('Added to Want to go');
+  }catch(e){b.disabled=false;b.textContent='+ Add';toast(e.message)}
+}
+function aiShow(i){var p=aiResults[i];go('vMap');map.panTo({lat:p.lat,lng:p.lng});map.setZoom(16)}
+
+/* ---------- settings ---------- */
+function openSettings(){
+  var name=user?((user.firstName||'')+' '+(user.lastName||'')).trim()||user.handle||user.email:'';
+  openSheet('<div class="grab"></div><h2>'+(name?esc(name):'Settings')+'</h2>'+(user&&user.email?'<div class="sub" style="margin-top:-10px">'+esc(user.email)+'</div>':'')+
+    '<a class="btn soft" style="text-decoration:none" href="/">Open the full Wander app</a>'+
+    '<button class="btn danger" onclick="logout()">Log out</button>');
+}
+
+if(token)start();else $('login').classList.remove('hidden');
+</script>
+</body></html>
