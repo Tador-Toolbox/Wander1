@@ -1476,6 +1476,7 @@ Do not explain. Just one word.`;
       console.error('Weekend events error:', e.message);
     }
 
+    await require('../services/venueCapacity').enrichEvents([...(events||[]), ...(weekendEvents||[])], locationStr);
     res.json({ events, weekendEvents });
 
   } catch (err) {

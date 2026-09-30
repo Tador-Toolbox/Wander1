@@ -599,7 +599,7 @@ async function aiEvents(){
       if(!p)return null;
       p.name=ev.name||p.name;p.why=[ev.date,ev.time,ev.venueName&&ev.venueName!==ev.name?ev.venueName:''].filter(Boolean).join(' · ');
       if(ev.photoUrl)p.photo=ev.photoUrl;
-      p.ev={match:ev.matchScore||0,people:ev.estimatedCapacity||0,price:ev.price||'',note:ev.conciergeNote||'',insta:ev.instagramUrl||'',web:ev.websiteUrl||'',tags:ev.tags||[],verified:!!ev.openConfirmed,unverified:!!ev.unverified};
+      p.ev={match:ev.matchScore||0,people:ev.estimatedCapacity||0,capSrc:ev.capacitySource==='sources'?'by sources':'estimate by AI',price:ev.price||'',note:ev.conciergeNote||'',insta:ev.instagramUrl||'',web:ev.websiteUrl||'',tags:ev.tags||[],verified:!!ev.openConfirmed,unverified:!!ev.unverified};
       return p;
     }));
     aiShowResults('Events near you',items.filter(Boolean));
@@ -634,7 +634,7 @@ function evBlock(e){
   if(!e)return '';
   var h='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
   if(e.match)h+='<span class="match" style="font-size:15px;padding:6px 12px;margin:0">'+e.match+'% match</span>';
-  if(e.people)h+='<span class="ppl" style="font-size:14px;padding:6px 12px;margin:0">👥 ~'+e.people+' people</span>';
+  if(e.people)h+='<span class="ppl" style="font-size:14px;padding:6px 12px;margin:0">👥 ~'+e.people+' people <span style="font-weight:600;opacity:.7">('+e.capSrc+')</span></span>';
   if(e.price)h+='<span class="ppl" style="font-size:14px;padding:6px 12px;margin:0">💰 '+esc(e.price)+'</span>';
   h+='</div>';
   if(e.verified)h+='<div style="color:#1E7A45;font-weight:700;font-size:14px">✓ Verified open</div>';
