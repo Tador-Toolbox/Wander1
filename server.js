@@ -308,6 +308,9 @@ app.get('/admin/errors', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin-errors.html'));
 });
 
+// V2 (simple design) - same API and accounts
+app.get(['/V2','/v2'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'v2.html')));
+
 // SPA fallback - serves index.html for all non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

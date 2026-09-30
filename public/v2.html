@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wander</title>
+<style>
+*{box-sizing:border-box;margin:0}
+body{font-family:-apple-system,system-ui,sans-serif;background:#fff;color:#111;height:100dvh;overflow:hidden}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 14px;background:#111;color:#fff}
+button.ghost{background:#eee;color:#111}
+input{font:inherit;width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;margin-bottom:10px}
+#login{display:flex;flex-direction:column;justify-content:center;height:100%;padding:28px;max-width:380px;margin:auto}
+#login h1{margin-bottom:18px}#err{color:#c00;margin:6px 0;min-height:18px;font-size:14px}
+#app{display:none;height:100%;position:relative}
+#map{position:absolute;inset:0}
+#top{position:absolute;top:0;left:0;right:0;padding:calc(10px + env(safe-area-inset-top)) 10px 8px;z-index:5;background:linear-gradient(#fffe,#fff0)}
+#search{box-shadow:0 2px 8px #0002;margin-bottom:8px}
+#chips{display:flex;gap:6px;overflow-x:auto}
+.chip{flex:none;background:#fff;color:#111;box-shadow:0 1px 4px #0003;padding:7px 12px;border-radius:99px;font-size:14px}
+.chip.on{background:#111;color:#fff}
+#sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -4px 16px #0003;z-index:6;padding:12px 16px calc(14px + env(safe-area-inset-bottom));max-height:45dvh;overflow:auto;display:none}
+#sheet h3{margin-bottom:4px}#sheet .sub{color:#666;font-size:14px;margin-bottom:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+#menu{position:absolute;right:12px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:4;display:flex;flex-direction:column;gap:8px}
+#menu button{border-radius:99px;box-shadow:0 2px 8px #0004}
+.pac-container{z-index:10000}
+</style></head><body>
+<div id="login">
+  <h1>🧭 Wander</h1>
+  <input id="em" placeholder="Email or username" autocapitalize="none">
+  <input id="pw" type="password" placeholder="Password">
+  <div id="err"></div>
+  <button onclick="login()">Log in</button>
+  <p style="margin-top:16px;font-size:14px;color:#666">No account? <a href="/">Sign up in the main app</a></p>
+</div>
+<div id="app">
+  <div id="map"></div>
+  <div id="top"><input id="search" placeholder="Search a place to add…"><div id="chips"></div></div>
+  <div id="sheet"></div>
+  <div id="menu">
+    <button onclick="newTrip()">+ Trip</button>
+    <button class="ghost" onclick="shareTrip()">Share trip</button>
+    <button class="ghost" onclick="logout()">Log out</button>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+let token=localStorage.getItem('wandr_token'),places=[],trips=[],tripId='all',map,markers=[],sel=null,pending=null;
+async function api(p,o={}){
+  const r=await fetch('/api'+p,{...o,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:o.body?JSON.stringify(o.body):undefined});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401&&token){logout();}
+  if(!r.ok)throw new Error(d.error||'Error');return d;
+}
+async function login(){
+  $('err').textContent='';
+  try{
+    const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('em').value,password:$('pw').value})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error);
+    token=d.token;localStorage.setItem('wandr_token',token);start();
+  }catch(e){$('err').textContent=e.message}
+}
+function logout(){localStorage.removeItem('wandr_token');token=null;location.reload()}
+async function start(){
+  $('login').style.display='none';$('app').style.display='block';
+  const k=await (await fetch('/api/config/maps-key')).json();
+  window.boot=initMap;
+  const s=document.createElement('script');
+  s.src='https://maps.googleapis.com/maps/api/js?key='+k.key+'&libraries=places&callback=boot';document.head.appendChild(s);
+}
+async function initMap(){
+  map=new google.maps.Map($('map'),{center:{lat:20,lng:0},zoom:2,disableDefaultUI:true,gestureHandling:'greedy',clickableIcons:false});
+  const ac=new google.maps.places.Autocomplete($('search'),{fields:['name','geometry','formatted_address','place_id']});
+  ac.addListener('place_changed',()=>{
+    const p=ac.getPlace();if(!p.geometry)return;
+    pending={name:p.name,location:p.formatted_address,placeId:p.place_id,lat:p.geometry.location.lat(),lng:p.geometry.location.lng()};
+    map.panTo(p.geometry.location);map.setZoom(15);showSheet(pending,true);$('search').value='';
+  });
+  await load();
+}
+async function load(){
+  [places,trips]=await Promise.all([api('/places'),api('/trips')]);
+  renderChips();render(true);
+}
+function renderChips(){
+  $('chips').innerHTML='<button class="chip '+(tripId==='all'?'on':'')+'" onclick="pick(\'all\')">All</button>'+
+   trips.filter(t=>!t.isShared).map(t=>'<button class="chip '+(tripId===t._id?'on':'')+'" onclick="pick(\''+t._id+'\')">'+(t.emoji||'')+' '+esc(t.name)+'</button>').join('');
+}
+function pick(id){tripId=id;renderChips();render(true);hideSheet()}
+function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function render(fit){
+  markers.forEach(m=>m.setMap(null));markers=[];
+  const list=places.filter(p=>tripId==='all'||p.trip===tripId);
+  const b=new google.maps.LatLngBounds();
+  list.forEach(p=>{
+    const m=new google.maps.Marker({map,position:{lat:p.lat,lng:p.lng},title:p.name});
+    m.addListener('click',()=>showSheet(p,false));markers.push(m);b.extend(m.getPosition());
+  });
+  if(fit&&list.length){map.fitBounds(b,60);if(list.length===1)map.setZoom(14)}
+}
+function showSheet(p,isNew){
+  sel=p;const s=$('sheet');s.style.display='block';
+  const opts='<option value="">No trip</option>'+trips.filter(t=>!t.isShared).map(t=>'<option value="'+t._id+'"'+(p.trip===t._id?' selected':'')+'>'+esc(t.name)+'</option>').join('');
+  s.innerHTML='<h3>'+esc(p.name)+'</h3><div class="sub">'+esc(p.location||'')+'</div>'+
+   '<select id="tsel" style="width:100%;padding:10px;margin-bottom:10px;border-radius:10px">'+opts+'</select>'+
+   '<div class="row">'+(isNew?'<button onclick="savePlace()">Save</button>':'<button onclick="moveTo()">Update trip</button><button class="ghost" onclick="delPlace()">Delete</button>')+
+   '<a href="https://www.google.com/maps/search/?api=1&query='+p.lat+','+p.lng+'" target="_blank"><button class="ghost">Open in Maps</button></a>'+
+   '<button class="ghost" onclick="hideSheet()">Close</button></div>';
+  if(isNew&&tripId!=='all')$('tsel').value=tripId;
+}
+function hideSheet(){$('sheet').style.display='none';sel=null}
+async function savePlace(){
+  const p=await api('/places',{method:'POST',body:{...pending,trip:$('tsel').value||null}});
+  places.unshift(p);hideSheet();render(false);
+}
+async function moveTo(){
+  const p=await api('/places/'+sel._id,{method:'PUT',body:{trip:$('tsel').value||''}});
+  Object.assign(sel,p);hideSheet();render(false);
+}
+async function delPlace(){
+  if(!confirm('Delete this place?'))return;
+  await api('/places/'+sel._id,{method:'DELETE'});
+  places=places.filter(x=>x._id!==sel._id);hideSheet();render(false);
+}
+async function newTrip(){
+  const n=prompt('Trip name');if(!n)return;
+  const t=await api('/trips',{method:'POST',body:{name:n}});
+  trips.unshift(t);tripId=t._id;renderChips();render(true);
+}
+async function shareTrip(){
+  if(tripId==='all'){alert('Pick a trip first');return}
+  const r=await api('/trips/'+tripId+'/share',{method:'POST'});
+  const url=location.origin+'/trip/'+r.token;
+  if(navigator.share){try{await navigator.share({url,title:'Trip'});return}catch{}}
+  try{await navigator.clipboard.writeText(url);alert('Link copied:\n'+url)}catch{prompt('Copy link',url)}
+}
+if(token)start();
+</script></body></html>
