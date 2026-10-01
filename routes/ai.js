@@ -1476,8 +1476,9 @@ Do not explain. Just one word.`;
       console.error('Weekend events error:', e.message);
     }
 
-    await require('../services/venueCapacity').enrichEvents([...(events||[]), ...(weekendEvents||[])], locationStr);
-    res.json({ events, weekendEvents });
+    const vc = require('../services/venueCapacity');
+    const [evOut, wkOut] = await Promise.all([vc.enrichEvents(events, locationStr), vc.enrichEvents(weekendEvents, locationStr)]);
+    res.json({ events: evOut, weekendEvents: wkOut });
 
   } catch (err) {
     console.error('Event discover error:', err.message);

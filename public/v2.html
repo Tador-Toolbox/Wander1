@@ -599,7 +599,7 @@ async function aiEvents(){
       if(!p)return null;
       p.name=ev.name||p.name;p.why=[ev.date,ev.time,ev.venueName&&ev.venueName!==ev.name?ev.venueName:''].filter(Boolean).join(' · ');
       if(ev.photoUrl)p.photo=ev.photoUrl;
-      p.ev={match:ev.matchScore||0,people:ev.estimatedCapacity||0,capSrc:ev.capacitySource==='sources'?'by sources':'estimate by AI',price:ev.price||'',note:ev.conciergeNote||'',insta:ev.instagramUrl||'',web:ev.websiteUrl||'',tags:ev.tags||[],verified:!!ev.openConfirmed,unverified:!!ev.unverified};
+      p.ev={match:ev.matchScore||0,people:ev.estimatedCapacity||0,capSrc:ev.capacitySource==='sources'?'by sources':'estimate by AI',price:ev.price||'',note:ev.conciergeNote||'',insta:ev.instagramUrl||'',web:ev.websiteUrl||'',tags:ev.tags||[],next:ev.nextEvent||null,verified:!!ev.openConfirmed,unverified:!!ev.unverified};
       return p;
     }));
     aiShowResults('Events near you',items.filter(Boolean));
@@ -630,6 +630,10 @@ async function aiAdd(i,fromSheet){
     places.unshift(s);renderMarkers();b.textContent='Saved';if(sb){sb.textContent='✓ Saved';sb.className='btn soft'}toast(onTrip?'Added to your trip':'Added to Want to go');
   }catch(e){b.disabled=false;b.textContent='+ Add';if(sb){sb.disabled=false;sb.textContent='+ Add to my map'}toast(e.message)}
 }
+function fmtEvDate(n){
+  var d=new Date(n.startTime||n.date);if(isNaN(d))return '';
+  return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+(n.startTime?' · '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):'');
+}
 function evBlock(e){
   if(!e)return '';
   var h='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
@@ -639,6 +643,7 @@ function evBlock(e){
   h+='</div>';
   if(e.verified)h+='<div style="color:#1E7A45;font-weight:700;font-size:14px">✓ Verified open</div>';
   else if(e.unverified)h+='<div style="color:#B45309;font-weight:700;font-size:14px">⚠ Verify before going</div>';
+  if(e.next&&e.next.title)h+='<div style="background:#FFF7E6;border-radius:14px;padding:12px 14px;font-size:15px"><div class="eyebrow" style="color:#B45309">Next event</div><b>'+esc(e.next.title)+'</b><div class="sub" style="margin-top:2px">'+esc(fmtEvDate(e.next))+'</div></div>';
   if(e.tags&&e.tags.length)h+='<div class="tagRow">'+e.tags.slice(0,5).map(function(t){return '<span>'+esc(t)+'</span>'}).join('')+'</div>';
   if(e.note)h+='<div class="evBox">'+esc(e.note)+'</div>';
   var links='';
