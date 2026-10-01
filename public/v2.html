@@ -525,7 +525,7 @@ function aiShowResults(title,items){
   if(!items.length)h+='<div class="loading">Nothing found right now. Try again later.</div>';
   items.forEach(function(p,i){
     var saved=p.placeId&&places.some(function(x){return x.placeId===p.placeId});
-    h+='<div class="sug"><span class="thumb" id="aiTh'+i+'"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></span>'+
+    h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(p.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></button>'+
       '<button class="t" onclick="aiShow('+i+')"><b>'+esc(p.name)+'</b><small>'+esc(p.why||p.address||'')+'</small>'+(p.ev&&p.ev.match?'<span class="match">'+p.ev.match+'% match</span>'+(p.ev.people?'<span class="ppl">~'+p.ev.people+' people</span>':''):'')+'</button>'+
       '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')"'+(saved?' disabled>Saved':'>+ Add')+'</button></div>';
   });
