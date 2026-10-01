@@ -118,6 +118,19 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 @keyframes sp{to{transform:rotate(360deg)}}
 #toast{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none}
 #toast.on{opacity:1}
+.card{background:#fff;border-radius:18px;padding:16px;box-shadow:0 1px 6px rgba(18,32,58,.08);display:flex;flex-direction:column;gap:12px}
+.card h3{font-size:16px}.card .hint{font-size:13px;color:var(--muted);margin-top:-8px}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);background:#fff;font-weight:600;font-size:14px}
+.pill.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.tagX{display:inline-flex;align-items:center;gap:6px;padding:7px 8px 7px 12px;border-radius:999px;background:var(--blue-soft);color:var(--blue);font-weight:700;font-size:13px}
+.tagX button{width:22px;height:22px;border-radius:50%;background:#fff;color:var(--blue);font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center}
+.opt{display:flex;flex-direction:column;gap:2px;text-align:left;padding:12px 14px;border:1.5px solid var(--line);border-radius:14px;background:#fff;width:100%}
+.opt b{font-size:15px}.opt small{color:var(--muted);font-size:13px}
+.opt.on{border-color:var(--blue);background:var(--blue-soft)}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fact{background:var(--soft);border-radius:12px;padding:10px 12px}.fact small{display:block;font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}.fact b{font-size:14px}
+#meSave{position:sticky;bottom:12px;box-shadow:0 6px 16px rgba(31,95,214,.35)}
 .pac-container{z-index:100;border-radius:12px;margin-top:6px;font-family:Manrope,sans-serif}
 </style></head><body>
 
@@ -151,6 +164,11 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
     <div id="tripList"></div>
   </section>
 
+  <section id="vMe" class="view hidden">
+    <div class="pageHead"><div><h1>Me</h1><div class="sub" id="meSub">Your AI profile</div></div><button class="iconBtn" style="box-shadow:none;background:var(--soft)" aria-label="Account" onclick="openSettings()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button></div>
+    <div id="meBody" style="padding:0 16px 32px;display:flex;flex-direction:column;gap:14px"><div class="loading"><div class="spin"></div></div></div>
+  </section>
+
   <section id="vAI" class="view hidden">
     <div class="pageHead"><h1>Ask AI</h1><div class="sub">One tap. Ideas picked for you.</div></div>
     <div id="aiHome">
@@ -166,7 +184,7 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
     <button class="tab" data-v="vTrips" onclick="go('vTrips')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7h18v12H3z"/><path d="M8 7V5h8v2"/></svg>Trips</button>
     <button id="fab" aria-label="Add a place" onclick="startAdd()"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
     <button class="tab" data-v="vAI" onclick="go('vAI')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8Z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8Z"/></svg>Ask AI</button>
-    <button class="tab" onclick="openSettings()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Me</button>
+    <button class="tab" data-v="vMe" onclick="go('vMe')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Me</button>
   </nav>
 </div>
 
@@ -215,9 +233,10 @@ async function start(){
 
 /* ---------- navigation ---------- */
 function go(v){
-  ['vMap','vTrips','vAI'].forEach(function(id){$(id).classList.toggle('hidden',id!==v)});
+  ['vMap','vTrips','vAI','vMe'].forEach(function(id){$(id).classList.toggle('hidden',id!==v)});
   document.querySelectorAll('nav.tabs .tab').forEach(function(t){t.classList.toggle('on',t.dataset.v===v)});
   if(v==='vTrips')renderTrips();
+  if(v==='vMe')renderMe();
 }
 
 /* ---------- map ---------- */
@@ -678,6 +697,66 @@ function aiShow(i){
     if(d.url)rows.push('<a href="'+esc(d.url)+'" target="_blank" style="color:var(--blue);font-weight:600">Open in Google Maps</a>');
     el.innerHTML=rows.join('<br>');el.style.lineHeight='1.9';el.style.fontSize='15px';
   });
+}
+
+/* ---------- me / AI profile ---------- */
+var ME_OPTS={
+  music:['Hip-Hop','80s','90s','Mainstream','Techno','Trance','R&B','Jazz','Rock','Electronic'],
+  goal:[['Network','💼 Secure the bag','Tech, real estate, or business.'],['Vibe Out','⚡ Just for the energy','Meet people and hang out.'],['Low-Key','🎧 Staying in my lane','Here for the music or the activity.']],
+  atmosphere:[['Top-Shelf','🥂 Top-Shelf','High-end, rooftops or lounges.'],['Electric','⚡ Electric','Loud, high-energy clubs or stadiums.'],['Main Street','🏠 Main Street','Local, underground, hidden gems.']],
+  soundVibe:[['Background','💬 Background','Keep it conversational.'],['Front & Center','🎛 Front & Center','Crank it, here for the DJ/band.'],['Acoustic','🎸 Acoustic','Raw, chill, unplugged.']],
+  crowdSize:[['Intimate','🔒 Intimate','Under 200 people'],['Mid-size','🎵 Mid-size','200–500 people'],['Big Room','🏟 Big Room','500+ people']]
+};
+var me=null,meDirty=false;
+async function renderMe(){
+  var name=user?((user.firstName||'')+' '+(user.lastName||'')).trim()||user.handle||'':'';
+  $('meSub').textContent=name?name+' · your AI profile':'Your AI profile';
+  if(!me){
+    try{var r=await api('/ai/profile');var p=r.profile||{};
+      me={tags:(p.tags||[]).slice(),music:(p.musicGenres||[]).slice(),goal:p.eventGoal||'',atmosphere:p.atmosphere||'',soundVibe:p.soundVibe||'',
+        crowd:(p.crowdSize||'').split(',').map(function(x){return x.trim()}).filter(Boolean),summary:p.summary||'',aesthetic:p.aestheticTags||[],
+        facts:[['Travel style',p.travelStyle],['Social',p.socialStyle],['Food',p.dietaryStyle],['Best time',p.timeOfDay]].filter(function(f){return f[1]}),
+        locations:p.locations||[],analyzedAt:p.analyzedAt};
+    }catch(e){$('meBody').innerHTML='<div class="loading">'+esc(e.message)+'</div>';return}
+  }
+  drawMe();
+}
+function drawMe(){
+  var m=me,h='';
+  h+='<div class="card"><h3>What AI knows about you</h3>'+
+    (m.summary?'<p style="font-size:15px;line-height:1.5">'+esc(m.summary)+'</p>':'<p class="sub">No profile yet. Pick your preferences below, and you can build a full profile from your photos in the full app.</p>')+
+    (m.facts.length?'<div class="facts">'+m.facts.map(function(f){return '<div class="fact"><small>'+esc(f[0])+'</small><b>'+esc(f[1])+'</b></div>'}).join('')+'</div>':'')+
+    (m.aesthetic.length?'<div class="pills">'+m.aesthetic.slice(0,8).map(function(t){return '<span class="ppl" style="margin:0;font-size:13px;padding:5px 10px">'+esc(t)+'</span>'}).join('')+'</div>':'')+
+    (m.locations.length?'<div class="sub">📍 '+esc(m.locations.slice(0,6).join(' · '))+'</div>':'')+'</div>';
+  h+='<div class="card"><h3>Your taste</h3><div class="hint">Remove what isn\'t you, add what\'s missing</div><div class="pills">'+
+    m.tags.map(function(t,i){return '<span class="tagX">'+esc(t)+'<button aria-label="Remove '+esc(t)+'" onclick="meDelTag('+i+')">×</button></span>'}).join('')+'</div>'+
+    '<form style="display:flex;gap:8px" onsubmit="event.preventDefault();meAddTag()"><input class="field" id="meTagIn" placeholder="Add (e.g. sushi, rooftops)" style="height:44px"><button class="btn soft" style="height:44px">Add</button></form></div>';
+  h+='<div class="card"><h3>🎵 Music you vibe with</h3><div class="hint">Pick all that apply</div><div class="pills">'+
+    ME_OPTS.music.map(function(g){return '<button class="pill'+(m.music.indexOf(g)>=0?' on':'')+'" onclick="meToggle(\'music\',\''+g+'\')">'+g+'</button>'}).join('')+'</div></div>';
+  h+=meRadio('goal','🎯 What\'s the mission?');
+  h+=meRadio('atmosphere','🏛 What kind of room?');
+  h+=meRadio('soundVibe','🔊 How\'s the sound?');
+  h+='<div class="card"><h3>👥 How packed do you like it?</h3><div class="hint">Pick up to 2</div>'+
+    ME_OPTS.crowdSize.map(function(o){return '<button class="opt'+(m.crowd.indexOf(o[0])>=0?' on':'')+'" onclick="meCrowd(\''+o[0]+'\')"><b>'+o[1]+'</b><small>'+o[2]+'</small></button>'}).join('')+'</div>';
+  if(meDirty)h+='<button class="btn blue" id="meSave" onclick="meSave()">Save changes</button>';
+  h+='<a class="btn soft" style="text-decoration:none" href="/">Rebuild from photos (full app)</a>';
+  $('meBody').innerHTML=h;
+}
+function meRadio(k,title){
+  return '<div class="card"><h3>'+title+'</h3>'+ME_OPTS[k].map(function(o){return '<button class="opt'+(me[k]===o[0]?' on':'')+'" onclick="meSet(\''+k+'\',\''+o[0].replace(/'/g,"\\'")+'\')"><b>'+o[1]+'</b><small>'+o[2]+'</small></button>'}).join('')+'</div>';
+}
+function meChanged(){meDirty=true;var y=$('vMe').scrollTop;drawMe();$('vMe').scrollTop=y}
+function meSet(k,v){me[k]=me[k]===v?'':v;meChanged()}
+function meToggle(k,v){var a=me[k],i=a.indexOf(v);if(i>=0)a.splice(i,1);else a.push(v);meChanged()}
+function meCrowd(v){var a=me.crowd,i=a.indexOf(v);if(i>=0)a.splice(i,1);else{if(a.length>=2)a.shift();a.push(v)}meChanged()}
+function meDelTag(i){me.tags.splice(i,1);meChanged()}
+function meAddTag(){var v=$('meTagIn').value.trim().toLowerCase();if(!v)return;if(me.tags.indexOf(v)<0)me.tags.push(v);meChanged()}
+async function meSave(){
+  if(!meDirty)return;
+  try{
+    await api('/ai/preferences',{method:'POST',body:{replace:true,tags:me.tags,music:me.music,goal:me.goal,atmosphere:me.atmosphere,soundVibe:me.soundVibe,crowdSize:me.crowd.join(',')}});
+    meDirty=false;drawMe();toast('Profile saved — AI ideas will use it');
+  }catch(e){toast(e.message)}
 }
 
 /* ---------- settings ---------- */

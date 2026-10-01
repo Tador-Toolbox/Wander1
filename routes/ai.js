@@ -1673,7 +1673,7 @@ router.delete('/photo/:publicId', auth, async (req, res) => {
 ───────────────────────────────────────── */
 router.post('/preferences', auth, async (req, res) => {
   try {
-    const { music, goal, atmosphere, soundVibe, crowdSize } = req.body;
+    const { music, goal, atmosphere, soundVibe, crowdSize, tags } = req.body;
     const User = require('../models/User');
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -1683,6 +1683,13 @@ router.post('/preferences', auth, async (req, res) => {
     if (atmosphere)       user.aiProfile.atmosphere  = atmosphere;
     if (soundVibe)        user.aiProfile.soundVibe   = soundVibe;
     if (crowdSize)        user.aiProfile.crowdSize   = crowdSize;
+    if (req.body.replace) { // V2 profile editor sends the full state, so empty values clear
+      if (Array.isArray(music)) user.aiProfile.musicGenres = music;
+      ['eventGoal:goal','atmosphere:atmosphere','soundVibe:soundVibe','crowdSize:crowdSize'].forEach(m => {
+        const [field, key] = m.split(':'); if (typeof req.body[key] === 'string') user.aiProfile[field] = req.body[key];
+      });
+    }
+    if (Array.isArray(tags)) user.aiProfile.tags = tags.map(t => String(t).trim().toLowerCase()).filter(Boolean).slice(0, 30);
 
     user.markModified('aiProfile');
     await user.save();
