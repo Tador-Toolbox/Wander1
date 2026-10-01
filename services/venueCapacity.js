@@ -6,7 +6,7 @@ const VenueInfo = require('../models/VenueInfo');
 const RA_URL = 'https://ra.co/graphql';
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
 const HEADERS = { 'content-type': 'application/json', origin: 'https://ra.co', referer: 'https://ra.co/', 'ra-content-language': 'en', 'user-agent': UA };
-const LOOKUP_VER = 3;                       // bump to force re-check of cached entries
+const LOOKUP_VER = 4;                       // bump to force re-check of cached entries
 const DAY = 24 * 3600 * 1000;
 const VENUE_TTL = 60 * DAY;                 // capacity / website / closed flag
 const AI_ONLY_TTL = 7 * DAY;                // venues not found externally
@@ -84,6 +84,16 @@ async function instagramFromWebsite(url) {
   } catch (e) { console.log('[venueCapacity] website error', url, e.message); return ''; }
 }
 
+async function googleTypes(name, city) {
+  const key = process.env.GOOGLE_MAPS_API_KEY;
+  if (!key) return [];
+  try {
+    const r = await timedFetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(name + ' ' + (city || ''))}&key=${key}`, {});
+    const d = await r.json();
+    return (d.results && d.results[0] && d.results[0].types) || [];
+  } catch (e) { console.log('[venueCapacity] google types error', e.message); return []; }
+}
+
 // Returns cached/fresh venue info (or null)
 async function getVenueInfo(name, city, aiEstimate) {
   if (!name) return null;
@@ -103,6 +113,7 @@ async function getVenueInfo(name, city, aiEstimate) {
       if (cap > 0) Object.assign(update, { capacity: cap, source: 'sources' });
       update.instagram = await instagramFromWebsite(v.website);
     }
+    update.googleTypes = await googleTypes(name, city);
     if (!update.capacity && !(doc && doc.capacity) && aiEstimate) Object.assign(update, { capacity: Number(aiEstimate) || null, source: 'ai' });
   }
   const raId = update.raId || (doc && doc.raId);
@@ -126,13 +137,19 @@ async function enrichEvents(events, city) {
       if (d.capacity) { ev.estimatedCapacity = d.capacity; ev.capacitySource = d.source || 'ai'; }
       else if (ev.estimatedCapacity) ev.capacitySource = 'ai';
       if (d.isClosed) ev.listedClosed = true;
+      const types = d.googleTypes || [];
+      if (!d.raId && !types.includes('night_club')) {
+        ev.partyUnconfirmed = true;
+        ev.venueKind = types.includes('restaurant') ? 'restaurant' : types.includes('bar') ? 'bar' : 'venue';
+      }
       if (!ev.websiteUrl && d.website && !/instagram\.com/i.test(d.website)) ev.websiteUrl = d.website;
       if (d.instagram) { ev.instagramHandle = d.instagram; ev.instagramUrl = 'https://www.instagram.com/' + d.instagram; }
       if (d.phone && !ev.phone) ev.phone = d.phone;
       if (d.nextEvent && d.nextEvent.title) ev.nextEvent = d.nextEvent;
     } catch (e) { console.log('[venueCapacity] enrich error', e.message); }
   }));
-  return (events || []).filter(ev => !ev.listedClosed);
+  // confirmed party venues first, "may turn into a party" after
+  return (events || []).filter(ev => !ev.listedClosed).sort((a, b) => (a.partyUnconfirmed ? 1 : 0) - (b.partyUnconfirmed ? 1 : 0));
 }
 
 module.exports = { getVenueInfo, enrichEvents };

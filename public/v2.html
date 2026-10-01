@@ -545,7 +545,7 @@ function aiShowResults(title,items){
   items.forEach(function(p,i){
     var saved=p.placeId&&places.some(function(x){return x.placeId===p.placeId});
     h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(p.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></button>'+
-      '<button class="t" onclick="aiShow('+i+')"><b>'+esc(p.name)+'</b><small>'+esc(p.why||p.address||'')+'</small>'+(p.ev&&p.ev.match?'<span class="match">'+p.ev.match+'% match</span>'+(p.ev.people?'<span class="ppl">~'+p.ev.people+' people</span>':''):'')+'</button>'+
+      '<button class="t" onclick="aiShow('+i+')"><b>'+esc(p.name)+'</b><small>'+esc(p.why||p.address||'')+'</small>'+(p.ev&&p.ev.maybe?'<span class="ppl" style="background:#FFF4E5;color:#8A4B0F;margin-right:6px">May turn into a party</span>':'')+(p.ev&&p.ev.match?'<span class="match">'+p.ev.match+'% match</span>'+(p.ev.people?'<span class="ppl">~'+p.ev.people+' people</span>':''):'')+'</button>'+
       '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')"'+(saved?' disabled>Saved':'>+ Add')+'</button></div>';
   });
   $('aiRes').innerHTML=h;
@@ -618,7 +618,7 @@ async function aiEvents(){
       if(!p)return null;
       p.name=ev.name||p.name;p.why=[ev.date,ev.time,ev.venueName&&ev.venueName!==ev.name?ev.venueName:''].filter(Boolean).join(' · ');
       if(ev.photoUrl)p.photo=ev.photoUrl;
-      p.ev={match:ev.matchScore||0,people:ev.estimatedCapacity||0,capSrc:ev.capacitySource==='sources'?'by sources':'estimate by AI',price:ev.price||'',note:ev.conciergeNote||'',insta:ev.instagramUrl||'',web:ev.websiteUrl||'',tags:ev.tags||[],next:ev.nextEvent||null,verified:!!ev.openConfirmed,unverified:!!ev.unverified};
+      p.ev={match:ev.matchScore||0,people:ev.estimatedCapacity||0,capSrc:ev.capacitySource==='sources'?'by sources':'estimate by AI',price:ev.price||'',note:ev.conciergeNote||'',insta:ev.instagramUrl||'',web:ev.websiteUrl||'',tags:ev.tags||[],next:ev.nextEvent||null,maybe:ev.partyUnconfirmed?(ev.venueKind||'venue'):'',verified:!!ev.openConfirmed,unverified:!!ev.unverified};
       return p;
     }));
     aiShowResults('Events near you',items.filter(Boolean));
@@ -660,6 +660,7 @@ function evBlock(e){
   if(e.people)h+='<span class="ppl" style="font-size:14px;padding:6px 12px;margin:0">👥 ~'+e.people+' people <span style="font-weight:600;opacity:.7">('+e.capSrc+')</span></span>';
   if(e.price)h+='<span class="ppl" style="font-size:14px;padding:6px 12px;margin:0">💰 '+esc(e.price)+'</span>';
   h+='</div>';
+  if(e.maybe)h+='<div style="background:#FFF4E5;border-radius:12px;padding:10px 12px;font-size:14px;color:#8A4B0F;font-weight:600">⚠ This is a '+esc(e.maybe)+', not a club. It sometimes turns into a party — check before you go.</div>';
   if(e.verified)h+='<div style="color:#1E7A45;font-weight:700;font-size:14px">✓ Verified open</div>';
   else if(e.unverified)h+='<div style="color:#B45309;font-weight:700;font-size:14px">⚠ Verify before going</div>';
   if(e.next&&e.next.title)h+='<div style="background:#FFF7E6;border-radius:14px;padding:12px 14px;font-size:15px"><div class="eyebrow" style="color:#B45309">Next event</div><b>'+esc(e.next.title)+'</b><div class="sub" style="margin-top:2px">'+esc(fmtEvDate(e.next))+'</div></div>';

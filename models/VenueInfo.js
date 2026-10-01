@@ -14,6 +14,7 @@ const venueInfoSchema = new mongoose.Schema({
   instagram: String,
   nextEvent: { title: String, date: Date, startTime: Date, url: String },
   eventsCheckedAt: Date,
+  googleTypes: [String],
   lookupVer: Number,
   checkedAt: { type: Date, default: Date.now }
 });
