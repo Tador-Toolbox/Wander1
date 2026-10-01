@@ -9,6 +9,7 @@ const venueInfoSchema = new mongoose.Schema({
   capacity:  Number,
   source:    { type: String, enum: ['sources', 'ai'], default: 'ai' },
   isClosed:  Boolean,
+  lookupVer: Number,
   checkedAt: { type: Date, default: Date.now }
 });
 
