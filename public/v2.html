@@ -532,14 +532,27 @@ async function shareUrl(url,title){
 }
 
 /* ---------- AI ---------- */
-var aiResults=[],aiTrip=null;
+var aiResults=[];
 function aiBack(){$('aiRes').classList.add('hidden');$('aiHome').classList.remove('hidden')}
 function aiLoading(t){
   $('aiHome').classList.add('hidden');var r=$('aiRes');r.classList.remove('hidden');
   r.innerHTML='<button class="back" onclick="aiBack()">‹ Back</button><div class="loading"><div class="spin"></div>'+esc(t)+'</div>';
 }
-function aiShowResults(title,items){
-  aiResults=items;
+var aiMode=null,aiTitle='';
+function aiSeen(id,name){var n=String(name||'').toLowerCase();return aiResults.some(function(x){return (id&&x.placeId===id)||String(x.name||'').toLowerCase()===n})}
+function aiShownNames(){return aiResults.map(function(x){return x.name})}
+async function aiMore(){
+  var b=$('aiMoreBtn');if(b){b.disabled=true;b.innerHTML='<span class="spin" style="width:18px;height:18px;border-width:2px;margin:0"></span> Finding more…'}
+  var before=aiResults.length;
+  try{
+    if(aiMode==='now')await aiNow(true);else if(aiMode==='events')await aiEvents(true);else if(aiMode==='trip')await aiTrip(aiTripId,true);
+  }catch(e){toast(e.message)}
+  if(aiResults.length===before){toast('No new places this time — try again');aiShowResults(aiTitle,[],true)}
+}
+function aiShowResults(title,items,append){
+  aiTitle=title;
+  if(append){items=items.filter(function(p){return !aiSeen(p.placeId,p.name)});aiResults=aiResults.concat(items);items=aiResults}
+  else aiResults=items;
   var h='<button class="back" onclick="aiBack()">‹ Back</button><h2 class="display" style="font-size:22px">'+esc(title)+'</h2>';
   if(!items.length)h+='<div class="loading">Nothing found right now. Try again later.</div>';
   items.forEach(function(p,i){
@@ -548,6 +561,7 @@ function aiShowResults(title,items){
       '<button class="t" onclick="aiShow('+i+')"><b>'+esc(p.name)+'</b><small>'+esc(p.why||p.address||'')+'</small>'+(p.ev&&p.ev.maybe?'<span class="ppl" style="background:#FFF4E5;color:#8A4B0F;margin-right:6px">May turn into a party</span>':'')+(p.ev&&p.ev.match?'<span class="match">'+p.ev.match+'% match</span>'+(p.ev.people?'<span class="ppl">~'+p.ev.people+' people</span>':''):'')+'</button>'+
       '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')"'+(saved?' disabled>Saved':'>+ Add')+'</button></div>';
   });
+  if(items.length)h+='<button class="btn soft" id="aiMoreBtn" style="width:100%;margin-top:4px" onclick="aiMore()">Find more places</button>';
   $('aiRes').innerHTML=h;
   items.forEach(function(p,i){
     if(p.photo||!p.placeId||!window.google)return;
@@ -575,12 +589,12 @@ function cityName(pos){
     });
   });
 }
-function placeSearch(query,pos,openNow){
+function placeSearch(query,pos,openNow,skip){
   return new Promise(function(res){
     var req={query:query};if(pos){req.location=pos;req.radius=8000}if(openNow)req.openNow=true;
     new google.maps.places.PlacesService(map).textSearch(req,function(r,st){
       if(st!=='OK'||!r||!r.length)return res(null);
-      var p=r[0];
+      var p=skip?r.find(function(x){return !skip(x.place_id,x.name)}):r[0];if(!p)return res(null);
       res({name:p.name,address:p.formatted_address||'',placeId:p.place_id,lat:p.geometry.location.lat(),lng:p.geometry.location.lng(),photo:p.photos&&p.photos[0]?p.photos[0].getUrl({maxWidth:300}):''});
     });
   });
@@ -592,26 +606,27 @@ function timeInfo(){
   var day=d.toLocaleDateString('en-US',{weekday:'long'});
   return {hour:h,timeLabel:part+' ('+clock+' on '+day+')'};
 }
-async function aiNow(){
-  aiTripId=null;aiLoading('Finding ideas near you…');
+async function aiNow(more){
+  aiMode='now';aiTripId=null;if(!more)aiLoading('Finding ideas near you…');
   try{
     var pos=await getPos(),city=await cityName(pos),t=timeInfo();
-    var r=await api('/ai/right-now',{method:'POST',body:{lat:pos&&pos.lat,lng:pos&&pos.lng,locationStr:city||'your current location',timeLabel:t.timeLabel,hour:t.hour}});
+    var ex=more?aiResults.map(function(x){return x.name+(x.why?' ('+x.why+')':'')}):[];
+    var r=await api('/ai/right-now',{method:'POST',body:{lat:pos&&pos.lat,lng:pos&&pos.lng,locationStr:city||'your current location',timeLabel:t.timeLabel,hour:t.hour,exclude:ex}});
     var items=await Promise.all((r.ideas||[]).map(async function(idea){
-      var p=await placeSearch(idea.searchQuery||idea.title,pos,true);
+      var p=await placeSearch(idea.searchQuery||idea.title,pos,true,more?aiSeen:null);
       if(!p)return null;p.why=idea.title;return p;
     }));
-    aiShowResults('What to do now',items.filter(Boolean));
-  }catch(e){aiErr(e)}
+    aiShowResults('What to do now',items.filter(Boolean),more);
+  }catch(e){if(more)throw e;aiErr(e)}
 }
-async function aiEvents(){
-  aiTripId=null;aiLoading('Looking for events near you…');
+async function aiEvents(more){
+  aiMode='events';aiTripId=null;if(!more)aiLoading('Looking for events near you…');
   try{
     var pos=await getPos(),city=await cityName(pos);
     if(!city){city=prompt('Where are you? (city)');if(!city){aiBack();return}}
     var now=new Date(),t=timeInfo();
     var r=await api('/ai/event-discover',{method:'POST',body:{lat:pos&&pos.lat,lng:pos&&pos.lng,locationStr:city,timeLabel:t.timeLabel,hour:t.hour,
-      dayOfWeek:now.toLocaleDateString('en-US',{weekday:'long'}),dateStr:now.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}});
+      dayOfWeek:now.toLocaleDateString('en-US',{weekday:'long'}),dateStr:now.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),exclude:more?aiShownNames():[]}});
     var evs=(r.events||[]).concat(r.weekendEvents||[]).slice(0,5);
     var items=await Promise.all(evs.map(async function(ev){
       var p=await placeSearch((ev.venueName||ev.name)+' '+city,pos);
@@ -621,8 +636,8 @@ async function aiEvents(){
       p.ev={match:ev.matchScore||0,people:ev.estimatedCapacity||0,capSrc:ev.capacitySource==='sources'?'by sources':'estimate by AI',price:ev.price||'',note:ev.conciergeNote||'',insta:ev.instagramUrl||'',web:ev.websiteUrl||'',tags:ev.tags||[],next:ev.nextEvent||null,maybe:ev.partyUnconfirmed?(ev.venueKind||'venue'):'',verified:!!ev.openConfirmed,unverified:!!ev.unverified};
       return p;
     }));
-    aiShowResults('Events near you',items.filter(Boolean));
-  }catch(e){aiErr(e)}
+    aiShowResults('Events near you',items.filter(Boolean),more);
+  }catch(e){if(more)throw e;aiErr(e)}
 }
 function aiTripPick(){
   if(!trips.length){toast('Create a trip first');go('vTrips');return}
@@ -630,15 +645,16 @@ function aiTripPick(){
   trips.forEach(function(t){h+='<button class="listItem" onclick="aiTrip(\''+t._id+'\')"><span class="sq" style="background:'+colorFor(t)+'"></span><span><b>'+esc(t.name)+'</b><small>'+countFor(t._id)+' places</small></span></button>'});
   openSheet(h);
 }
-async function aiTrip(id){
-  closeSheet();aiTripId=id;var t=trips.find(function(x){return x._id===id});
-  aiLoading('Finding places for '+t.name+'…');
+async function aiTrip(id,more){
+  aiMode='trip';closeSheet();aiTripId=id;var t=trips.find(function(x){return x._id===id});
+  if(!more)aiLoading('Finding places for '+t.name+'…');
   try{
     var inTrip=places.filter(function(p){return String(p.trip)===id}).map(function(p){return p.name+(p.location?' ('+p.location+')':'')});
     var q='Suggest 5 great places to add to my trip "'+t.name+'".'+(inTrip.length?' Places already in this trip (do not repeat them, suggest places in the same area): '+inTrip.join('; ')+'.':'');
+    if(more)q+=' Also already suggested, give DIFFERENT places: '+aiShownNames().join('; ')+'.';
     var r=await api('/ai/ask',{method:'POST',body:{question:q}});
-    aiShowResults('Ideas for '+t.name,(r.places||[]));
-  }catch(e){aiErr(e)}
+    aiShowResults('Ideas for '+t.name,(r.places||[]),more);
+  }catch(e){if(more)throw e;aiErr(e)}
 }
 var aiTripId=null;
 async function aiAdd(i,fromSheet){

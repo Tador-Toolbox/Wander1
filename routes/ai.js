@@ -900,6 +900,7 @@ ${isJapan ? 'PART 4 — 2 JAPAN AI PICKS: Add 2 more suggestions with isTabelog:
 router.post('/right-now', auth, async (req, res) => {
   try {
     const { lat, lng, locationStr, timeLabel, hour } = req.body;
+    const exclude = Array.isArray(req.body.exclude) ? req.body.exclude.slice(0, 40).map(String) : [];
 
     // Load user's AI profile for taste context
     const User = require('../models/User');
@@ -921,6 +922,7 @@ router.post('/right-now', auth, async (req, res) => {
 Current time: ${timeLabel} (hour: ${hour}:00)
 ${locationContext}
 ${tasteContext}
+${exclude.length ? 'ALREADY SHOWN to the user — suggest DIFFERENT ideas and different kinds of places, never these: ' + exclude.join('; ') : ''}
 
 Structure your 3 ideas as:
 1. FOOD/DRINK — a restaurant, bar, café, or nightlife spot matching their taste
@@ -989,6 +991,8 @@ Reply ONLY with valid JSON, no markdown:
 router.post('/event-discover', auth, async (req, res) => {
   try {
     const { locationStr = 'Tel Aviv', timeLabel = 'evening', hour = 20, dayOfWeek = 'Saturday', dateStr = '' } = req.body;
+    const exclude = Array.isArray(req.body.exclude) ? req.body.exclude.slice(0, 60).map(x => String(x).toLowerCase().trim()) : [];
+    const isExcluded = n => { const v = String(n || '').toLowerCase().trim(); return !!v && exclude.some(x => x && (v === x || v.includes(x) || x.includes(v))); };
     const mapsKey = process.env.GOOGLE_MAPS_API_KEY;
 
     // Load Identity Cube
@@ -1024,7 +1028,7 @@ router.post('/event-discover', auth, async (req, res) => {
     // Flatten + deduplicate by place_id
     const seen = new Set();
     const allPlaces = searchResults.flat().filter(p => {
-      if (seen.has(p.place_id)) return false;
+      if (seen.has(p.place_id) || isExcluded(p.name)) return false;
       seen.add(p.place_id);
       return true;
     });
@@ -1222,6 +1226,7 @@ Return ONLY valid JSON:
         }
       } catch(e) { console.log('Blacklist load error:', e.message); }
 
+      if (exclude.length) blacklistStr = (blacklistStr === 'none' ? '' : blacklistStr + ', ') + exclude.map(x => `"${x}"`).join(', ') + ' (already shown to the user — pick different venues)';
       const weekendPromptFinal = weekendPrompt.replace('__BLACKLIST__', blacklistStr);
       // Ask for 4 candidates so we have replacements if some are closed
       const weekendText = await callAI(weekendPromptFinal);
@@ -1477,7 +1482,8 @@ Do not explain. Just one word.`;
     }
 
     const vc = require('../services/venueCapacity');
-    const [evOut, wkOut] = await Promise.all([vc.enrichEvents(events, locationStr), vc.enrichEvents(weekendEvents, locationStr)]);
+    const notShown = list => (list || []).filter(e => !isExcluded(e.name) && !isExcluded(e.venueName));
+    const [evOut, wkOut] = await Promise.all([vc.enrichEvents(notShown(events), locationStr), vc.enrichEvents(notShown(weekendEvents), locationStr)]);
     res.json({ events: evOut, weekendEvents: wkOut });
 
   } catch (err) {
