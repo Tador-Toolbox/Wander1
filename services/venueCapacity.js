@@ -152,4 +152,35 @@ async function enrichEvents(events, city) {
   return (events || []).filter(ev => !ev.listedClosed).sort((a, b) => (a.partyUnconfirmed ? 1 : 0) - (b.partyUnconfirmed ? 1 : 0));
 }
 
-module.exports = { getVenueInfo, enrichEvents };
+// Real club events for a city between two dates (YYYY-MM-DD)
+async function cityEvents(city, from, to, limit = 12) {
+  const name = String(city || '').split(',')[0].trim();
+  if (!name) return [];
+  const s = await gql({
+    operationName: 'GET_GLOBAL_SEARCH_RESULTS',
+    variables: { searchTerm: name, indices: ['AREA'] },
+    query: 'query GET_GLOBAL_SEARCH_RESULTS($searchTerm: String!, $indices: [IndexType!]) { search(searchTerm: $searchTerm, limit: 16, indices: $indices, includeNonLive: false) { searchType id value countryName } }'
+  });
+  const areas = (s?.data?.search || []).filter(x => x.searchType === 'AREA');
+  const area = areas.find(x => norm(x.value) === norm(name)) || areas[0];
+  if (!area) return [];
+  const r = await gql({
+    operationName: 'GET_POPULAR_EVENTS',
+    variables: { filters: { areas: { eq: Number(area.id) }, listingDate: { gte: from, lte: to } }, pageSize: limit, sort: { score: { order: 'DESCENDING' } } },
+    query: 'query GET_POPULAR_EVENTS($filters: FilterInputDtoInput, $pageSize: Int, $sort: SortInputDtoInput) { eventListings(filters: $filters, pageSize: $pageSize, page: 1, sort: $sort) { data { listingDate event { id title date startTime contentUrl interestedCount venue { name } artists { name } } } } }'
+  });
+  const seen = new Set();
+  return (r?.data?.eventListings?.data || []).map(x => x.event).filter(e => e && !seen.has(e.id) && seen.add(e.id)).map(e => ({
+    title: e.title, date: (e.date || '').slice(0, 10), startTime: e.startTime || '', venue: e.venue?.name || '',
+    artists: (e.artists || []).map(a => a.name).slice(0, 5), interested: e.interestedCount || 0,
+    url: e.contentUrl ? 'https://ra.co' + e.contentUrl : ''
+  }));
+}
+
+// Is this venue listed as an RA club (and not closed)? Cached via getVenueInfo.
+async function isListedClub(name, city) {
+  const d = await getVenueInfo(name, city, null).catch(() => null);
+  return !!(d && d.raId && !d.isClosed);
+}
+
+module.exports = { getVenueInfo, enrichEvents, cityEvents, isListedClub };

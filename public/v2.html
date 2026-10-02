@@ -674,6 +674,11 @@ function drawPlan(){
       evs.map(function(x){return '<div><b>'+esc(x.name)+'</b> <span class="sub">'+esc(x.when||'')+'</span><div class="sub" style="margin-top:2px">'+esc(x.note||'')+'</div></div>'}).join('')+
       '<div class="sub" style="font-size:12px">Event dates are AI suggestions — check before you go.</div></div>';
   }
+  var ce=plan.clubEvents||[];
+  if(ce.length){
+    h+='<div class="card" style="background:#F3F1FB;box-shadow:none"><h3>🎧 Parties & club nights</h3><div class="hint">Real listings for your dates</div>'+
+      ce.slice(0,8).map(function(x){return '<div><b>'+esc(x.title)+'</b> <span class="sub">'+esc(x.date?fmtDay(x.date):'')+(x.venue?' · '+esc(x.venue):'')+'</span>'+(x.artists&&x.artists.length?'<div class="sub" style="margin-top:2px">'+esc(x.artists.join(', '))+'</div>':'')+(x.url?'<a href="'+esc(x.url)+'" target="_blank" style="font-size:13px;font-weight:700;color:var(--blue)">Details & tickets</a>':'')+'</div>'}).join('')+'</div>';
+  }
   (plan.days||[]).forEach(function(d,di){
     h+='<div style="margin-top:6px"><div class="eyebrow">Day '+(di+1)+' · '+esc(fmtDay(d.date))+'</div><h3 style="font-size:17px;margin-top:2px">'+esc(d.title||'')+'</h3></div>';
     (d.stops||[]).forEach(function(st){

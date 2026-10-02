@@ -1801,10 +1801,12 @@ Reply ONLY with valid JSON, no markdown:
 {"reply":"1-3 short sentences","places":[{"name":"exact place name","city":"city, country","why":"max 8 words"}]}`;
     const result = extractJSON(await callGemini(prompt));
     if (!result) return res.status(500).json({ error: 'AI could not answer. Try again.' });
+    const closed = await blacklistedNames('');
     const key = process.env.GOOGLE_MAPS_API_KEY;
     const places = (await Promise.all((result.places || []).slice(0, 4).map(async p => {
+      if (closed.some(n => sameName(n, p.name))) return null;
       const r = (await searchGooglePlaces(`${p.name} ${p.city || ''}`, key))[0];
-      if (!r) return null;
+      if (!r || r.business_status === 'CLOSED_PERMANENTLY' || !sameName(p.name, r.name)) return null;
       return { name: r.name, why: p.why || '', address: r.formatted_address || '', lat: r.geometry.location.lat, lng: r.geometry.location.lng, placeId: r.place_id };
     }))).filter(Boolean);
     res.json({ reply: result.reply || '', places });
@@ -1818,6 +1820,24 @@ Reply ONLY with valid JSON, no markdown:
    POST /api/ai/build-trip  (V2 "Build a trip")
    { city, startDate, endDate, wishes } → day-by-day plan + holidays/events
 ───────────────────────────────────────── */
+async function blacklistedNames(city) {
+  try {
+    const VenueBlacklist = require('../models/VenueBlacklist');
+    const c = String(city || '').toLowerCase();
+    return (await VenueBlacklist.find({}).lean())
+      .filter(v => !v.city || !c || c.includes(String(v.city).toLowerCase()) || String(v.city).toLowerCase().includes(c.split(',')[0].trim()))
+      .map(v => v.venueName);
+  } catch { return []; }
+}
+const nameTokens = n => String(n || '').toLowerCase().replace(/[^a-z0-9֐-׿ ]+/g, ' ').split(/\s+/)
+  .filter(t => t.length > 2 && !['the','bar','club','cafe','restaurant','tlv','tel','aviv'].includes(t));
+function sameName(a, b) {
+  const A = nameTokens(a), B = nameTokens(b);
+  if (!A.length || !B.length) return String(a).toLowerCase().trim() === String(b).toLowerCase().trim();
+  return A.some(t => B.includes(t));
+}
+const NIGHT_RE = /club|techno|party|disco|dj|nightlife|rave|dance floor|trance|house music/i;
+
 router.post('/build-trip', auth, async (req, res) => {
   try {
     const { city = '', startDate = '', endDate = '', wishes = '' } = req.body;
@@ -1832,6 +1852,11 @@ router.post('/build-trip', auth, async (req, res) => {
     const p = user?.aiProfile || {};
     const taste = [...(p.tags || []), ...(p.musicGenres || [])].slice(0, 15).join(', ') || 'unknown';
 
+    const vc = require('../services/venueCapacity');
+    const [closedNames, clubEvents] = await Promise.all([
+      blacklistedNames(city),
+      vc.cityEvents(city, dates[0], dates[dates.length - 1]).catch(() => [])
+    ]);
     const prompt = `You are an expert local travel planner. Build a day-by-day trip.
 
 City / destination: ${city}
@@ -1844,6 +1869,9 @@ Rules:
 - Use ONLY real, specific places that exist on Google Maps in or near ${city}.
 - 3 or 4 stops per day, in a sensible geographic order, with a rough time (e.g. "09:30").
 - Match the traveler's wishes above all.
+- NEVER suggest these places, they are permanently closed: ${closedNames.join(', ') || 'none'}.
+- Only suggest nightclubs you are sure are currently operating.
+${clubEvents.length ? '- REAL club events on these dates (from a live listing). If the traveler wants nightlife, use these for evening stops (stop name = the venue name, why = event title):\n' + clubEvents.map(e => `  ${e.date}: "${e.title}" at ${e.venue}${e.artists.length ? ' with ' + e.artists.join(', ') : ''}`).join('\n') : ''}
 - List public holidays (national and religious) that fall within or right around these dates in that country, and what they mean for the traveler (closures, crowds, celebrations).
 - List well-known recurring events, festivals or seasonal happenings for that month in ${city}. Only include ones you are confident recur at this time of year.
 
@@ -1859,11 +1887,24 @@ Reply ONLY with valid JSON, no markdown:
     if (!plan || !Array.isArray(plan.days)) return res.status(500).json({ error: 'Could not build the trip. Try again.' });
 
     const key = process.env.GOOGLE_MAPS_API_KEY;
+    const dropped = [];
     await Promise.all(plan.days.slice(0, nDays).flatMap(d => (d.stops || []).slice(0, 4).map(async s => {
-      const r = (await searchGooglePlaces(`${s.name} ${city}`, key))[0];
-      if (r) Object.assign(s, { name: r.name, address: r.formatted_address || '', lat: r.geometry.location.lat, lng: r.geometry.location.lng, placeId: r.place_id });
+      const asked = s.name;
+      if (closedNames.some(n => sameName(n, asked))) { dropped.push(asked + ' (closed)'); return; }
+      const r = (await searchGooglePlaces(`${asked} ${city}`, key))[0];
+      if (!r) { dropped.push(asked + ' (not found)'); return; }
+      if (r.business_status === 'CLOSED_PERMANENTLY' || r.permanently_closed) { dropped.push(asked + ' (closed)'); return; }
+      if (!sameName(asked, r.name)) { dropped.push(`${asked} (Google matched "${r.name}")`); return; }
+      if (NIGHT_RE.test(`${asked} ${s.why || ''}`)) {
+        const types = r.types || [];
+        const isNight = types.includes('night_club') || types.includes('bar') || await vc.isListedClub(r.name, city);
+        if (!isNight) { dropped.push(`${asked} (not a club: ${types.slice(0, 2).join(', ')})`); return; }
+      }
+      Object.assign(s, { name: r.name, address: r.formatted_address || '', lat: r.geometry.location.lat, lng: r.geometry.location.lng, placeId: r.place_id });
     })));
+    if (dropped.length) console.log('[ai/build-trip] dropped stops:', dropped.join('; '));
     plan.days = plan.days.slice(0, nDays).map((d, i) => ({ ...d, date: dates[i], stops: (d.stops || []).filter(s => s.lat != null) }));
+    plan.clubEvents = clubEvents;
     plan.city = city; plan.startDate = dates[0]; plan.endDate = dates[dates.length - 1];
     res.json(plan);
   } catch (err) {
