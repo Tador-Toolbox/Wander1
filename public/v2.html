@@ -692,7 +692,8 @@ async function aiEvents(more){
       return p;
     }));
     if(!more&&tonightP)await tonightP;
-    aiShowResults('Events near you',items.filter(Boolean),more);
+    var seenP={};items=items.filter(function(x){if(!x)return false;var k=x.placeId||x.name;if(seenP[k])return false;seenP[k]=1;return true});
+    aiShowResults('Events near you',items,more);
   }catch(e){
     if(more)throw e;
     if(typeof tonightP!=='undefined'&&tonightP){await tonightP;if(tonight.length){aiShowResults('Events near you',[],false);return}}
@@ -854,13 +855,28 @@ async function aiTrip(id,more){
   }catch(e){if(more)throw e;aiErr(e)}
 }
 var aiTripId=null;
-async function aiAdd(i,fromSheet){
-  var p=aiResults[i],b=$('aiAdd'+i)||{};b.disabled=true;b.textContent='Saving…';var sb=$('dtAdd');if(sb){sb.disabled=true;sb.textContent='Saving…'}
-  var onTrip=!!aiTripId;
+// + Add → pick a trip (or just the map). Inside a trip context (Ideas for my trip / Build a trip) save straight to it.
+function aiAdd(i){
+  if(aiTripId)return aiSave(i,aiTripId);
+  var p=aiResults[i];
+  var h='<h2>Add “'+esc(p.name)+'”</h2><div class="sub" style="margin-top:-8px">Choose where to save it</div>'+
+    '<button class="listItem" onclick="aiSave('+i+',\'\')"><span class="sq" style="background:var(--blue-soft);color:var(--blue)">📍</span><span><b>Just my map</b><small>Saved as Want to go</small></span></button>';
+  trips.forEach(function(t){h+='<button class="listItem" onclick="aiSave('+i+',\''+t._id+'\')">'+tripThumb(t,'thumbImg')+'<span><b>'+esc(t.name)+'</b><small>'+countFor(t._id)+' places</small></span></button>'});
+  h+='<button class="listItem" onclick="aiNewTripSave('+i+')"><span class="sq" style="font-size:22px">＋</span><span><b>New trip…</b><small>Create a trip and add it</small></span></button>';
+  openSheet(h);loadTripPhotos();
+}
+async function aiNewTripSave(i){
+  var n=prompt('Trip name');if(!n)return;
+  try{var t=await api('/trips',{method:'POST',body:{name:n}});trips.unshift(t);renderChips();aiSave(i,t._id)}catch(e){toast(e.message)}
+}
+async function aiSave(i,tripId){
+  closeSheet();
+  var p=aiResults[i],b=$('aiAdd'+i)||{};b.disabled=true;b.textContent='Saving…';
   try{
-    var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai',trip:onTrip?aiTripId:null}});
-    places.unshift(s);renderMarkers();b.textContent='Saved';if(sb){sb.textContent='✓ Saved';sb.className='btn soft'}toast(onTrip?'Added to your trip':'Added to Want to go');
-  }catch(e){b.disabled=false;b.textContent='+ Add';if(sb){sb.disabled=false;sb.textContent='+ Add to my map'}toast(e.message)}
+    var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai',trip:tripId||null,notes:p.why||''}});
+    places.unshift(s);renderMarkers();b.textContent='Saved';
+    toast(tripId?'Added to '+tripName(tripId):'Added to Want to go');
+  }catch(e){b.disabled=false;b.textContent='+ Add';toast(e.message)}
 }
 function fmtEvDate(n){
   var d=new Date(n.startTime||n.date);if(isNaN(d))return '';
@@ -891,7 +907,7 @@ function aiShow(i){
     '<div><h2>'+esc(p.name)+'</h2>'+(p.why?'<div class="sub" style="color:var(--ink);font-weight:600">'+esc(p.why)+'</div>':'')+'<div class="sub" id="dtAddr">'+esc(p.address||'')+'</div></div>'+
     evBlock(p.ev)+
     '<div id="dtInfo" class="sub">Loading details…</div>'+
-    '<button class="btn blue" id="dtAdd" onclick="aiAdd('+i+',true)">+ Add to my map</button>'+
+    '<button class="btn blue" id="dtAdd" onclick="aiAdd('+i+')">+ Add to map or trip</button>'+
     '<div class="two"><a class="btn dark" style="text-decoration:none" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+(p.placeId?'&destination_place_id='+encodeURIComponent(p.placeId):'')+'">Navigate</a>'+
     '<button class="btn soft" onclick="closeSheet();go(\'vMap\');map.panTo({lat:'+p.lat+',lng:'+p.lng+'});map.setZoom(16)">Show on map</button></div>'+
     '<button class="reportBtn" onclick="reportClosed(aiResults['+i+'].name,aiResults['+i+'].address)">Is this place closed? Report it</button>');
