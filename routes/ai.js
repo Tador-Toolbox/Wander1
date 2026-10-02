@@ -1925,3 +1925,49 @@ router.post('/verify', auth, async (req, res) => {
 
 // Expose for routes/places.js (module.exports is the router)
 router.updateFeedbackLoop = updateFeedbackLoop;
+
+/* ─────────────────────────────────────────
+   POST /api/ai/tonight  { city, date:'YYYY-MM-DD', extraEvents? }
+   Real parties tonight (Eventer + club listing + Go-Out from the phone), ranked for the user
+───────────────────────────────────────── */
+router.post('/tonight', auth, async (req, res) => {
+  try {
+    const { city = '', date = '' } = req.body;
+    if (!city || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'city and date required' });
+    const next = new Date(new Date(date + 'T12:00:00Z').getTime() + 86400000).toISOString().slice(0, 10);
+    const [eventer, listing] = await Promise.all([
+      require('../services/eventer').cityEvents(city, date, next, 40).catch(() => []),
+      require('../services/venueCapacity').cityEvents(city, date, next, 20).catch(() => [])
+    ]);
+    const phone = (Array.isArray(req.body.extraEvents) ? req.body.extraEvents : []).slice(0, 40)
+      .filter(e => e && e.title && (e.date === date || e.date === next))
+      .map(e => ({ title: String(e.title).slice(0, 140), date: e.date, startTime: String(e.startTime || e.date).slice(0, 25), venue: String(e.venue || '').slice(0, 80),
+        artists: [], url: /^https:\/\/www\.go-out\.co\/event\/\w+$/.test(e.url || '') ? e.url : '', source: 'goout' }));
+    // tonight = events on `date`, plus after-midnight starts (before 06:00) on the next day
+    const hourOf = e => { const m = String(e.startTime || '').match(/T(\d{2}):/); return m ? +m[1] : 22; };
+    const seen = new Set();
+    const events = [...eventer, ...phone, ...listing]
+      .filter(e => e.date === date || (e.date === next && hourOf(e) < 6))
+      .filter(e => { const k = e.title.toLowerCase().replace(/\s+/g, ' ').slice(0, 25); if (seen.has(k)) return false; seen.add(k); return true; })
+      .slice(0, 30);
+    console.log(`[ai/tonight] ${city} ${date}: eventer ${eventer.length}, go-out ${phone.length}, listing ${listing.length} → ${events.length} tonight`);
+    if (!events.length) return res.json({ events: [] });
+
+    const User = require('../models/User');
+    const p = (await User.findById(req.userId).select('aiProfile'))?.aiProfile || {};
+    const prompt = `Rank tonight's parties for this person.
+Taste: music ${(p.musicGenres || []).join(', ') || 'any'}; mission ${p.eventGoal || 'any'}; room ${p.atmosphere || 'any'}; sound ${p.soundVibe || 'any'}; crowd size ${p.crowdSize || 'any'}; tags ${(p.tags || []).slice(0, 10).join(', ')}
+Parties:
+${events.map((e, i) => `[${i}] ${e.title}${e.venue ? ' @ ' + e.venue : ''}${e.artists?.length ? ' with ' + e.artists.join(', ') : ''}`).join('\n')}
+Reply ONLY with JSON: {"ranked":[{"i":0,"match":87,"why":"max 8 words"}]} — include every party, best first.`;
+    let ranked = [];
+    try { ranked = extractJSON(await callGemini(prompt, 2500))?.ranked || []; } catch {}
+    const byI = new Map(ranked.map(r => [Number(r.i), r]));
+    const out = events.map((e, i) => ({ ...e, match: Math.max(0, Math.min(100, Number(byI.get(i)?.match) || 0)), why: byI.get(i)?.why || '' }))
+      .sort((a, b) => b.match - a.match || String(a.startTime).localeCompare(String(b.startTime)));
+    res.json({ events: out.slice(0, 12) });
+  } catch (err) {
+    console.error('[ai/tonight]', err);
+    res.status(500).json({ error: 'Could not load tonight’s events' });
+  }
+});

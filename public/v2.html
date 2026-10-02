@@ -576,7 +576,9 @@ function aiShowResults(title,items,append){
   if(append){items=items.filter(function(p){return !aiSeen(p.placeId,p.name)});aiResults=aiResults.concat(items);items=aiResults}
   else aiResults=items;
   var h='<button class="back" onclick="aiBack()">‹ Back</button><h2 class="display" style="font-size:22px">'+esc(title)+'</h2>';
-  if(!items.length)h+='<div class="loading">Nothing found right now. Try again later.</div>';
+  var tn=aiMode==='events'?tonightHtml():'';
+  if(tn)h+=tn+'<h3 style="font-size:17px;margin-top:6px">📍 Places for you</h3>';
+  if(!items.length)h+='<div class="loading">'+(tn?'No venue picks right now.':'Nothing found right now. Try again later.')+'</div>';
   items.forEach(function(p,i){
     var saved=p.placeId&&places.some(function(x){return x.placeId===p.placeId});
     h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(p.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></button>'+
@@ -649,12 +651,33 @@ async function aiNow(more){
     aiShowResults('What to do now',items,more);
   }catch(e){if(more)throw e;aiErr(e)}
 }
+var tonight=[];
+function ymdLocal(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function tonightHtml(){
+  if(!tonight.length)return '';
+  var h='<div class="night"><div class="eyebrow" style="color:#5B3FC4">🎧 Tonight near you</div>';
+  tonight.slice(0,6).forEach(function(e){
+    var tm=String(e.startTime||'').match(/T(\d{2}:\d{2})/);
+    h+='<a class="clubLine" href="'+esc(e.url||'#')+'" target="_blank"><b>'+esc(e.title)+'</b><span>'+esc([e.venue,tm?tm[1]:'',e.why].filter(Boolean).join(' · '))+'</span>'+(e.match?'<span class="match" style="margin-top:4px">'+e.match+'% match</span>':'')+'</a>';
+  });
+  if(tonight.length>6)h+='<button class="moreLink" onclick="showTonightAll()">+'+(tonight.length-6)+' more parties tonight</button>';
+  return h+'</div>';
+}
+function showTonightAll(){window._clubByDay={};openSheet('<h2>Tonight</h2>'+tonight.map(clubLine).join(''))}
 async function aiEvents(more){
+  var tonightP=null;
   aiMode='events';aiTripId=null;if(!more)aiLoading('Looking for events near you…');
   try{
     var pos=await getPos(),city=await cityName(pos);
     if(!city){city=prompt('Where are you? (city)');if(!city){aiBack();return}}
     var now=new Date(),t=timeInfo();
+    if(!more){
+      // night starts "today" until 6am → after midnight still show last night's parties
+      var day=new Date(now.getTime()-(now.getHours()<6?864e5:0)),dk=ymdLocal(day),nk=ymdLocal(new Date(day.getTime()+864e5));
+      tonightP=goOutEvents(city,dk,nk).catch(function(){return []}).then(function(extra){
+        return api('/ai/tonight',{method:'POST',body:{city:city,date:dk,extraEvents:extra}});
+      }).then(function(x){tonight=x.events||[]}).catch(function(){tonight=[]});
+    }
     var r=await api('/ai/event-discover',{method:'POST',body:{lat:pos&&pos.lat,lng:pos&&pos.lng,locationStr:city,timeLabel:t.timeLabel,hour:t.hour,
       dayOfWeek:now.toLocaleDateString('en-US',{weekday:'long'}),dateStr:now.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),exclude:more?aiShownNames():[]}});
     var evs=(r.events||[]).concat(r.weekendEvents||[]).slice(0,5);
@@ -666,8 +689,13 @@ async function aiEvents(more){
       p.ev={match:ev.matchScore||0,people:ev.estimatedCapacity||0,capSrc:ev.capacitySource==='sources'?'by sources':'estimate by AI',price:ev.price||'',note:ev.conciergeNote||'',insta:ev.instagramUrl||'',web:ev.websiteUrl||'',tags:ev.tags||[],next:ev.nextEvent||null,maybe:ev.partyUnconfirmed?(ev.venueKind||'venue'):'',verified:!!ev.openConfirmed,unverified:!!ev.unverified};
       return p;
     }));
+    if(!more&&tonightP)await tonightP;
     aiShowResults('Events near you',items.filter(Boolean),more);
-  }catch(e){if(more)throw e;aiErr(e)}
+  }catch(e){
+    if(more)throw e;
+    if(typeof tonightP!=='undefined'&&tonightP){await tonightP;if(tonight.length){aiShowResults('Events near you',[],false);return}}
+    aiErr(e);
+  }
 }
 /* ---- Build a trip ---- */
 var plan=null;
