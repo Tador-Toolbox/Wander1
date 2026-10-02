@@ -787,13 +787,16 @@ function drawPlan(){
   var h='<button class="back" onclick="aiBack()">‹ Back</button><h2 class="display" style="font-size:24px">'+esc(plan.title||plan.city)+'</h2>'+
     '<div class="sub" style="margin-top:-6px">'+esc(fmtDay(plan.startDate))+' – '+esc(fmtDay(plan.endDate))+'</div>'+
     (plan.summary?'<p style="font-size:15px;line-height:1.5">'+esc(plan.summary)+'</p>':'');
+  var W=plan.weather;
+  if(W&&W.summary)h+='<div class="holLine" style="background:#EAF3FD;color:#1B4F8A">'+(W.kind==='forecast'?'🌤 <b>Forecast: ':'🌤 <b>Typical weather: ')+esc(W.summary)+'</b><span>'+(W.kind==='forecast'?'From the weather forecast for your dates.':'Estimate based on the same dates in past years.')+'</span></div>';
   // holidays: one compact line each, or a single all-clear line
   h+=hol.length?hol.map(function(x){return '<div class="holLine">🗓 <b>'+esc(x.date?fmtDay(x.date):'')+' — '+esc(x.name)+'</b>'+(x.note?'<span>'+esc(x.note)+'</span>':'')+'</div>'}).join('')
     :'<div class="holLine ok">✓ No public holidays on your dates</div>';
   // city events as chips
   if(cityEv.length)h+='<div class="evChips">'+cityEv.slice(0,6).map(function(x,i){return '<button class="evChip" onclick="showCityEv('+i+')">✨ '+esc(x.name.replace(/\s*\(.*?\)\s*/g,' ').trim())+'</button>'}).join('')+'</div>';
   (plan.days||[]).forEach(function(d,di){
-    h+='<div style="margin-top:8px"><div class="eyebrow">Day '+(di+1)+' · '+esc(fmtDay(d.date))+'</div><h3 style="font-size:17px;margin-top:2px">'+esc(d.title||'')+'</h3></div>';
+    var wd=W&&W.days&&W.days[d.date];
+    h+='<div style="margin-top:8px"><div class="eyebrow" style="display:flex;justify-content:space-between"><span>Day '+(di+1)+' · '+esc(fmtDay(d.date))+'</span>'+(wd?'<span style="text-transform:none;letter-spacing:0;color:var(--ink)">'+wd.icon+' '+wd.max+'° / '+wd.min+'°'+(wd.rain>=30?' · 💧'+wd.rain+'%':'')+'</span>':'')+'</div><h3 style="font-size:17px;margin-top:2px">'+esc(d.title||'')+'</h3></div>';
     (d.stops||[]).forEach(function(st){
       var i=aiResults.push({name:st.name,why:(st.time?st.time+' · ':'')+(st.why||''),address:st.address,lat:st.lat,lng:st.lng,placeId:st.placeId})-1;
       h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(st.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"></button>'+

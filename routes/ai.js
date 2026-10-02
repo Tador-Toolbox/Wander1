@@ -1851,6 +1851,7 @@ router.post('/build-trip', auth, async (req, res) => {
     const seenT = new Set();
     clubEvents = [...goOutEvents, ...phoneEvents, ...clubEvents].filter(e => { const k = e.title.toLowerCase().slice(0, 25); if (seenT.has(k)) return false; seenT.add(k); return true; })
       .sort((a, b) => String(a.startTime || a.date).localeCompare(String(b.startTime || b.date)));
+    const weatherP = require('../services/weather').tripWeather(city, dates).catch(() => null);
     const prompt = `You are an expert local travel planner. Build a day-by-day trip.
 
 City / destination: ${city}
@@ -1903,6 +1904,7 @@ Reply ONLY with valid JSON, no markdown:
     plan.days = plan.days.slice(0, nDays).map((d, i) => ({ ...d, date: dates[i], stops: (d.stops || []).filter(s => s.lat != null).slice(0, 4) }));
     plan.droppedCount = dropped.length;
     plan.clubEvents = clubEvents;
+    plan.weather = await weatherP;
     plan.city = city; plan.startDate = dates[0]; plan.endDate = dates[dates.length - 1];
     res.json(plan);
   } catch (err) {
