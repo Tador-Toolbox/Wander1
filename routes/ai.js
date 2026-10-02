@@ -1813,3 +1813,61 @@ Reply ONLY with valid JSON, no markdown:
     res.status(500).json({ error: 'AI failed' });
   }
 });
+
+/* ─────────────────────────────────────────
+   POST /api/ai/build-trip  (V2 "Build a trip")
+   { city, startDate, endDate, wishes } → day-by-day plan + holidays/events
+───────────────────────────────────────── */
+router.post('/build-trip', auth, async (req, res) => {
+  try {
+    const { city = '', startDate = '', endDate = '', wishes = '' } = req.body;
+    if (!city.trim() || !startDate) return res.status(400).json({ error: 'City and start date are required' });
+    const start = new Date(startDate), end = new Date(endDate || startDate);
+    if (isNaN(start) || isNaN(end) || end < start) return res.status(400).json({ error: 'Check the dates' });
+    const nDays = Math.min(7, Math.round((end - start) / 86400000) + 1);
+    const dates = Array.from({ length: nDays }, (_, i) => new Date(start.getTime() + i * 86400000).toISOString().slice(0, 10));
+
+    const User = require('../models/User');
+    const user = await User.findById(req.userId).select('aiProfile');
+    const p = user?.aiProfile || {};
+    const taste = [...(p.tags || []), ...(p.musicGenres || [])].slice(0, 15).join(', ') || 'unknown';
+
+    const prompt = `You are an expert local travel planner. Build a day-by-day trip.
+
+City / destination: ${city}
+Dates: ${dates[0]} to ${dates[dates.length - 1]} (${nDays} day${nDays > 1 ? 's' : ''})
+What the traveler is looking for: ${wishes || 'a good mix of highlights, food and local spots'}
+Traveler taste tags: ${taste}
+${p.atmosphere ? 'Nightlife atmosphere preference: ' + p.atmosphere : ''}
+
+Rules:
+- Use ONLY real, specific places that exist on Google Maps in or near ${city}.
+- 3 or 4 stops per day, in a sensible geographic order, with a rough time (e.g. "09:30").
+- Match the traveler's wishes above all.
+- List public holidays (national and religious) that fall within or right around these dates in that country, and what they mean for the traveler (closures, crowds, celebrations).
+- List well-known recurring events, festivals or seasonal happenings for that month in ${city}. Only include ones you are confident recur at this time of year.
+
+Reply ONLY with valid JSON, no markdown:
+{
+ "title": "short trip title",
+ "summary": "2 sentences",
+ "holidays": [{"date":"YYYY-MM-DD","name":"","note":"short impact for traveler"}],
+ "events": [{"when":"dates or 'all month'","name":"","note":"short"}],
+ "days": [{"date":"YYYY-MM-DD","title":"theme of the day","stops":[{"time":"09:30","name":"exact place name","why":"max 10 words"}]}]
+}`;
+    const plan = extractJSON(await callGemini(prompt));
+    if (!plan || !Array.isArray(plan.days)) return res.status(500).json({ error: 'Could not build the trip. Try again.' });
+
+    const key = process.env.GOOGLE_MAPS_API_KEY;
+    await Promise.all(plan.days.slice(0, nDays).flatMap(d => (d.stops || []).slice(0, 4).map(async s => {
+      const r = (await searchGooglePlaces(`${s.name} ${city}`, key))[0];
+      if (r) Object.assign(s, { name: r.name, address: r.formatted_address || '', lat: r.geometry.location.lat, lng: r.geometry.location.lng, placeId: r.place_id });
+    })));
+    plan.days = plan.days.slice(0, nDays).map((d, i) => ({ ...d, date: dates[i], stops: (d.stops || []).filter(s => s.lat != null) }));
+    plan.city = city; plan.startDate = dates[0]; plan.endDate = dates[dates.length - 1];
+    res.json(plan);
+  } catch (err) {
+    console.error('[ai/build-trip]', err);
+    res.status(500).json({ error: 'Could not build the trip' });
+  }
+});
