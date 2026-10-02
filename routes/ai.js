@@ -1867,8 +1867,18 @@ Reply ONLY with valid JSON, no markdown:
  "events": [{"when":"dates or 'all month'","name":"","note":"short"}],
  "days": [{"date":"YYYY-MM-DD","title":"theme of the day","stops":[{"time":"09:30","name":"exact place name","why":"max 10 words"}]}]
 }`;
-    const plan = extractJSON(await callGemini(prompt));
-    if (!plan || !Array.isArray(plan.days)) return res.status(500).json({ error: 'Could not build the trip. Try again.' });
+    // Long multi-day plans need a big token budget (2000 default truncated the JSON)
+    let raw = await callGemini(prompt, 8000);
+    let plan = extractJSON(raw);
+    if (!plan || !Array.isArray(plan.days)) {
+      console.log('[ai/build-trip] parse failed, len', (raw || '').length, 'tail:', (raw || '').slice(-200));
+      raw = await callGemini(prompt + '\n\nKeep it compact: max 4 stops per day, "why" max 6 words, max 4 holidays and 4 events. Output must be complete valid JSON.', 8000);
+      plan = extractJSON(raw);
+    }
+    if (!plan || !Array.isArray(plan.days)) {
+      console.log('[ai/build-trip] parse failed twice, tail:', (raw || '').slice(-200));
+      return res.status(500).json({ error: 'Could not build the trip. Try again.' });
+    }
 
     const key = process.env.GOOGLE_MAPS_API_KEY;
     const vp = require('../services/verifyPlace');
