@@ -6,7 +6,7 @@ const HEADERS = {
   'accept-language': 'he-IL,he;q=0.9,en;q=0.8',
   'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36'
 };
-const PAGE = 40, MAX_PAGES = 10, TTL = 30 * 60 * 1000;
+const PAGE = 40, MAX_PAGES = 40, TTL = 30 * 60 * 1000;
 let cache = { at: 0, events: [] };
 
 // English ↔ Hebrew city names so "Tel Aviv" matches "תל אביב-יפו"
@@ -39,14 +39,18 @@ async function page(skip) {
 async function upcoming(until) {
   if (Date.now() - cache.at < TTL && cache.events.length && (cache.until || '') >= until) return cache.events;
   const all = [];
+  let skip = 0;
+  // The site may return fewer than `limit` per page (it uses 8) — keep paging by what we got
   for (let i = 0; i < MAX_PAGES; i++) {
-    const evs = await page(i * PAGE);
+    const evs = await page(skip);
     if (!evs || !evs.length) break;
     all.push(...evs);
+    skip += evs.length;
     const last = evs[evs.length - 1].StartingDate || '';
-    if (last.slice(0, 10) > until || evs.length < PAGE) break;
+    if (last.slice(0, 10) > until) break;
   }
-  if (all.length) cache = { at: Date.now(), events: all, until };
+  console.log(`[goOut] fetched ${all.length} events up to ${(all[all.length - 1] || {}).StartingDate || '-'} (need until ${until})`);
+  if (all.length) cache = { at: Date.now(), events: all, until: (all[all.length - 1].StartingDate || '').slice(0, 10) };
   return all;
 }
 
@@ -55,15 +59,18 @@ async function cityEvents(city, from, to, limit = 15) {
   if (!isIsraelCity(city)) return [];
   const terms = cityTerms(city);
   const evs = await upcoming(to);
+  const inRange = evs.filter(e => { const d = String(e.StartingDate || '').slice(0, 10); return d >= from && d <= to; }).length;
   const seen = new Set();
-  return evs.filter(e => {
+  const out = evs.filter(e => {
     const d = String(e.StartingDate || '').slice(0, 10);
     const addr = `${e.EnglishAddress || ''} ${e.Adress || ''}`.toLowerCase();
     const key = String(e.Title || '').trim().toLowerCase();
     if (d < from || d > to || seen.has(key)) return false;
     if (terms.length && !terms.some(t => addr.includes(t))) return false;
     seen.add(key); return true;
-  }).slice(0, limit).map(e => ({
+  });
+  console.log(`[goOut] ${city} ${from}..${to}: ${inRange} in dates, ${out.length} in city`);
+  return out.slice(0, limit).map(e => ({
     title: String(e.Title || '').trim(),
     date: String(e.StartingDate).slice(0, 10),
     startTime: e.StartingDate,
