@@ -514,18 +514,21 @@ function colorFor(t){var s=String(t._id||'');var n=0;for(var i=0;i<s.length;i++)
 function countFor(id){return places.filter(function(p){return String(p.trip)===id}).length}
 function myMapCard(){
   var mine=places.filter(function(p){return !p.trip}),todo=mine.filter(function(p){return p.status!=='been'}).length;
-  return '<article class="trip" style="border:2px solid var(--blue-soft)"><div class="body"><button style="padding:0;flex:none" onclick="openTodo()" aria-label="Open My map list"><span class="cover" style="background:var(--blue-soft);display:flex;align-items:center;justify-content:center;font-size:28px">📍</span></button>'+
-    '<button class="open" onclick="openTodo()"><h3>My map</h3><small>'+todo+' to do · '+(mine.length-todo)+' done</small></button>'+
+  return '<article class="trip" style="border:2px solid var(--blue-soft)"><div class="body"><button style="padding:0;flex:none" onclick="openTodo(\'\')" aria-label="Open My map list"><span class="cover" style="background:var(--blue-soft);display:flex;align-items:center;justify-content:center;font-size:28px">📍</span></button>'+
+    '<button class="open" onclick="openTodo(\'\')"><h3>My map</h3><small>'+todo+' to do · '+(mine.length-todo)+' done</small></button>'+
     '<button class="sq" aria-label="Show on map" onclick="tripFilter=\'\';go(\'vMap\');renderChips();renderMarkers()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg></button></div></article>';
 }
 // To-do list of places saved to "Just my map" (no trip): tick = visited
-function openTodo(){
-  var mine=places.filter(function(p){return !p.trip});
+var todoTrip='',todoShowDone=false;
+function openTodo(tripId){
+  if(tripId!==undefined)todoTrip=tripId||'';
+  var mine=places.filter(function(p){return todoTrip?String(p.trip)===todoTrip:!p.trip});
   var todo=mine.filter(function(p){return p.status!=='been'}),done=mine.filter(function(p){return p.status==='been'});
   var row=function(p){var i=places.indexOf(p);return '<div class="todo'+(p.status==='been'?' done':'')+'"><button class="tick" aria-label="'+(p.status==='been'?'Mark as to do':'Mark as visited')+'" onclick="toggleTodo('+i+')">'+(p.status==='been'?'✓':'')+'</button><button class="t" onclick="closeSheet();focusPlaceObj('+i+')"><b>'+esc(p.name)+'</b><small>'+esc(p.location||'')+'</small></button></div>'};
-  openSheet('<h2>My map</h2><div class="sub" style="margin-top:-8px">Places you saved without a trip. Tick them off when you go.</div>'+
-    (todo.length?'<div class="eyebrow">To do · '+todo.length+'</div>'+todo.map(row).join(''):'<div class="empty" style="padding:16px">Nothing to do yet — tap + to add places.</div>')+
-    (done.length?'<div class="eyebrow" style="margin-top:6px">Done · '+done.length+'</div>'+done.map(row).join(''):''));
+  var title=todoTrip?tripName(todoTrip):'My map';
+  openSheet('<h2>'+esc(title)+'</h2><div class="sub" style="margin-top:-8px">'+(todoTrip?'Your trip list. Tick a place when you\'ve been there.':'Places you saved without a trip. Tick them off when you go.')+'</div>'+
+    (todo.length?'<div class="eyebrow">To do · '+todo.length+'</div>'+todo.map(row).join(''):'<div class="empty" style="padding:16px">'+(mine.length?'All done 🎉':'Nothing here yet — tap + to add places.')+'</div>')+
+    (done.length?'<button class="moreLink" onclick="todoShowDone=!todoShowDone;openTodo()">'+(todoShowDone?'Hide':'Show')+' done ('+done.length+')</button>'+(todoShowDone?done.map(row).join(''):''):''));
 }
 async function toggleTodo(i){
   var p=places[i];cur=p;
@@ -537,6 +540,7 @@ function renderTrips(){
   $('tripList').innerHTML=myMapCard()+trips.map(function(t){
     var n=countFor(t._id),v=places.filter(function(p){return String(p.trip)===t._id&&p.status==='been'}).length;
     return '<article class="trip"><div class="body"><button style="padding:0;flex:none" onclick="showTrip(\''+t._id+'\')" aria-label="Open '+esc(t.name)+' on map">'+tripThumb(t,'cover')+'</button><button class="open" onclick="showTrip(\''+t._id+'\')"><h3>'+esc(t.name)+(t.shareToken?' <span class="badge">Link on</span>':'')+'</h3><small>'+n+(n===1?' place · ':' places · ')+v+' visited</small></button>'+
+      '<button class="sq" aria-label="Trip list" onclick="openTodo(\''+t._id+'\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m4 6 1.5 1.5L8 5"/><path d="m4 12 1.5 1.5L8 11"/><path d="m4 18 1.5 1.5L8 17"/><path d="M11 6h9M11 12h9M11 18h9"/></svg></button>'+
       '<button class="sq" aria-label="Share trip" onclick="shareTrip(\''+t._id+'\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/></svg></button>'+
       '<button class="sq" aria-label="Trip options" onclick="tripMenu(\''+t._id+'\')">⋯</button></div></article>';
   }).join('');
