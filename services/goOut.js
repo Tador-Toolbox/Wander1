@@ -6,7 +6,7 @@ const HEADERS = {
   'accept-language': 'he-IL,he;q=0.9,en;q=0.8',
   'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36'
 };
-const PAGE = 40, MAX_PAGES = 40, TTL = 30 * 60 * 1000;
+const PAGE = 8, MAX_PAGES = 45, TTL = 30 * 60 * 1000;
 let cache = { at: 0, events: [] };
 
 // English ↔ Hebrew city names so "Tel Aviv" matches "תל אביב-יפו"
@@ -46,11 +46,13 @@ async function upcoming(until) {
     if (!evs || !evs.length) break;
     all.push(...evs);
     skip += evs.length;
-    const last = evs[evs.length - 1].StartingDate || '';
-    if (last.slice(0, 10) > until) break;
+    // Pages aren't strictly date-sorted (promoted events far ahead) — stop only when the whole page is past `until`
+    const earliest = evs.map(e => String(e.StartingDate || '').slice(0, 10)).filter(Boolean).sort()[0] || '';
+    if (earliest > until) break;
   }
-  console.log(`[goOut] fetched ${all.length} events up to ${(all[all.length - 1] || {}).StartingDate || '-'} (need until ${until})`);
-  if (all.length) cache = { at: Date.now(), events: all, until: (all[all.length - 1].StartingDate || '').slice(0, 10) };
+  const dates = all.map(e => String(e.StartingDate || '').slice(0, 10)).filter(Boolean).sort();
+  console.log(`[goOut] fetched ${all.length} events in ${Math.ceil(skip / PAGE)} pages, dates ${dates[0] || '-'}..${dates[dates.length - 1] || '-'} (need until ${until})`);
+  if (all.length) cache = { at: Date.now(), events: all, until };
   return all;
 }
 
@@ -70,6 +72,7 @@ async function cityEvents(city, from, to, limit = 15) {
     seen.add(key); return true;
   });
   console.log(`[goOut] ${city} ${from}..${to}: ${inRange} in dates, ${out.length} in city`);
+  if (inRange && !out.length) console.log('[goOut] sample addresses:', evs.filter(e => { const d = String(e.StartingDate || '').slice(0, 10); return d >= from && d <= to; }).slice(0, 5).map(e => e.EnglishAddress || e.Adress).join(' | '));
   return out.slice(0, limit).map(e => ({
     title: String(e.Title || '').trim(),
     date: String(e.StartingDate).slice(0, 10),
