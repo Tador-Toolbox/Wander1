@@ -32,11 +32,16 @@ router.put('/:id', async (req, res) => {
     if (!place) return res.status(404).json({ error: 'Not found' });
     const fields = ['name','location','placeId','notes','link','tags','lat','lng','trip'];
     fields.forEach(f => { if (req.body[f] !== undefined) place[f] = req.body[f] === '' ? null : req.body[f]; });
+    const oldRating = place.rating || 0;
     if (req.body.rating   !== undefined) place.rating   = Number(req.body.rating) || 0;
     if (req.body.isPublic   !== undefined) place.isPublic   = !!req.body.isPublic;
     if (req.body.visibility !== undefined) place.visibility = req.body.visibility||'private';
     if (req.body.status     !== undefined) place.status     = req.body.status||'none';
     await place.save();
+    if (req.body.rating !== undefined && place.rating !== oldRating && (place.tags || []).length) {
+      try { await require('./ai').updateFeedbackLoop(req.userId, place.tags, place.rating, oldRating); }
+      catch (e) { console.log('[places] feedback loop error', e.message); }
+    }
     res.json(place);
   } catch { res.status(500).json({ error: 'Server error' }); }
 });

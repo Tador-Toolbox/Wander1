@@ -133,6 +133,7 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .facts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .fact{background:var(--soft);border-radius:12px;padding:10px 12px}.fact small{display:block;font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}.fact b{font-size:14px}
 #meSave{position:sticky;bottom:12px;box-shadow:0 6px 16px rgba(31,95,214,.35)}
+.reportBtn{align-self:center;font-size:13px;font-weight:600;color:var(--muted);text-decoration:underline;text-underline-offset:3px;padding:6px}
 .pac-container{z-index:100;border-radius:12px;margin-top:6px;font-family:Manrope,sans-serif}
 </style></head><body>
 
@@ -430,7 +431,8 @@ function openPlace(p){
     '<label class="lbl">Notes<textarea class="field" id="plNotes" placeholder="Add a note…" onblur="saveNotes()">'+esc(p.notes||'')+'</textarea></label>'+
     '<div class="two"><a class="btn dark" style="text-decoration:none" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+(p.placeId?'&destination_place_id='+encodeURIComponent(p.placeId):'')+'">Navigate</a>'+
     '<button class="btn soft" onclick="sharePlace()">Share</button></div>'+
-    '<button class="btn danger" onclick="deletePlace()">Delete place</button>');
+    '<button class="btn danger" onclick="deletePlace()">Delete place</button>'+
+    '<button class="reportBtn" onclick="reportClosed(cur.name,cur.location||\'\')">Is this place closed? Report it</button>');
   var ph=(p.coverPhoto)||(p.photos&&p.photos[0]&&(p.photos[0].url||p.photos[0]));
   if(ph)$('plPhoto').style.backgroundImage='url("'+ph+'")';
   else if(p.placeId&&window.google){
@@ -609,17 +611,25 @@ function timeInfo(){
   var day=d.toLocaleDateString('en-US',{weekday:'long'});
   return {hour:h,timeLabel:part+' ('+clock+' on '+day+')'};
 }
+async function verifyItems(items,city){
+  if(!items.length)return items;
+  try{
+    var v=await api('/ai/verify',{method:'POST',body:{items:items.map(function(p){return {name:p.name,city:city||p.address||'',why:p.why||''}})}});
+    return items.filter(function(p,i){var r=v.results&&v.results[i];if(r&&r.ok&&r.place){p.placeId=r.place.placeId||p.placeId;return true}return !r})
+  }catch(e){return items}
+}
 async function aiNow(more){
   aiMode='now';aiTripId=null;if(!more)aiLoading('Finding ideas near you…');
   try{
     var pos=await getPos(),city=await cityName(pos),t=timeInfo();
     var ex=more?aiResults.map(function(x){return x.name+(x.why?' ('+x.why+')':'')}):[];
     var r=await api('/ai/right-now',{method:'POST',body:{lat:pos&&pos.lat,lng:pos&&pos.lng,locationStr:city||'your current location',timeLabel:t.timeLabel,hour:t.hour,exclude:ex}});
-    var items=await Promise.all((r.ideas||[]).map(async function(idea){
+    var items=(await Promise.all((r.ideas||[]).map(async function(idea){
       var p=await placeSearch(idea.searchQuery||idea.title,pos,true,more?aiSeen:null);
-      if(!p)return null;p.why=idea.title;return p;
-    }));
-    aiShowResults('What to do now',items.filter(Boolean),more);
+      if(!p)return null;p.why=idea.title;p.kind=idea.type;return p;
+    }))).filter(Boolean);
+    items=await verifyItems(items,city);
+    aiShowResults('What to do now',items,more);
   }catch(e){if(more)throw e;aiErr(e)}
 }
 async function aiEvents(more){
@@ -766,7 +776,8 @@ function aiShow(i){
     '<div id="dtInfo" class="sub">Loading details…</div>'+
     '<button class="btn blue" id="dtAdd" onclick="aiAdd('+i+',true)">+ Add to my map</button>'+
     '<div class="two"><a class="btn dark" style="text-decoration:none" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+(p.placeId?'&destination_place_id='+encodeURIComponent(p.placeId):'')+'">Navigate</a>'+
-    '<button class="btn soft" onclick="closeSheet();go(\'vMap\');map.panTo({lat:'+p.lat+',lng:'+p.lng+'});map.setZoom(16)">Show on map</button></div>');
+    '<button class="btn soft" onclick="closeSheet();go(\'vMap\');map.panTo({lat:'+p.lat+',lng:'+p.lng+'});map.setZoom(16)">Show on map</button></div>'+
+    '<button class="reportBtn" onclick="reportClosed(aiResults['+i+'].name,aiResults['+i+'].address)">Is this place closed? Report it</button>');
   var b=$('aiAdd'+i);if(b&&b.disabled){$('dtAdd').disabled=true;$('dtAdd').textContent='✓ Saved';$('dtAdd').className='btn soft'}
   if(!p.placeId){$('dtInfo').textContent='';return}
   new google.maps.places.PlacesService(map).getDetails({placeId:p.placeId,fields:['formatted_address','rating','user_ratings_total','opening_hours','utc_offset_minutes','formatted_phone_number','website','url','photos','price_level']},function(d,st){
@@ -844,6 +855,12 @@ async function meSave(){
     await api('/ai/preferences',{method:'POST',body:{replace:true,tags:me.tags,music:me.music,goal:me.goal,atmosphere:me.atmosphere,soundVibe:me.soundVibe,crowdSize:me.crowd.join(',')}});
     meDirty=false;drawMe();toast('Profile saved — AI ideas will use it');
   }catch(e){toast(e.message)}
+}
+
+async function reportClosed(name,where){
+  if(!confirm('Report "'+name+'" as permanently closed? We will check it and remove it from suggestions.'))return;
+  try{await api('/report-closure',{method:'POST',body:{venueName:name,city:String(where||'').split(',').slice(-2).join(',').trim()}});toast('Thanks — we will check it')}
+  catch(e){toast(e.message)}
 }
 
 /* ---------- settings ---------- */
