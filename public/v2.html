@@ -651,7 +651,7 @@ async function aiNow(more){
     aiShowResults('What to do now',items,more);
   }catch(e){if(more)throw e;aiErr(e)}
 }
-var tonight=[];
+var tonight=[],aiCity='';
 function ymdLocal(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function tonightHtml(){
   if(!tonight.length)return '';
@@ -668,8 +668,9 @@ async function aiEvents(more){
   var tonightP=null;
   aiMode='events';aiTripId=null;if(!more)aiLoading('Looking for events near you…');
   try{
-    var pos=await getPos(),city=await cityName(pos);
+    var pos=await getPos(),city=(more&&aiCity)||await cityName(pos)||aiCity;
     if(!city){city=prompt('Where are you? (city)');if(!city){aiBack();return}}
+    aiCity=city;
     var now=new Date(),t=timeInfo();
     if(!more){
       // night starts "today" until 6am → after midnight still show last night's parties

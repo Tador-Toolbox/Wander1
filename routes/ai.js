@@ -1848,8 +1848,7 @@ router.post('/build-trip', auth, async (req, res) => {
         artists: [], url: /^https:\/\/www\.go-out\.co\/event\/\w+$/.test(e.url || '') ? e.url : '', source: 'goout' }));
     console.log(`[ai/build-trip] events: club listing ${clubEvents.length}, eventer ${goOutEvents.length}, go-out (phone) ${phoneEvents.length}`);
     // Israel: Eventer + Go-Out have far better coverage; merge with the club listing, no duplicate titles
-    const seenT = new Set();
-    clubEvents = [...goOutEvents, ...phoneEvents, ...clubEvents].filter(e => { const k = e.title.toLowerCase().slice(0, 25); if (seenT.has(k)) return false; seenT.add(k); return true; })
+    clubEvents = require('../services/eventDedupe').mergeEvents(goOutEvents, phoneEvents, clubEvents)
       .sort((a, b) => String(a.startTime || a.date).localeCompare(String(b.startTime || b.date)));
     const weatherP = require('../services/weather').tripWeather(city, dates).catch(() => null);
     const prompt = `You are an expert local travel planner. Build a day-by-day trip.
@@ -1947,11 +1946,8 @@ router.post('/tonight', auth, async (req, res) => {
         artists: [], url: /^https:\/\/www\.go-out\.co\/event\/\w+$/.test(e.url || '') ? e.url : '', source: 'goout' }));
     // tonight = events on `date`, plus after-midnight starts (before 06:00) on the next day
     const hourOf = e => { const m = String(e.startTime || '').match(/T(\d{2}):/); return m ? +m[1] : 22; };
-    const seen = new Set();
-    const events = [...eventer, ...phone, ...listing]
-      .filter(e => e.date === date || (e.date === next && hourOf(e) < 6))
-      .filter(e => { const k = e.title.toLowerCase().replace(/\s+/g, ' ').slice(0, 25); if (seen.has(k)) return false; seen.add(k); return true; })
-      .slice(0, 30);
+    const tonightOnly = l => l.filter(e => e.date === date || (e.date === next && hourOf(e) < 6));
+    const events = require('../services/eventDedupe').mergeEvents(tonightOnly(eventer), tonightOnly(phone), tonightOnly(listing)).slice(0, 30);
     console.log(`[ai/tonight] ${city} ${date}: eventer ${eventer.length}, go-out ${phone.length}, listing ${listing.length} → ${events.length} tonight`);
     if (!events.length) return res.json({ events: [] });
 
