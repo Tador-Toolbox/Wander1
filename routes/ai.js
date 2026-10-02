@@ -1841,9 +1841,15 @@ router.post('/build-trip', auth, async (req, res) => {
       vc.cityEvents(city, dates[0], dates[dates.length - 1]).catch(() => []),
       require('../services/eventer').cityEvents(city, dates[0], dates[dates.length - 1]).catch(() => [])
     ]);
-    // Israel: Eventer has far better coverage; merge with the club listing, no duplicate titles
+    // Go-Out events fetched by the user's phone (Go-Out filters by the visitor's country)
+    const phoneEvents = (Array.isArray(req.body.extraEvents) ? req.body.extraEvents : []).slice(0, 30)
+      .filter(e => e && e.title && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && e.date >= dates[0] && e.date <= dates[dates.length - 1])
+      .map(e => ({ title: String(e.title).slice(0, 140), date: e.date, startTime: String(e.startTime || e.date).slice(0, 25), venue: String(e.venue || '').slice(0, 80),
+        artists: [], url: /^https:\/\/www\.go-out\.co\/event\/\w+$/.test(e.url || '') ? e.url : '', source: 'goout' }));
+    console.log(`[ai/build-trip] events: club listing ${clubEvents.length}, eventer ${goOutEvents.length}, go-out (phone) ${phoneEvents.length}`);
+    // Israel: Eventer + Go-Out have far better coverage; merge with the club listing, no duplicate titles
     const seenT = new Set();
-    clubEvents = [...goOutEvents, ...clubEvents].filter(e => { const k = e.title.toLowerCase().slice(0, 25); if (seenT.has(k)) return false; seenT.add(k); return true; })
+    clubEvents = [...goOutEvents, ...phoneEvents, ...clubEvents].filter(e => { const k = e.title.toLowerCase().slice(0, 25); if (seenT.has(k)) return false; seenT.add(k); return true; })
       .sort((a, b) => String(a.startTime || a.date).localeCompare(String(b.startTime || b.date)));
     const prompt = `You are an expert local travel planner. Build a day-by-day trip.
 

@@ -713,11 +713,35 @@ function buildTripForm(){
   rp={from:null,to:null,month:new Date(t.getFullYear(),t.getMonth(),1)};drawRP();
   try{new google.maps.places.Autocomplete($('btCity'),{types:['(regions)'],fields:['name']}).addListener('place_changed',function(){})}catch(e){}
 }
+/* Go-Out: fetched by the phone (it filters by the visitor's country; allows any origin) */
+var IL_CITY={'tel aviv':['tel aviv','תל אביב','tel-aviv','jaffa','יפו'],'jerusalem':['jerusalem','ירושלים'],'haifa':['haifa','חיפה'],'eilat':['eilat','אילת'],'herzliya':['herzliya','הרצליה'],'beer sheva':['beer sheva',"be'er sheva",'באר שבע'],'ashkelon':['ashkelon','אשקלון'],'netanya':['netanya','נתניה'],'ramat gan':['ramat gan','רמת גן'],'ashdod':['ashdod','אשדוד'],'rishon':['rishon','ראשון לציון']};
+function ilTerms(city){var c=String(city||'').toLowerCase();for(var k in IL_CITY){if(IL_CITY[k].some(function(a){return c.indexOf(a)>=0}))return IL_CITY[k]}return /israel|ישראל/.test(c)?[]:null}
+async function goOutEvents(city,from,to){
+  var terms=ilTerms(city);if(!terms)return [];
+  var out=[],seen={},skip=0;
+  for(var i=0;i<40;i++){
+    var r;try{r=await fetch('https://www.go-out.co/endOne/getEventsByTypeNew?',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({skip:skip,Types:['אירועים','מועדוני לילה'],limit:8,recivedDate:new Date().toISOString(),location:'IL'})})}catch(e){break}
+    if(!r.ok)break;
+    var txt=(await r.text()).trim(),d;
+    try{d=JSON.parse(txt.charAt(0)==='{'?txt:decodeURIComponent(escape(atob(txt))))}catch(e){break}
+    var evs=d.events||[];if(!evs.length)break;skip+=evs.length;
+    evs.forEach(function(e){
+      var day=String(e.StartingDate||'').slice(0,10),addr=((e.EnglishAddress||'')+' '+(e.Adress||'')).toLowerCase(),k=String(e.Title||'').trim().toLowerCase();
+      if(day<from||day>to||seen[k])return;if(terms.length&&!terms.some(function(t){return addr.indexOf(t)>=0}))return;
+      seen[k]=1;var f=String(e.EnglishAddress||e.Adress||'').split(',')[0].trim();
+      out.push({title:String(e.Title||'').trim(),date:day,startTime:e.StartingDate,venue:/\d|post box|^israel$/i.test(f)?'':f,artists:[],url:e.Url?'https://www.go-out.co/event/'+e.Url:'',source:'goout'});
+    });
+    var earliest=evs.map(function(e){return String(e.StartingDate||'').slice(0,10)}).sort()[0]||'';
+    if(earliest>to)break;
+  }
+  return out.slice(0,30);
+}
 async function buildTrip(){
   var city=$('btCity').value.trim(),from=rp.from,to=rp.to||rp.from,wish=$('btWish').value.trim();
   if(!city){toast('Enter a city');return}if(!from){toast('Tap your arrival day');return}
   closeSheet();aiMode=null;aiTripId=null;aiLoading('Building your trip to '+city+'… (about 20 seconds)');
-  try{plan=await api('/ai/build-trip',{method:'POST',body:{city:city,startDate:from,endDate:to||from,wishes:wish}});drawPlan()}
+  var extra=[];try{extra=await goOutEvents(city,from,to||from)}catch(e){}
+  try{plan=await api('/ai/build-trip',{method:'POST',body:{city:city,startDate:from,endDate:to||from,wishes:wish,extraEvents:extra}});drawPlan()}
   catch(e){aiErr(e)}
 }
 function fmtDay(iso){var d=new Date(iso+'T12:00:00');return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
