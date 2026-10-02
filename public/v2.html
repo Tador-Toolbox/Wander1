@@ -796,8 +796,7 @@ function drawPlan(){
   // city events as chips
   if(cityEv.length)h+='<div class="evChips">'+cityEv.slice(0,6).map(function(x,i){return '<button class="evChip" onclick="showCityEv('+i+')">✨ '+esc(x.name.replace(/\s*\(.*?\)\s*/g,' ').trim())+'</button>'}).join('')+'</div>';
   (plan.days||[]).forEach(function(d,di){
-    var wd=W&&W.days&&W.days[d.date];
-    h+='<div style="margin-top:8px"><div class="eyebrow" style="display:flex;justify-content:space-between"><span>Day '+(di+1)+' · '+esc(fmtDay(d.date))+'</span>'+(wd?'<span style="text-transform:none;letter-spacing:0;color:var(--ink)">'+wd.icon+' '+wd.max+'° / '+wd.min+'°'+(wd.rain>=30?' · 💧'+wd.rain+'%':'')+'</span>':'')+'</div><h3 style="font-size:17px;margin-top:2px">'+esc(d.title||'')+'</h3></div>';
+    h+='<div style="margin-top:8px"><div class="eyebrow">Day '+(di+1)+' · '+esc(fmtDay(d.date))+'</div><h3 style="font-size:17px;margin-top:2px">'+esc(d.title||'')+'</h3></div>';
     (d.stops||[]).forEach(function(st){
       var i=aiResults.push({name:st.name,why:(st.time?st.time+' · ':'')+(st.why||''),address:st.address,lat:st.lat,lng:st.lng,placeId:st.placeId})-1;
       h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(st.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"></button>'+
