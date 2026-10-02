@@ -1839,9 +1839,9 @@ router.post('/build-trip', auth, async (req, res) => {
     let [closedNames, clubEvents, goOutEvents] = await Promise.all([
       require('../services/verifyPlace').closedList(city),
       vc.cityEvents(city, dates[0], dates[dates.length - 1]).catch(() => []),
-      require('../services/goOut').cityEvents(city, dates[0], dates[dates.length - 1]).catch(() => [])
+      require('../services/eventer').cityEvents(city, dates[0], dates[dates.length - 1]).catch(() => [])
     ]);
-    // Israel: Go-Out has far better coverage; merge with the club listing, no duplicate titles
+    // Israel: Eventer has far better coverage; merge with the club listing, no duplicate titles
     const seenT = new Set();
     clubEvents = [...goOutEvents, ...clubEvents].filter(e => { const k = e.title.toLowerCase().slice(0, 25); if (seenT.has(k)) return false; seenT.add(k); return true; })
       .sort((a, b) => String(a.startTime || a.date).localeCompare(String(b.startTime || b.date)));
