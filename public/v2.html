@@ -145,6 +145,12 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .rpD.sel{background:var(--blue);color:#fff}
 .rpD.start{border-radius:12px 0 0 12px}.rpD.end{border-radius:0 12px 12px 0}.rpD.start.end{border-radius:12px}
 .rpD.start:not(.end):only-child{border-radius:12px}
+.holLine{background:#FFF7E6;border-radius:12px;padding:10px 12px;font-size:14px;color:#6B4A0F}.holLine span{display:block;font-weight:500;margin-top:2px}
+.holLine.ok{background:#E7F4EC;color:#1E7A45;font-weight:700}
+.evChips{display:flex;flex-wrap:wrap;gap:8px}.evChip{background:#fff;border:1px solid #E3E6EB;border-radius:999px;padding:8px 12px;font-size:13px;font-weight:700;text-align:left}
+.night{background:#F3F1FB;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.clubLine{display:block;text-decoration:none;color:var(--ink);background:#fff;border-radius:10px;padding:8px 10px}.clubLine b{display:block;font-size:14px}.clubLine span{font-size:12px;color:var(--muted)}
+.moreLink{align-self:flex-start;font-size:13px;font-weight:700;color:#5B3FC4}
 .pac-container{z-index:100;border-radius:12px;margin-top:6px;font-family:Manrope,sans-serif}
 </style></head><body>
 
@@ -717,29 +723,36 @@ async function buildTrip(){
 function fmtDay(iso){var d=new Date(iso+'T12:00:00');return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
 function drawPlan(){
   aiResults=[];
+  var ce=plan.clubEvents||[];
+  var hol=(plan.holidays||[]).filter(function(x){return x&&x.name&&!/^no\b|no (major )?(public )?holiday/i.test(x.name)});
+  var low=function(t){return String(t||'').toLowerCase()};
+  var cityEv=(plan.events||[]).filter(function(x){
+    if(!x||!x.name)return false;var n=low(x.name);
+    return !ce.some(function(c){return n.indexOf(low(c.title).slice(0,18))>=0||(c.venue&&n.indexOf(' at '+low(c.venue))>=0)});
+  });
+  window._cityEv=cityEv;window._clubByDay={};
+  ce.forEach(function(c){(window._clubByDay[c.date]=window._clubByDay[c.date]||[]).push(c)});
   var h='<button class="back" onclick="aiBack()">‹ Back</button><h2 class="display" style="font-size:24px">'+esc(plan.title||plan.city)+'</h2>'+
     '<div class="sub" style="margin-top:-6px">'+esc(fmtDay(plan.startDate))+' – '+esc(fmtDay(plan.endDate))+'</div>'+
     (plan.summary?'<p style="font-size:15px;line-height:1.5">'+esc(plan.summary)+'</p>':'');
-  var hol=(plan.holidays||[]),evs=(plan.events||[]);
-  if(hol.length||evs.length){
-    h+='<div class="card" style="background:#FFF7E6;box-shadow:none"><h3>🎉 Holidays & events</h3>'+
-      hol.map(function(x){return '<div><b>'+esc(x.name)+'</b> <span class="sub">'+esc(x.date?fmtDay(x.date):'')+'</span><div class="sub" style="margin-top:2px">'+esc(x.note||'')+'</div></div>'}).join('')+
-      evs.map(function(x){return '<div><b>'+esc(x.name)+'</b> <span class="sub">'+esc(x.when||'')+'</span><div class="sub" style="margin-top:2px">'+esc(x.note||'')+'</div></div>'}).join('')+
-      '<div class="sub" style="font-size:12px">Event dates are AI suggestions — check before you go.</div></div>';
-  }
-  var ce=plan.clubEvents||[];
-  if(ce.length){
-    h+='<div class="card" style="background:#F3F1FB;box-shadow:none"><h3>🎧 Parties & club nights</h3><div class="hint">Real listings for your dates</div>'+
-      ce.slice(0,8).map(function(x){return '<div><b>'+esc(x.title)+'</b> <span class="sub">'+esc(x.date?fmtDay(x.date):'')+(x.venue?' · '+esc(x.venue):'')+'</span>'+(x.artists&&x.artists.length?'<div class="sub" style="margin-top:2px">'+esc(x.artists.join(', '))+'</div>':'')+(x.url?'<a href="'+esc(x.url)+'" target="_blank" style="font-size:13px;font-weight:700;color:var(--blue)">Details & tickets</a>':'')+'</div>'}).join('')+'</div>';
-  }
+  // holidays: one compact line each, or a single all-clear line
+  h+=hol.length?hol.map(function(x){return '<div class="holLine">🗓 <b>'+esc(x.date?fmtDay(x.date):'')+' — '+esc(x.name)+'</b>'+(x.note?'<span>'+esc(x.note)+'</span>':'')+'</div>'}).join('')
+    :'<div class="holLine ok">✓ No public holidays on your dates</div>';
+  // city events as chips
+  if(cityEv.length)h+='<div class="evChips">'+cityEv.slice(0,6).map(function(x,i){return '<button class="evChip" onclick="showCityEv('+i+')">✨ '+esc(x.name.replace(/\s*\(.*?\)\s*/g,' ').trim())+'</button>'}).join('')+'</div>';
   (plan.days||[]).forEach(function(d,di){
-    h+='<div style="margin-top:6px"><div class="eyebrow">Day '+(di+1)+' · '+esc(fmtDay(d.date))+'</div><h3 style="font-size:17px;margin-top:2px">'+esc(d.title||'')+'</h3></div>';
+    h+='<div style="margin-top:8px"><div class="eyebrow">Day '+(di+1)+' · '+esc(fmtDay(d.date))+'</div><h3 style="font-size:17px;margin-top:2px">'+esc(d.title||'')+'</h3></div>';
     (d.stops||[]).forEach(function(st){
       var i=aiResults.push({name:st.name,why:(st.time?st.time+' · ':'')+(st.why||''),address:st.address,lat:st.lat,lng:st.lng,placeId:st.placeId})-1;
       h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(st.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"></button>'+
         '<button class="t" onclick="aiShow('+i+')"><b>'+esc(st.name)+'</b><small>'+esc(aiResults[i].why)+'</small></button>'+
         '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')">+ Add</button></div>';
     });
+    var nights=window._clubByDay[d.date]||[];
+    if(nights.length){
+      h+='<div class="night"><div class="eyebrow" style="color:#5B3FC4">🎧 Tonight</div>'+nights.slice(0,2).map(clubLine).join('')+
+        (nights.length>2?'<button class="moreLink" onclick="showNights(\''+d.date+'\')">+'+(nights.length-2)+' more parties</button>':'')+'</div>';
+    }
   });
   h+='<button class="btn blue" id="savePlanBtn" style="width:100%;margin-top:8px" onclick="savePlan()">Save as a trip ('+aiResults.length+' places)</button>';
   $('aiRes').innerHTML=h;
@@ -750,6 +763,11 @@ function drawPlan(){
     });
   });
 }
+function clubLine(c){
+  return '<a class="clubLine" href="'+esc(c.url||'#')+'" target="_blank"><b>'+esc(c.title)+'</b><span>'+esc([c.venue,(c.artists||[]).slice(0,3).join(', ')].filter(Boolean).join(' · '))+'</span></a>';
+}
+function showNights(date){openSheet('<h2>Parties · '+esc(fmtDay(date))+'</h2>'+(window._clubByDay[date]||[]).map(clubLine).join(''))}
+function showCityEv(i){var x=window._cityEv[i];openSheet('<h2>'+esc(x.name)+'</h2>'+(x.when?'<div class="sub">'+esc(x.when)+'</div>':'')+'<p style="font-size:15px;line-height:1.5">'+esc(x.note||'')+'</p><div class="sub" style="font-size:12px">Suggested by AI — check dates before you go.</div>')}
 async function savePlan(){
   var b=$('savePlanBtn');b.disabled=true;b.textContent='Saving…';
   try{

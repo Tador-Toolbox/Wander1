@@ -1856,8 +1856,8 @@ Rules:
 - NEVER suggest these places, they are permanently closed: ${closedNames.join(', ') || 'none'}.
 - Only suggest nightclubs you are sure are currently operating.
 ${clubEvents.length ? '- REAL club events on these dates (from a live listing). If the traveler wants nightlife, use these for evening stops (stop name = the venue name, why = event title):\n' + clubEvents.map(e => `  ${e.date}: "${e.title}" at ${e.venue}${e.artists.length ? ' with ' + e.artists.join(', ') : ''}`).join('\n') : ''}
-- List public holidays (national and religious) that fall within or right around these dates in that country, and what they mean for the traveler (closures, crowds, celebrations).
-- List well-known recurring events, festivals or seasonal happenings for that month in ${city}. Only include ones you are confident recur at this time of year.
+- "holidays": ONLY real public holidays (national or religious) that fall within or right around these dates in that country, with their impact (closures, crowds). If there are none, return an empty array. Never add entries like "No holiday".
+- "events": max 4 well-known festivals, exhibitions or seasonal happenings in ${city} at this time of year (NOT club nights or parties — those are handled separately). Only ones you are confident about.
 
 Reply ONLY with valid JSON, no markdown:
 {
