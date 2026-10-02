@@ -134,6 +134,17 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .fact{background:var(--soft);border-radius:12px;padding:10px 12px}.fact small{display:block;font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}.fact b{font-size:14px}
 #meSave{position:sticky;bottom:12px;box-shadow:0 6px 16px rgba(31,95,214,.35)}
 .reportBtn{align-self:center;font-size:13px;font-weight:600;color:var(--muted);text-decoration:underline;text-underline-offset:3px;padding:6px}
+.rp{border:1px solid var(--line);border-radius:14px;padding:10px;background:#fff}
+.rpHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.rpHead button{width:40px;height:40px;border-radius:10px;font-size:22px;color:var(--blue)}
+.rpGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));row-gap:4px;text-align:center}
+.rpW{font-size:12px;font-weight:700;color:var(--muted);padding:4px 0}
+.rpD{height:40px;font-weight:600;font-size:15px;border-radius:0}
+.rpD.past{color:#C3C8D0}
+.rpD.mid{background:var(--blue-soft)}
+.rpD.sel{background:var(--blue);color:#fff}
+.rpD.start{border-radius:12px 0 0 12px}.rpD.end{border-radius:0 12px 12px 0}.rpD.start.end{border-radius:12px}
+.rpD.start:not(.end):only-child{border-radius:12px}
 .pac-container{z-index:100;border-radius:12px;margin-top:6px;font-family:Manrope,sans-serif}
 </style></head><body>
 
@@ -654,19 +665,51 @@ async function aiEvents(more){
 }
 /* ---- Build a trip ---- */
 var plan=null;
+var rp={from:null,to:null,month:null};
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function drawRP(){
+  var m=rp.month,y=m.getFullYear(),mo=m.getMonth(),first=new Date(y,mo,1).getDay(),days=new Date(y,mo+1,0).getDate(),today=ymd(new Date());
+  var h='<div class="rp"><div class="rpHead"><button aria-label="Previous month" onclick="rpMove(-1)">‹</button><b>'+m.toLocaleDateString('en-GB',{month:'long',year:'numeric'})+'</b><button aria-label="Next month" onclick="rpMove(1)">›</button></div><div class="rpGrid">';
+  ['S','M','T','W','T','F','S'].forEach(function(w){h+='<span class="rpW">'+w+'</span>'});
+  for(var i=0;i<first;i++)h+='<span></span>';
+  for(var dd=1;dd<=days;dd++){
+    var k=ymd(new Date(y,mo,dd)),cls='rpD';
+    if(k<today)cls+=' past';
+    if(rp.from&&k===rp.from)cls+=' sel start';
+    if(rp.to&&k===rp.to)cls+=' sel end';
+    if(rp.from&&rp.to&&k>rp.from&&k<rp.to)cls+=' mid';
+    h+='<button class="'+cls+'"'+(k<today?' disabled':'')+' onclick="rpPick(\''+k+'\')">'+dd+'</button>';
+  }
+  h+='</div></div>';
+  $('rp').innerHTML=h;
+  var f=function(x){return new Date(x+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})};
+  $('rpHint').textContent=!rp.from?'Tap your arrival day, then your last day':!rp.to?'Arrive '+f(rp.from)+' — now tap your last day':f(rp.from)+' → '+f(rp.to)+' ('+(Math.round((new Date(rp.to)-new Date(rp.from))/864e5)+1)+' days)';
+}
+function rpMove(n){rp.month=new Date(rp.month.getFullYear(),rp.month.getMonth()+n,1);drawRP()}
+function rpPick(k){
+  if(!rp.from||rp.to){rp.from=k;rp.to=null}
+  else if(k<rp.from){rp.from=k}
+  else{
+    var n=Math.round((new Date(k)-new Date(rp.from))/864e5)+1;
+    if(n>7){toast('Up to 7 days for now');return}
+    rp.to=k;
+  }
+  drawRP();
+}
 function buildTripForm(){
   var t=new Date(),d=function(x){return new Date(t.getTime()+x*86400000).toISOString().slice(0,10)};
   openSheet('<h2>Build a trip</h2>'+
     '<label class="lbl">City or destination<input class="field" id="btCity" placeholder="e.g. Seoul"></label>'+
-    '<div class="two"><label class="lbl">From<input class="field" type="date" id="btFrom" value="'+d(14)+'"></label><label class="lbl">To<input class="field" type="date" id="btTo" value="'+d(17)+'"></label></div>'+
+    '<div class="lbl">Dates<div class="sub" id="rpHint" style="font-weight:600">Tap your arrival day, then your last day</div></div><div id="rp"></div>'+
     '<label class="lbl">What are you looking for?<textarea class="field" id="btWish" style="height:90px" placeholder="e.g. street food, techno clubs at night, one day of nature, not too many museums"></textarea></label>'+
     '<div class="sub" style="margin-top:-6px">Up to 7 days. Holidays and events for those dates are included.</div>'+
     '<button class="btn blue" onclick="buildTrip()">Build my trip</button>');
+  rp={from:null,to:null,month:new Date(t.getFullYear(),t.getMonth(),1)};drawRP();
   try{new google.maps.places.Autocomplete($('btCity'),{types:['(regions)'],fields:['name']}).addListener('place_changed',function(){})}catch(e){}
 }
 async function buildTrip(){
-  var city=$('btCity').value.trim(),from=$('btFrom').value,to=$('btTo').value,wish=$('btWish').value.trim();
-  if(!city){toast('Enter a city');return}if(!from){toast('Pick dates');return}
+  var city=$('btCity').value.trim(),from=rp.from,to=rp.to||rp.from,wish=$('btWish').value.trim();
+  if(!city){toast('Enter a city');return}if(!from){toast('Tap your arrival day');return}
   closeSheet();aiMode=null;aiTripId=null;aiLoading('Building your trip to '+city+'… (about 20 seconds)');
   try{plan=await api('/ai/build-trip',{method:'POST',body:{city:city,startDate:from,endDate:to||from,wishes:wish}});drawPlan()}
   catch(e){aiErr(e)}
@@ -780,9 +823,10 @@ function aiShow(i){
     '<button class="reportBtn" onclick="reportClosed(aiResults['+i+'].name,aiResults['+i+'].address)">Is this place closed? Report it</button>');
   var b=$('aiAdd'+i);if(b&&b.disabled){$('dtAdd').disabled=true;$('dtAdd').textContent='✓ Saved';$('dtAdd').className='btn soft'}
   if(!p.placeId){$('dtInfo').textContent='';return}
-  new google.maps.places.PlacesService(map).getDetails({placeId:p.placeId,fields:['formatted_address','rating','user_ratings_total','opening_hours','utc_offset_minutes','formatted_phone_number','website','url','photos','price_level']},function(d,st){
+  new google.maps.places.PlacesService(map).getDetails({placeId:p.placeId,fields:['formatted_address','rating','user_ratings_total','opening_hours','utc_offset_minutes','formatted_phone_number','website','url','photos','price_level','business_status']},function(d,st){
     var el=$('dtInfo');if(!el)return;
     if(st!=='OK'||!d){el.textContent='';return}
+    if(d.business_status==='CLOSED_PERMANENTLY'||d.business_status==='CLOSED_TEMPORARILY'){el.insertAdjacentHTML('beforebegin','<div style="background:#FDECEC;color:#B42318;border-radius:12px;padding:10px 12px;font-weight:700">⛔ Google lists this place as '+(d.business_status==='CLOSED_PERMANENTLY'?'permanently':'temporarily')+' closed</div>');var ab=$('dtAdd');if(ab){ab.disabled=true;ab.className='btn soft';ab.textContent='Closed'}}
     if(d.formatted_address)$('dtAddr').textContent=d.formatted_address;
     if(!p.photo&&d.photos&&d.photos[0])$('dtPhoto').style.backgroundImage='url("'+d.photos[0].getUrl({maxWidth:800})+'")';
     var open=null;try{open=d.opening_hours&&d.opening_hours.isOpen?d.opening_hours.isOpen():null}catch(e){}

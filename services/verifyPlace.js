@@ -84,7 +84,14 @@ async function verifyPlace(o) {
   }
 
   const d = await details(hit.place_id, key) || hit;
-  if (d.business_status === 'CLOSED_PERMANENTLY' || d.permanently_closed) return { ok: false, reason: 'Google: permanently closed' };
+  const status = d.business_status || hit.business_status;
+  if (status === 'CLOSED_PERMANENTLY' || d.permanently_closed || hit.permanently_closed) return { ok: false, reason: 'Google: permanently closed' };
+  if (status === 'CLOSED_TEMPORARILY') return { ok: false, reason: 'Google: temporarily closed' };
+  // No opening hours on Google is a common sign of a dead listing → double-check on the web
+  if (!d.opening_hours && !web) {
+    web = await webCheck(d.name, city);
+    if (web?.status === 'CLOSED') return { ok: false, reason: 'no hours on Google + web: closed' };
+  }
   if ((o.closed || []).some(n => sameName(n, d.name))) return { ok: false, reason: 'blacklisted (closed)' };
 
   const types = d.types || hit.types || [];
