@@ -28,7 +28,26 @@ async function getJSON(url, ms = 7000) {
   try { const r = await fetch(url, { signal: ctrl.signal }); return await r.json(); }
   catch { return {}; } finally { clearTimeout(t); }
 }
-const textSearch = (q, key) => getJSON(`${GOOGLE}/textsearch/json?query=${encodeURIComponent(q)}&key=${key}`).then(d => d.results || []);
+const textSearch = (q, key, c) => getJSON(`${GOOGLE}/textsearch/json?query=${encodeURIComponent(q)}${c ? `&location=${c.lat},${c.lng}&radius=40000` : ''}&key=${key}`).then(d => d.results || []);
+
+// City centre (cached) — results must be near the trip city (e.g. "Wagyu House" in Athens ≠ Houston)
+const cityCache = new Map();
+async function cityCenter(city, key) {
+  const k = String(city || '').toLowerCase().trim();
+  if (!k) return null;
+  if (cityCache.has(k)) return cityCache.get(k);
+  const d = await getJSON(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city)}&key=${key}`);
+  const loc = d?.results?.[0]?.geometry?.location || null;
+  cityCache.set(k, loc);
+  return loc;
+}
+function km(a, b) {
+  const R = 6371, toR = x => x * Math.PI / 180;
+  const dLat = toR(b.lat - a.lat), dLng = toR(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+const MAX_KM = 80;
 const details = (id, key) => getJSON(`${GOOGLE}/details/json?place_id=${id}&fields=name,formatted_address,geometry,business_status,types,opening_hours,place_id,website,url&key=${key}`).then(d => d.result || null);
 
 // Gemini with Google Search grounding: is it closed, and what is it called on Google Maps?
@@ -73,10 +92,12 @@ async function verifyPlace(o) {
   if ((o.closed || []).some(n => sameName(n, name))) return { ok: false, reason: 'blacklisted (closed)' };
   if (!key) return { ok: false, reason: 'no maps key' };
 
-  // 1. quoted search for an exact match, then plain search
-  let cands = await textSearch(`"${name}" ${city}`, key);
-  let hit = cands.find(c => sameName(name, c.name));
-  if (!hit) { cands = await textSearch(`${name} ${city}`, key); hit = cands.find(c => sameName(name, c.name)); }
+  // 1. quoted search for an exact match, then plain search — biased to the city and within MAX_KM of it
+  const center = await cityCenter(city, key);
+  const near = c => !center || !c.geometry?.location || km(center, c.geometry.location) <= MAX_KM;
+  let cands = await textSearch(`"${name}" ${city}`, key, center);
+  let hit = cands.find(c => sameName(name, c.name) && near(c));
+  if (!hit) { cands = await textSearch(`${name} ${city}`, key, center); hit = cands.find(c => sameName(name, c.name) && near(c)); }
 
   // 2. not found / name mismatch → web search: closed? real current name?
   let web = null;
@@ -84,10 +105,13 @@ async function verifyPlace(o) {
     web = await webCheck(name, city);
     if (web?.status === 'CLOSED') return { ok: false, reason: 'web: permanently closed' };
     if (web?.name) {
-      const re = await textSearch(`"${web.name}" ${city}`, key);
-      hit = re.find(c => sameName(web.name, c.name)) || null;
+      const re = await textSearch(`"${web.name}" ${city}`, key, center);
+      hit = re.find(c => sameName(web.name, c.name) && near(c)) || null;
     }
-    if (!hit) return { ok: false, reason: `not found on Google (got "${cands[0]?.name || '-'}")` };
+    if (!hit) {
+      const far = cands.find(c => sameName(name, c.name) && !near(c));
+      return { ok: false, reason: far ? `only found far away: "${far.name}", ${far.formatted_address || ''}` : `not found on Google (got "${cands[0]?.name || '-'}")` };
+    }
   }
 
   const d = await details(hit.place_id, key) || hit;
