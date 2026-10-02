@@ -9,8 +9,15 @@ const WRONG_TYPES = ['gym', 'sports_complex', 'health', 'fitness_center', 'stadi
 const NIGHT_RE = /club|techno|party|disco|\bdj\b|nightlife|rave|dance floor|trance|house music/i;
 const STOP = ['the', 'bar', 'club', 'cafe', 'restaurant', 'tlv', 'tel', 'aviv', 'and'];
 
-const tokens = n => String(n || '').toLowerCase().replace(/[^a-z0-9֐-׿ㄱ-힝 ]+/g, ' ').split(/\s+/).filter(t => t.length > 2 && !STOP.includes(t));
+// Greek → Latin so "ΚΛΑΚΑΖ" matches "Klakaz"
+const GREEK = { α:'a',β:'v',γ:'g',δ:'d',ε:'e',ζ:'z',η:'i',θ:'th',ι:'i',κ:'k',λ:'l',μ:'m',ν:'n',ξ:'x',ο:'o',π:'p',ρ:'r',σ:'s',ς:'s',τ:'t',υ:'y',φ:'f',χ:'ch',ψ:'ps',ω:'o',ά:'a',έ:'e',ή:'i',ί:'i',ό:'o',ύ:'y',ώ:'o',ϊ:'i',ϋ:'y' };
+const latin = n => String(n || '').toLowerCase().normalize('NFC').replace(/[α-ωάέήίόύώϊϋς]/g, c => GREEK[c] || c);
+const squash = n => latin(n).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\u0590-\u05ff]/g, '');
+const tokens = n => latin(n).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9֐-׿ㄱ-힝 ]+/g, ' ').split(/\s+/).filter(t => t.length > 2 && !STOP.includes(t));
 function sameName(a, b) {
+  // "IT Athens" vs "ITAthens", "Kíkí" vs "Kiki": compare with spaces/accents removed
+  const sa = squash(a), sb = squash(b);
+  if (sa && sb && (sa === sb || (sa.length > 4 && sb.includes(sa)) || (sb.length > 4 && sa.includes(sb)))) return true;
   const A = tokens(a), B = tokens(b);
   if (!A.length || !B.length) return String(a).toLowerCase().trim() === String(b).toLowerCase().trim();
   return A.some(t => B.includes(t) || B.some(u => (t.length > 4 && u.startsWith(t)) || (u.length > 4 && t.startsWith(u))));
@@ -104,7 +111,7 @@ async function verifyPlace(o) {
     if (!types.includes('night_club') && !types.includes('bar') && !listed?.raId)
       return { ok: false, reason: `not a nightlife venue (${types.slice(0, 3).join(',')})` };
   }
-  if (!openOnDate(d, o.date)) return { ok: false, reason: `closed on ${o.date}` };
+  if (!night && !openOnDate(d, o.date)) return { ok: false, reason: `closed on ${o.date}` };
 
   const loc = d.geometry?.location || hit.geometry?.location;
   return {
