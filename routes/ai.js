@@ -310,6 +310,103 @@ Reply ONLY with valid JSON, no extra text, no markdown fences:
 });
 
 /* ─────────────────────────────────────────
+   POST /api/ai/plan-days/:tripId  (V2 "Plan by days")
+   body: { startDate:'YYYY-MM-DD', days:N }
+   Splits the trip's own places into real dated days (nearby places together,
+   respects opening days from Google), saves it on the trip, adds weather.
+───────────────────────────────────────── */
+router.post('/plan-days/:tripId', auth, async (req, res) => {
+  try {
+    const trip = await Trip.findOne({ _id: req.params.tripId, user: req.userId });
+    if (!trip) return res.status(404).json({ error: 'Trip not found' });
+    const { startDate } = req.body;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate || '')) return res.status(400).json({ error: 'Pick a start date' });
+    const places = await Place.find({ trip: trip._id, user: req.userId }).select('name location lat lng tags notes placeId status');
+    if (!places.length) return res.status(400).json({ error: 'This trip has no places yet' });
+    const nDays = Math.max(1, Math.min(14, parseInt(req.body.days) || Math.ceil(places.length / 4)));
+    const start = new Date(startDate + 'T12:00:00Z');
+    const dates = Array.from({ length: nDays }, (_, i) => new Date(start.getTime() + i * 86400000).toISOString().slice(0, 10));
+    const wd = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+
+    // Opening days from Google (so a museum closed on Monday isn't put on Monday)
+    const key = process.env.GOOGLE_MAPS_API_KEY;
+    const DAYN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const hours = await Promise.all(places.slice(0, 30).map(async p => {
+      if (!p.placeId || !key) return '';
+      try {
+        const d = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${p.placeId}&fields=opening_hours&key=${key}`).then(r => r.json());
+        const per = d.result?.opening_hours?.periods;
+        if (!per?.length || (per.length === 1 && !per[0].close)) return '';
+        const open = new Set(per.map(x => x.open?.day));
+        const closed = DAYN.filter((_, i) => !open.has(i));
+        return closed.length ? ` (closed on ${closed.join(', ')})` : '';
+      } catch { return ''; }
+    }));
+
+    const center = { lat: places.reduce((a, p) => a + (p.lat || 0), 0) / places.length, lng: places.reduce((a, p) => a + (p.lng || 0), 0) / places.length };
+    const weatherP = require('../services/weather').tripWeather(center, dates).catch(() => null);
+
+    const list = places.map((p, i) => `${i + 1}. id:${p._id} | ${p.name} — ${p.location || ''} (lat:${(p.lat || 0).toFixed(4)},lng:${(p.lng || 0).toFixed(4)})${p.tags?.length ? ' [' + p.tags.join(', ') + ']' : ''}${hours[i] || ''}${p.notes ? ' (note: ' + p.notes + ')' : ''}`).join('\n');
+    const prompt = `You are a travel planner. Arrange the traveler's OWN saved places into a ${nDays}-day plan for the trip "${trip.name}".
+
+Days:
+${dates.map((d, i) => `Day ${i + 1}: ${d} (${wd(d)})`).join('\n')}
+
+Places (use the exact id values):
+${list}
+
+Rules:
+- Use EVERY place exactly once. Do not add new places.
+- Put places that are close to each other on the same day, and order each day so the route is short (no zig-zag).
+- Spread places evenly across the days.
+- Never put a place on a weekday it is closed.
+- Cafes/breakfast in the morning, restaurants at lunch or dinner, bars/clubs in the evening/night.
+- time = morning | afternoon | evening | night. duration like "1 hour". tip = one short practical sentence.
+
+Reply ONLY with JSON:
+{"summary":"one sentence","days":[{"date":"YYYY-MM-DD","theme":"3-5 words","places":[{"id":"<id>","time":"morning","duration":"1 hour","tip":"..."}]}]}`;
+
+    let plan = extractJSON(await callGemini(prompt, 6000)) || {};
+    if (!Array.isArray(plan.days)) return res.status(500).json({ error: 'The AI could not build a plan, try again' });
+
+    // Clean up: real ids only, each place once, add anything the AI forgot to the lightest day
+    const ids = new Set(places.map(p => String(p._id))), used = new Set();
+    const days = dates.map((date, i) => {
+      const d = plan.days.find(x => x.date === date) || plan.days[i] || {};
+      return { date, theme: String(d.theme || '').slice(0, 60), places: (d.places || []).filter(x => ids.has(String(x.id)) && !used.has(String(x.id)) && used.add(String(x.id)))
+        .map(x => ({ place: x.id, time: String(x.time || '').slice(0, 20), duration: String(x.duration || '').slice(0, 30), tip: String(x.tip || '').slice(0, 200) })) };
+    });
+    places.filter(p => !used.has(String(p._id))).forEach(p => {
+      const light = days.reduce((a, b) => (b.places.length < a.places.length ? b : a));
+      light.places.push({ place: p._id, time: '', duration: '', tip: '' });
+    });
+
+    trip.startDate = dates[0];
+    trip.plan = { summary: String(plan.summary || '').slice(0, 200), days, createdAt: new Date() };
+    await trip.save();
+    const weather = await weatherP;
+    console.log(`[ai/plan-days] ${trip.name}: ${places.length} places → ${nDays} days, weather ${weather?.kind || 'none'}`);
+    res.json({ trip, weather });
+  } catch (e) {
+    console.error('[ai/plan-days] error', e.message);
+    res.status(500).json({ error: 'Could not plan the trip, try again' });
+  }
+});
+
+/* GET /api/ai/trip-weather/:tripId — weather for a saved plan */
+router.get('/trip-weather/:tripId', auth, async (req, res) => {
+  try {
+    const trip = await Trip.findOne({ _id: req.params.tripId, user: req.userId });
+    const dates = (trip?.plan?.days || []).map(d => d.date).filter(Boolean);
+    if (!dates.length) return res.json({ weather: null });
+    const places = await Place.find({ trip: trip._id }).select('lat lng');
+    if (!places.length) return res.json({ weather: null });
+    const center = { lat: places.reduce((a, p) => a + (p.lat || 0), 0) / places.length, lng: places.reduce((a, p) => a + (p.lng || 0), 0) / places.length };
+    res.json({ weather: await require('../services/weather').tripWeather(center, dates) });
+  } catch { res.json({ weather: null }); }
+});
+
+/* ─────────────────────────────────────────
    POST /api/ai/story/:tripId
 ───────────────────────────────────────── */
 router.post('/story/:tripId', auth, async (req, res) => {

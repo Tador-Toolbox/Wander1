@@ -45,6 +45,11 @@ router.put('/:id', async (req, res) => {
     if (name)  trip.name  = name;
     if (emoji) trip.emoji = emoji;
     if (color) trip.color = color;
+    if (req.body.plan && Array.isArray(req.body.plan.days)) {
+      trip.plan.days = req.body.plan.days.map(d => ({ date: d.date, theme: d.theme || '', places: (d.places || []).map(x => ({ place: x.place, time: x.time || '', duration: x.duration || '', tip: x.tip || '' })) }));
+      trip.markModified('plan');
+    }
+    if (req.body.clearPlan) { trip.plan = undefined; trip.startDate = ''; }
     await trip.save();
     res.json(trip);
   } catch { res.status(500).json({ error: 'Server error' }); }

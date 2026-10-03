@@ -16,7 +16,7 @@ async function locate(city) {
 /** dates: ['YYYY-MM-DD', ...] → { kind:'forecast'|'typical', days:{date:{max,min,rain,icon}}, summary } */
 async function tripWeather(city, dates) {
   try {
-    const loc = await locate(city);
+    const loc = city && typeof city === 'object' && city.lat != null ? { lat: city.lat, lng: city.lng } : await locate(city);
     if (!loc || !dates.length) return null;
     const from = dates[0], to = dates[dates.length - 1];
     const daysAhead = (new Date(to) - new Date()) / 86400000;

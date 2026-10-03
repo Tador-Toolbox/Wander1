@@ -15,6 +15,18 @@ const TripSchema = new mongoose.Schema({
     status:    { type: String, enum: ['pending','accepted'], default: 'pending' },
     invitedAt: { type: Date, default: Date.now }
   }],
+  // Plan by days (V2): real dates, places per day in order
+  startDate: { type: String, default: '' },   // YYYY-MM-DD
+  plan: {
+    summary:   { type: String, default: '' },
+    days: [{
+      date:   String,
+      theme:  String,
+      places: [{ place: { type: mongoose.Schema.Types.ObjectId, ref: 'Place' }, time: String, duration: String, tip: String, _id: false }],
+      _id: false
+    }],
+    createdAt: Date
+  },
   story: {
     orderedPlaces: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Place' }],
     narrations:    [{ type: String }],

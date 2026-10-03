@@ -9,7 +9,7 @@ router.get('/:token', async (req, res) => {
     const trip = await Trip.findOne({ shareToken: req.params.token });
     if (!trip) return res.status(404).json({ error: 'Trip not found or link expired' });
     const places = await Place.find({ trip: trip._id });
-    res.json({ trip: { _id: trip._id, name: trip.name, emoji: trip.emoji, color: trip.color }, places });
+    res.json({ trip: { _id: trip._id, name: trip.name, emoji: trip.emoji, color: trip.color, startDate: trip.startDate || '', plan: trip.plan?.days?.length ? trip.plan : null }, places });
   } catch(e) {
     console.error('[share/get]', e.message);
     res.status(500).json({ error: 'Server error' });
@@ -59,8 +59,17 @@ router.post('/:token/import', auth, async (req, res) => {
       }));
 
     console.log('[share/import] inserting', placeDocs.length, 'valid places');
-    const newPlaces = await Place.insertMany(placeDocs, { ordered: false });
+    const kept = sourcePlaces.filter(p => p.name && p.lat != null && p.lng != null);
+    const newPlaces = await Place.insertMany(placeDocs, { ordered: true });
     console.log('[share/import] inserted', newPlaces.length, 'places OK');
+    // Copy the plan by days, pointing at the new place copies
+    if (sourceTripDoc.plan?.days?.length) {
+      const map = new Map(kept.map((p, i) => [String(p._id), newPlaces[i]?._id]));
+      newTrip.startDate = sourceTripDoc.startDate || '';
+      newTrip.plan = { summary: sourceTripDoc.plan.summary || '', createdAt: new Date(),
+        days: sourceTripDoc.plan.days.map(d => ({ date: d.date, theme: d.theme, places: d.places.filter(x => map.get(String(x.place))).map(x => ({ place: map.get(String(x.place)), time: x.time, duration: x.duration, tip: x.tip })) })) };
+      await newTrip.save();
+    }
 
     res.status(201).json({ trip: newTrip, places: newPlaces });
   } catch(e) {

@@ -171,6 +171,22 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .sharedList{display:flex;flex-direction:column;background:#fff;border-radius:16px;border:1px solid var(--line);overflow:hidden}
 .sRow{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:2px}.sRow:last-child{border-bottom:0}
 .sRow small{color:var(--muted);font-size:13px}
+.trip .acts{display:flex;gap:8px;padding:0 16px 14px}
+.planBtn{flex:1;min-width:0;height:44px;border-radius:12px;background:var(--soft);font-weight:700;font-size:14px;text-align:left;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.planBtn.has{background:var(--blue-soft);color:var(--blue)}
+.dayTabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.dayTabs::-webkit-scrollbar{display:none}
+.dayTabs button{flex:none;min-width:68px;padding:8px 10px;border-radius:12px;border:2px solid var(--line);background:#fff;display:flex;flex-direction:column;align-items:center;gap:1px}
+.dayTabs button small{font-size:12px;color:var(--muted)}.dayTabs button.on{background:var(--ink);border-color:var(--ink);color:#fff}.dayTabs button.on small{color:#C9D1DD}
+.dayHead{display:flex;flex-direction:column;gap:2px}.dayHead b{font-size:17px}.dayHead span{font-size:14px;color:var(--muted)}
+.wx{background:var(--soft);border-radius:12px;padding:10px 12px;font-weight:700;font-size:15px;display:flex;flex-direction:column;gap:3px}
+.wx small{font-weight:500;font-size:12.5px;color:var(--muted);line-height:1.4}.wx.far{background:#FFF6E6}.wx.far small{color:#8A5A00}
+.pStop{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.pStop .num{flex:none;width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.pStop.done .num{background:var(--blue)}.pStop .pInfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pStop .t{text-align:left;padding:0;font-size:16px}.pStop small{color:var(--muted);font-size:13px}
+.tip{font-size:13.5px;color:var(--ink);opacity:.85;line-height:1.4}
+.moveSel{flex:none;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;padding:0 6px}
+.pinNum{background:#12203A;padding:2px 7px;border-radius:999px}
 </style></head><body>
 
 <!-- LOGIN -->
@@ -339,10 +355,19 @@ async function openShared(tok){
   }
   var t=sharedData.trip,ps=sharedData.places||[];
   S.innerHTML='<div class="sharedWrap"><div class="eyebrow">A trip shared with you</div><h1>'+esc((t.emoji?t.emoji+' ':'')+t.name)+'</h1>'+
-    '<p class="sub">'+ps.length+(ps.length===1?' place':' places')+'</p>'+
+    '<p class="sub">'+ps.length+(ps.length===1?' place':' places')+(t.plan&&t.plan.days&&t.plan.days.length?' · planned by days, '+esc(planRange(t)):'')+'</p>'+
     '<button class="btn blue" id="impBtn" onclick="importShared()">Save this trip to my Wander</button>'+
-    '<div class="sharedList">'+ps.map(function(p){return '<div class="sRow"><b>'+esc(p.name)+'</b><small>'+esc(p.location||'')+'</small></div>'}).join('')+'</div>'+
+    sharedBody(t,ps)+
     (token?'<a class="linkBtn" href="/V2">Open my map without saving</a>':'')+'</div>';
+}
+function sharedBody(t,ps){
+  var row=function(p,x){return '<div class="sRow"><b>'+esc(p.name)+'</b><small>'+esc([x&&x.time,p.location].filter(Boolean).join(' · '))+'</small>'+(x&&x.tip?'<div class="tip">'+esc(x.tip)+'</div>':'')+'</div>'};
+  if(!(t.plan&&t.plan.days&&t.plan.days.length))return '<div class="sharedList">'+ps.map(function(p){return row(p)}).join('')+'</div>';
+  var byId={};ps.forEach(function(p){byId[p._id]=p});
+  return t.plan.days.map(function(d,i){
+    return '<div class="eyebrow" style="margin-top:8px">Day '+(i+1)+' · '+fmtD(d.date,{weekday:'long',day:'numeric',month:'short'})+(d.theme?' · '+esc(d.theme):'')+'</div><div class="sharedList">'+
+      d.places.map(function(x){var p=byId[x.place];return p?row(p,x):''}).join('')+'</div>';
+  }).join('');
 }
 function importShared(){
   if(token)return doImport();
@@ -425,6 +450,7 @@ function visible(){
     if(filter==='been'&&p.status!=='been')return false;
     if(filter==='tobe'&&p.status==='been')return false;
     if(tripFilter&&String(p.trip)!==tripFilter)return false;
+    if(dayFilter&&dayFilter.ids.indexOf(p._id)<0)return false;
     return true;
   });
 }
@@ -438,7 +464,7 @@ function renderMarkers(){
   var list=visible();
   list.forEach(function(p){
     var m=new google.maps.Marker({map:map,position:{lat:p.lat,lng:p.lng},title:p.name,icon:pinIcon(p.status,p.rating),
-      label:p.rating?{text:'★'+p.rating,fontSize:'11px',fontWeight:'800',color:'#12203A',className:'pinRate'}:null});
+      label:dayFilter?{text:String(dayFilter.ids.indexOf(p._id)+1),fontSize:'12px',fontWeight:'800',color:'#fff',className:'pinNum'}:p.rating?{text:'★'+p.rating,fontSize:'11px',fontWeight:'800',color:'#12203A',className:'pinRate'}:null});
     m.addListener('click',function(){openPlace(p)});markers.push(m);
   });
   var been=list.filter(function(p){return p.status==='been'}).length;
@@ -450,17 +476,18 @@ function renderChips(){
     h+='<button class="chip'+(filter===c[0]?' on':'')+'" onclick="setFilter(\''+c[0]+'\')">'+c[2]+c[1]+'</button>';
   });
   h+='<button class="chip'+(tripFilter?' on':'')+'" onclick="pickTrip()">'+(tripFilter?esc(tripName(tripFilter))+' ✕':'Trip ▾')+'</button>';
+  if(dayFilter)h+='<button class="chip on" onclick="dayFilter=null;renderChips();renderMarkers();fitAll()">'+esc(dayFilter.label)+' ✕</button>';
   $('chips').innerHTML=h;
 }
 function setFilter(f){filter=f;renderChips();renderMarkers()}
 function pickTrip(){
-  if(tripFilter){tripFilter='';renderChips();renderMarkers();return}
+  if(tripFilter){tripFilter='';dayFilter=null;renderChips();renderMarkers();return}
   if(!trips.length){toast('No trips yet — create one in Trips');return}
   var h='<div class="grab"></div><h2>Show a trip</h2>';
   trips.forEach(function(t){h+='<button class="listItem" onclick="showTrip(\''+t._id+'\')"><span class="sq" style="background:'+colorFor(t)+'"></span><span><b>'+esc(t.name)+'</b><small>'+countFor(t._id)+' places</small></span></button>'});
   openSheet(h);loadTripPhotos();
 }
-function showTrip(id){tripFilter=id;closeSheet();go('vMap');renderChips();renderMarkers();fitAll()}
+function showTrip(id){tripFilter=id;dayFilter=null;closeSheet();go('vMap');renderChips();renderMarkers();fitAll()}
 
 /* ---------- sheets ---------- */
 function openSheet(h){
@@ -810,12 +837,99 @@ function renderTrips(){
   if(!trips.length){$('tripList').innerHTML=myMapCard()+'<div class="empty">No trips yet.<br>Create one, add places to it, and share it with a link.</div>';return}
   $('tripList').innerHTML=myMapCard()+trips.map(function(t){
     var n=countFor(t._id),v=places.filter(function(p){return String(p.trip)===t._id&&p.status==='been'}).length;
-    return '<article class="trip"><div class="body"><button style="padding:0;flex:none" onclick="showTrip(\''+t._id+'\')" aria-label="Open '+esc(t.name)+' on map">'+tripThumb(t,'cover')+'</button><button class="open" onclick="showTrip(\''+t._id+'\')"><h3>'+esc(t.name)+(t.shareToken?' <span class="badge">Link on</span>':'')+'</h3><small>'+n+(n===1?' place · ':' places · ')+v+' visited</small></button>'+
+    var hasPlan=t.plan&&t.plan.days&&t.plan.days.length;
+    return '<article class="trip"><div class="body"><button style="padding:0;flex:none" onclick="showTrip(\''+t._id+'\')" aria-label="Open '+esc(t.name)+' on map">'+tripThumb(t,'cover')+'</button><button class="open" onclick="showTrip(\''+t._id+'\')"><h3>'+esc(t.name)+'</h3><small>'+n+(n===1?' place · ':' places · ')+v+' visited'+(t.shareToken?' · <span class="badge">Link on</span>':'')+'</small></button></div>'+
+      '<div class="acts"><button class="planBtn'+(hasPlan?' has':'')+'" onclick="openPlan(\''+t._id+'\')">📅 '+(hasPlan?esc(planDates(t)):'Plan by days')+'</button>'+
       '<button class="sq" aria-label="Trip list" onclick="openTodo(\''+t._id+'\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m4 6 1.5 1.5L8 5"/><path d="m4 12 1.5 1.5L8 11"/><path d="m4 18 1.5 1.5L8 17"/><path d="M11 6h9M11 12h9M11 18h9"/></svg></button>'+
       '<button class="sq" aria-label="Share trip" onclick="shareTrip(\''+t._id+'\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/></svg></button>'+
       '<button class="sq" aria-label="Trip options" onclick="tripMenu(\''+t._id+'\')">⋯</button></div></article>';
   }).join('');
   loadTripPhotos();
+}
+/* ---------- Plan by days ---------- */
+var planTrip=null,planDay=0,planWeather=null,dayFilter=null;
+function fmtD(d,opt){return new Date(d+'T12:00:00').toLocaleDateString('en-GB',opt||{weekday:'short',day:'numeric',month:'short'})}
+function planDates(t){var d=t.plan.days,a=d[0].date,b=d[d.length-1].date;
+  if(a===b)return fmtD(a,{day:'numeric',month:'short'});
+  return a.slice(0,7)===b.slice(0,7)?(+a.slice(8))+'–'+fmtD(b,{day:'numeric',month:'short'}):fmtD(a,{day:'numeric',month:'short'})+' – '+fmtD(b,{day:'numeric',month:'short'});}
+function planRange(t){var n=t.plan.days.length;return planDates(t)+' · '+n+(n>1?' days':' day')}
+function tripById(id){return trips.find(function(x){return x._id===id})}
+function placeById(id){return places.find(function(p){return p._id===String(id)})}
+function openPlan(id){
+  var t=tripById(id);if(!t)return;
+  if(planTrip!==t){planDay=0;planWeather=null}
+  planTrip=t;
+  if(t.plan&&t.plan.days&&t.plan.days.length){planDay=Math.min(planDay,t.plan.days.length-1);return drawPlanView()}
+  planForm();
+}
+function planForm(){
+  var t=planTrip,n=countFor(t._id);
+  if(!n)return openSheet('<div class="grab"></div><h2>'+esc(t.name)+'</h2><p class="sub">Add places to this trip first, then plan it by days.</p>');
+  var sug=Math.max(1,Math.min(14,Math.ceil(n/4))),today=new Date().toISOString().slice(0,10);
+  var cur=(t.plan&&t.plan.days&&t.plan.days.length)||sug;
+  var h='<div class="grab"></div><div class="eyebrow">Plan by days</div><h2>'+esc(t.name)+'</h2><div class="sub">'+n+(n===1?' place':' places')+'. The AI puts nearby places on the same day, orders each day for a short route and avoids days a place is closed.</div>'+
+    '<label class="lbl">First day<input type="date" class="field" id="plStart" min="'+today+'" value="'+(t.startDate||'')+'"></label>'+
+    '<label class="lbl">Number of days<select class="field" id="plDays">';
+  for(var i=1;i<=14;i++)h+='<option value="'+i+'"'+(i===cur?' selected':'')+'>'+i+(i===1?' day':' days')+(i===sug?' (suggested)':'')+'</option>';
+  h+='</select></label><div id="plErr" class="sub" style="color:#B42318"></div><button class="btn blue" onclick="runPlan()">Plan my days</button>';
+  if(t.plan&&t.plan.days&&t.plan.days.length)h+='<button class="btn soft" onclick="drawPlanView()">Back to the plan</button>';
+  openSheet(h);
+}
+async function runPlan(){
+  var d=$('plStart').value,n=$('plDays').value;
+  if(!d){$('plErr').textContent='Pick the first day of the trip';return}
+  openSheet('<h2>Planning '+esc(planTrip.name)+'…</h2><div class="loading"><div class="spin"></div>Grouping places by area, checking opening days and weather</div>');
+  try{
+    var r=await api('/ai/plan-days/'+planTrip._id,{method:'POST',body:{startDate:d,days:n}});
+    Object.assign(planTrip,r.trip);planWeather=r.weather?Object.assign(r.weather,{_trip:planTrip._id}):{_trip:planTrip._id,none:true};
+    planDay=0;renderTrips();drawPlanView();
+  }catch(e){openSheet('<h2>Couldn\'t plan it</h2><p class="sub">'+esc(e.message)+'</p><button class="btn soft" onclick="planForm()">Try again</button>')}
+}
+function weatherLine(w,date){
+  if(!w)return '';
+  var d=w.days&&w.days[date],far=w.kind==='typical';
+  return '<div class="wx'+(far?' far':'')+'">'+(d?d.icon+' '+d.min+'–'+d.max+'°C'+(d.rain!=null?' · '+d.rain+'% chance of rain':''):'🌡️ '+esc(w.summary||''))+
+    '<small>'+(far?'⚠️ Too far ahead for a real forecast. This is the typical weather for these dates in past years, so it may not be accurate. Check again about 2 weeks before the trip.':'Weather forecast')+'</small></div>';
+}
+function drawPlanView(){
+  var t=planTrip,days=t.plan.days,day=days[planDay];
+  if(!planWeather||planWeather._trip!==t._id){
+    planWeather={_trip:t._id,loading:true};
+    api('/ai/trip-weather/'+t._id).then(function(r){planWeather=r.weather?Object.assign(r.weather,{_trip:t._id}):{_trip:t._id,none:true};if(planTrip===t&&$('planBox'))drawPlanView()}).catch(function(){});
+  }
+  var w=planWeather&&!planWeather.loading&&!planWeather.none?planWeather:null;
+  var h='<div class="grab"></div><div id="planBox" style="display:flex;flex-direction:column;gap:12px"><div><div class="eyebrow">'+esc(planRange(t))+'</div><h2>'+esc(t.name)+'</h2>'+(t.plan.summary?'<div class="sub">'+esc(t.plan.summary)+'</div>':'')+'</div>'+
+    '<div class="dayTabs">'+days.map(function(d,i){return '<button class="'+(i===planDay?'on':'')+'" onclick="planDay='+i+';drawPlanView()"><b>Day '+(i+1)+'</b><small>'+fmtD(d.date,{weekday:'short',day:'numeric'})+'</small></button>'}).join('')+'</div>'+
+    '<div class="dayHead"><b>'+fmtD(day.date,{weekday:'long',day:'numeric',month:'long'})+'</b>'+(day.theme?'<span>'+esc(day.theme)+'</span>':'')+'</div>'+weatherLine(w,day.date)+'<div>';
+  if(!day.places.length)h+='<div class="empty" style="padding:12px">No places on this day.</div>';
+  var opts=function(){return days.map(function(d,k){return '<option value="'+k+'"'+(k===planDay?' selected':'')+'>Day '+(k+1)+'</option>'}).join('')};
+  day.places.forEach(function(x,j){
+    var p=placeById(x.place);if(!p)return;
+    h+='<div class="pStop'+(p.status==='been'?' done':'')+'"><span class="num">'+(j+1)+'</span><div class="pInfo"><button class="t" onclick="closeSheet();focusPlaceObj('+places.indexOf(p)+')"><b>'+esc(p.name)+'</b></button>'+
+      '<small>'+[x.time,x.duration].filter(Boolean).map(esc).join(' · ')+'</small>'+(x.tip?'<div class="tip">'+esc(x.tip)+'</div>':'')+'</div>'+
+      '<select class="moveSel" aria-label="Move '+esc(p.name)+' to another day" onchange="movePlace('+j+',this.value)">'+opts()+'</select></div>';
+  });
+  h+='</div><div class="two"><button class="btn dark" onclick="navDay()">Navigate day</button><button class="btn soft" onclick="showDay()">Show on map</button></div>'+
+    '<div class="two"><button class="btn soft" onclick="shareTrip(\''+t._id+'\')">Share by days</button><button class="btn soft" onclick="planForm()">Change dates</button></div></div>';
+  openSheet(h);
+}
+async function movePlace(j,to){
+  to=+to;if(to===planDay)return;
+  var days=planTrip.plan.days,x=days[planDay].places.splice(j,1)[0];days[to].places.push(x);
+  drawPlanView();
+  try{await api('/trips/'+planTrip._id,{method:'PUT',body:{plan:{days:days}}});toast('Moved to Day '+(to+1))}catch(e){toast(e.message)}
+}
+function dayPlaces(){return planTrip.plan.days[planDay].places.map(function(x){return placeById(x.place)}).filter(Boolean)}
+function navDay(){
+  var ps=dayPlaces();if(!ps.length)return;
+  var ll=function(p){return p.lat+','+p.lng},last=ps[ps.length-1];
+  var url='https://www.google.com/maps/dir/?api=1&destination='+ll(last)+(ps.length>1?'&waypoints='+encodeURIComponent(ps.slice(0,-1).slice(0,9).map(ll).join('|')):'');
+  window.open(url,'_blank');
+}
+function showDay(){
+  var ps=dayPlaces();if(!ps.length)return;
+  dayFilter={ids:ps.map(function(p){return p._id}),label:'Day '+(planDay+1)};
+  tripFilter=planTrip._id;closeSheet();go('vMap');renderChips();renderMarkers();fitAll();
 }
 async function newTrip(){
   var n=prompt('Trip name');if(!n)return;
@@ -826,7 +940,7 @@ async function shareTrip(id){
   try{
     var r=await api('/trips/'+id+'/share',{method:'POST'});
     var t=trips.find(function(x){return x._id===id});if(t)t.shareToken=r.token;renderTrips();
-    shareUrl(location.origin+'/V2/trip/'+r.token,t?t.name:'Trip');
+    shareUrl(location.origin+'/V2/trip/'+r.token,t?t.name+(t.plan&&t.plan.days&&t.plan.days.length?' · '+planRange(t):''):'Trip');
   }catch(e){toast(e.message)}
 }
 function tripMenu(id){
