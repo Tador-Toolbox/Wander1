@@ -37,7 +37,13 @@ async function cityCenter(city, key) {
   if (!k) return null;
   if (cityCache.has(k)) return cityCache.get(k);
   const d = await getJSON(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city)}&key=${key}`);
-  const loc = d?.results?.[0]?.geometry?.location || null;
+  let loc = d?.results?.[0]?.geometry?.location || null;
+  if (!loc) {
+    // Geocoding API may be off for this key — fall back to Places text search (always on)
+    if (d?.status && d.status !== 'OK') console.log('[verifyPlace] geocode', d.status, '→ using Places for', city);
+    const t = await getJSON(`${GOOGLE}/textsearch/json?query=${encodeURIComponent(city)}&key=${key}`);
+    loc = t?.results?.[0]?.geometry?.location || null;
+  }
   cityCache.set(k, loc);
   return loc;
 }

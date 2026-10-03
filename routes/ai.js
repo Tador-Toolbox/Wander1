@@ -1746,14 +1746,20 @@ ${hasGps ? '- Respond ONLY with a JSON array of exactly 3 strings. No markdown.'
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ inline_data: { mime_type: mimeType || 'image/jpeg', data: imageBase64 } }, { text: prompt }] }],
-        generationConfig: { maxOutputTokens: 4000, temperature: 0.2, thinkingConfig: { thinkingBudget: 1024 } }
+        generationConfig: { maxOutputTokens: 4000, temperature: 0.2, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 1024 } }
       })
     });
     const data = await r.json();
     const raw = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
     if (!raw) console.log('[photo-scan] empty AI reply', JSON.stringify(data).slice(0, 300));
     let names = [];
-    try { names = JSON.parse((raw.match(/\[[\s\S]*\]/) || ['[]'])[0]); } catch {}
+    try { names = JSON.parse(raw); } catch { try { names = JSON.parse((raw.match(/\[[\s\S]*\]/) || ['[]'])[0]); } catch {} }
+    if (!Array.isArray(names) && Array.isArray(names?.places)) names = names.places;
+    if (!Array.isArray(names) || !names.length) {
+      // broken JSON (e.g. Hebrew ת"א quotes) → pull the names out by hand
+      names = [...raw.matchAll(/"name"\s*:\s*"([^"]+)"(?:[^}]*?"city"\s*:\s*"([^"]*)")?/g)].map(m => ({ name: m[1], city: m[2] || '' }));
+      if (!names.length) console.log('[photo-scan] could not parse AI reply:', raw.slice(0, 400));
+    }
     names = (Array.isArray(names) ? names : []).map(n => typeof n === 'string' ? { name: n } : { name: n?.name, city: n?.city || '', address: n?.address || '' }).filter(n => n.name && String(n.name).trim()).slice(0, 3);
     console.log('[photo-scan]', address || 'no GPS', '→ AI:', JSON.stringify(names));
 
