@@ -364,7 +364,7 @@ function segHtml(status,fn){
 }
 function startAdd(){
   go('vMap');
-  openSheet('<h2>Add a place</h2>'+
+  openSheet('<h2>Add a place</h2><div class="sub">A place you want to visit, or one you\'ve been to</div>'+
     '<button class="aiBtn" onclick="closeSheet();$(\'search\').focus()"><span class="aiIco" style="background:var(--blue-soft);color:var(--blue)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><span><b>Search</b><small>Type a place name</small></span></button>'+
     '<label class="aiBtn" style="cursor:pointer"><input type="file" accept="image/*" style="display:none" onchange="fromPhoto(this.files[0])"><span class="aiIco" style="background:#FFF3E0;color:#C2551A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><b>From a photo</b><small>AI reads the photo and finds the place</small></span></label>'+
     '<button class="aiBtn" onclick="addHere()"><span class="aiIco" style="background:#E7F4EC;color:#1E7A45"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg></span><span><b>Where I am now</b><small>Places around you</small></span></button>'+

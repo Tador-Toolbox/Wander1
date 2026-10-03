@@ -154,13 +154,13 @@ async function verifyNear(o) {
   if ((o.closed || []).some(n => sameName(n, name))) return { ok: false, reason: 'blacklisted (closed)' };
   let here = o.lat != null ? { lat: +o.lat, lng: +o.lng } : null, maxKm = 1, radius = 500, extra = '';
   if (!here) {
-    if (!o.city) return { ok: false, reason: 'no location and no city' };
-    here = await cityCenter(o.city, key);
-    if (!here) return { ok: false, reason: `city not found: ${o.city}` };
-    maxKm = MAX_KM; radius = 40000; extra = ` ${o.city}`;
+    // No GPS: use the address/city read from the photo (e.g. an Instagram caption) to bias the search
+    const hint = [o.address, o.city].filter(Boolean).join(' ');
+    here = hint ? (await cityCenter(o.address && o.city ? `${o.address}, ${o.city}` : hint, key)) || (o.city ? await cityCenter(o.city, key) : null) : null;
+    maxKm = here ? MAX_KM : Infinity; radius = 40000; extra = o.city ? ` ${o.city}` : '';
   }
-  const search = q => getJSON(`${GOOGLE}/textsearch/json?query=${encodeURIComponent(q)}&location=${here.lat},${here.lng}&radius=${radius}&key=${key}`).then(d => d.results || []);
-  const close = c => c.geometry?.location && km(here, c.geometry.location) <= maxKm;
+  const search = q => getJSON(`${GOOGLE}/textsearch/json?query=${encodeURIComponent(q)}${here ? `&location=${here.lat},${here.lng}&radius=${radius}` : ''}&key=${key}`).then(d => d.results || []);
+  const close = c => c.geometry?.location && (!here || km(here, c.geometry.location) <= maxKm);
   let cands = await search(`"${name}"${extra}`);
   let hit = cands.find(c => sameName(name, c.name) && close(c));
   if (!hit) { cands = await search(name + extra); hit = cands.find(c => sameName(name, c.name) && close(c)); }
@@ -171,7 +171,7 @@ async function verifyNear(o) {
   if (status === 'CLOSED_TEMPORARILY') return { ok: false, reason: 'Google: temporarily closed' };
   if ((o.closed || []).some(n => sameName(n, d.name))) return { ok: false, reason: 'blacklisted (closed)' };
   const loc = d.geometry?.location || hit.geometry?.location;
-  return { ok: true, place: { name: d.name, address: d.formatted_address || hit.formatted_address || '', lat: loc.lat, lng: loc.lng, placeId: d.place_id || hit.place_id, types: d.types || [], distM: Math.round(km(here, loc) * 1000) } };
+  return { ok: true, place: { name: d.name, address: d.formatted_address || hit.formatted_address || '', lat: loc.lat, lng: loc.lng, placeId: d.place_id || hit.place_id, types: d.types || [], distM: here ? Math.round(km(here, loc) * 1000) : null } };
 }
 
 async function closedList(city) {

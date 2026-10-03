@@ -1731,33 +1731,35 @@ router.post('/photo-scan', auth, async (req, res) => {
     const near = (Array.isArray(nearby) ? nearby : []).slice(0, 15).map(String);
     const prompt = `You are helping a user save a place in a travel app from a photo they took.
 
-${hasGps ? `GPS location: ${address}.` : 'The photo has NO location data — identify the place and its city from the photo alone (signs, language, landmarks, architecture).'}
-${near.length ? `Google places within a few hundred metres: ${near.join(' | ')}.\n` : ''}Analyze the image carefully — look for visible signs, logos or branding, menus, type of establishment (cafe, restaurant, bar, club, viewpoint, beach, hotel, museum, market, street, park, etc.), architecture and vibe.
+${hasGps ? `GPS location: ${address}.` : 'The photo has NO location data — identify the place and its city from the photo alone.'}
+It may be a normal photo OR a screenshot (Instagram, TikTok, Google Maps, a website). READ ALL TEXT in the image in any language (Hebrew, Greek, etc.): account handles (e.g. "kamado.ramen.il" → "Kamado Ramen"), captions, overlaid text, location pins (📍), street addresses, menus, signs.
+${near.length ? `Google places within a few hundred metres: ${near.join(' | ')}.\n` : ''}Also look at logos or branding, type of establishment (cafe, restaurant, bar, club, viewpoint, beach, hotel, museum, market, street, park, etc.), architecture and vibe.
 
 Combine what you SEE${hasGps ? ' with the location' : ''} to suggest 3 place names.
 Rules:
-- If you can read a sign or brand, the first name MUST be exactly that name.
+- If you can read the place's name (sign, brand, account handle, caption), the first name MUST be that name, written the way it would appear on Google Maps.
 - If the photo clearly matches one of the nearby Google places, use its exact name.
 - Otherwise give short, specific names (2-5 words), not generic like "Nice Place".
-${hasGps ? '- Respond ONLY with a JSON array of exactly 3 strings. No markdown.' : '- Respond ONLY with a JSON array of exactly 3 objects: [{"name":"...","city":"City, Country"}]. Use the city you think it is in; if you cannot tell, use "". No markdown.'}`;
+${hasGps ? '- Respond ONLY with a JSON array of exactly 3 strings. No markdown.' : '- Respond ONLY with a JSON array of exactly 3 objects: [{"name":"...","city":"City, Country","address":"street address if written in the image, else empty"}]. Use the city you think it is in (e.g. an address "המייסדים 27, כרכור" → city "Karkur, Israel"); if you cannot tell, use "". No markdown.'}`;
 
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ inline_data: { mime_type: mimeType || 'image/jpeg', data: imageBase64 } }, { text: prompt }] }],
-        generationConfig: { maxOutputTokens: 2000, temperature: 0.3 }
+        generationConfig: { maxOutputTokens: 4000, temperature: 0.2, thinkingConfig: { thinkingBudget: 1024 } }
       })
     });
     const data = await r.json();
     const raw = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+    if (!raw) console.log('[photo-scan] empty AI reply', JSON.stringify(data).slice(0, 300));
     let names = [];
     try { names = JSON.parse((raw.match(/\[[\s\S]*\]/) || ['[]'])[0]); } catch {}
-    names = (Array.isArray(names) ? names : []).map(n => typeof n === 'string' ? { name: n } : { name: n?.name, city: n?.city || '' }).filter(n => n.name && String(n.name).trim()).slice(0, 3);
+    names = (Array.isArray(names) ? names : []).map(n => typeof n === 'string' ? { name: n } : { name: n?.name, city: n?.city || '', address: n?.address || '' }).filter(n => n.name && String(n.name).trim()).slice(0, 3);
     console.log('[photo-scan]', address || 'no GPS', '→ AI:', JSON.stringify(names));
 
     const vp = require('../services/verifyPlace');
     const closed = await vp.closedList(city || names[0]?.city || '');
-    const checks = await Promise.all(names.map(n => vp.verifyNear(hasGps ? { name: n.name, lat, lng, closed } : { name: n.name, city: n.city, closed }).catch(e => ({ ok: false, reason: e.message }))));
+    const checks = await Promise.all(names.map(n => vp.verifyNear(hasGps ? { name: n.name, lat, lng, closed } : { name: n.name, city: n.city, address: n.address, closed }).catch(e => ({ ok: false, reason: e.message }))));
     const places = [], ideas = [];
     checks.forEach((v, i) => {
       console.log('[photo-scan]', names[i].name, v.ok ? `✅ ${v.place.name} (${v.place.distM}m)` : `❌ ${v.reason}`);
