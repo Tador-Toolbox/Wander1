@@ -5,8 +5,30 @@ const Place  = require('../models/Place');
 router.use(auth);
 
 // GET /api/places
+// Same place = same Google placeId, or same name within ~60 m
+function samePlace(a, b) {
+  if (a.placeId && b.placeId) return a.placeId === b.placeId;
+  const n = x => String(x || '').toLowerCase().trim();
+  if (n(a.name) !== n(b.name)) return false;
+  return Math.abs((a.lat || 0) - (b.lat || 0)) < 0.0006 && Math.abs((a.lng || 0) - (b.lng || 0)) < 0.0006;
+}
+// Places with no trip ("My map"): keep one copy of each — the visited / rated / noted one wins
+async function dedupeMyMap(userId) {
+  const loose = await Place.find({ user: userId, trip: null }).sort({ createdAt: 1 });
+  const score = p => (p.status === 'been' ? 4 : 0) + (p.rating ? 2 : 0) + (p.notes ? 1 : 0);
+  const keep = [], drop = [];
+  for (const p of loose) {
+    const k = keep.findIndex(x => samePlace(x, p));
+    if (k < 0) { keep.push(p); continue; }
+    if (score(p) > score(keep[k])) { drop.push(keep[k]._id); keep[k] = p; } else drop.push(p._id);
+  }
+  if (drop.length) { await Place.deleteMany({ _id: { $in: drop }, user: userId }); console.log('[places] removed', drop.length, 'duplicate(s) from My map'); }
+  return drop.length;
+}
+
 router.get('/', async (req, res) => {
   try {
+    if (!req.query.trip) await dedupeMyMap(req.userId).catch(e => console.log('[places] dedupe error', e.message));
     const filter = { user: req.userId };
     if (req.query.trip) filter.trip = req.query.trip === 'none' ? null : req.query.trip;
     const places = await Place.find(filter).sort({ createdAt: -1 });
@@ -20,6 +42,18 @@ router.post('/', async (req, res) => {
     const { name, location, placeId, notes, link, tags, lat, lng, trip, rating, isPublic, visibility, status, source } = req.body;
     if (!name || lat == null || lng == null)
       return res.status(400).json({ error: 'name, lat, lng are required' });
+    // No duplicates: same place already in this trip → return it; already on My map (no trip) → move it into this trip
+    const cands = await Place.find({ user: req.userId, $or: [placeId ? { placeId } : null, { name }].filter(Boolean) });
+    const same = cands.filter(p => samePlace(p, { name, placeId, lat, lng }));
+    const inTrip = same.find(p => String(p.trip || '') === String(trip || ''));
+    if (inTrip) return res.status(200).json(inTrip);
+    const loose = trip && same.find(p => !p.trip);
+    if (loose) {
+      loose.trip = trip;
+      if (notes && !loose.notes) loose.notes = notes;
+      await loose.save();
+      return res.status(200).json(loose);
+    }
     const place = await Place.create({ user: req.userId, trip: trip||null, name, location, placeId, notes, link, tags, lat, lng, rating: Number(rating)||0, isPublic: !!isPublic, visibility: visibility||'private', status: status||'none', source: source||'' });
     res.status(201).json(place);
   } catch { res.status(500).json({ error: 'Server error' }); }
@@ -71,4 +105,5 @@ router.delete('/:id', async (req, res) => {
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
 
+router.dedupeMyMap = dedupeMyMap;
 module.exports = router;

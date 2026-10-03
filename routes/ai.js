@@ -381,8 +381,11 @@ Reply ONLY with JSON:
       light.places.push({ place: p._id, time: '', duration: '', tip: '' });
     });
 
+    // keep any events already saved for the same nights
+    const oldEv = new Map((trip.plan?.days || []).map(d => [d.date, { events: d.events || [], eventsCheckedAt: d.eventsCheckedAt }]));
+    days.forEach(d => { const o = oldEv.get(d.date); if (o) { d.events = o.events; d.eventsCheckedAt = o.eventsCheckedAt; } });
     trip.startDate = dates[0];
-    trip.plan = { summary: String(plan.summary || '').slice(0, 200), days, createdAt: new Date() };
+    trip.plan = { summary: String(plan.summary || '').slice(0, 200), city: trip.plan?.city || '', days, createdAt: new Date() };
     await trip.save();
     const weather = await weatherP;
     console.log(`[ai/plan-days] ${trip.name}: ${places.length} places → ${nDays} days, weather ${weather?.kind || 'none'}`);
@@ -2046,7 +2049,8 @@ Rules:
 - NEVER suggest these places, they are permanently closed: ${closedNames.join(', ') || 'none'}.
 - Only suggest nightclubs you are sure are currently operating.
 ${bdEvents(bd).length ? '- REAL club events on these dates (from a live listing). If the traveler wants nightlife, use these for evening stops (stop name = the venue name, why = event title):\n' + bdEvents(bd).map(e => `  ${e.date}: "${e.title}" at ${e.venue}${e.artists.length ? ' with ' + e.artists.join(', ') : ''}`).join('\n') : ''}
-${bi === 0 ? `- "holidays": ONLY real public holidays (national or religious) that fall within or right around these dates in that country, with their impact (closures, crowds). If there are none, return an empty array. Never add entries like "No holiday".
+${bi === 0 ? `- "title" is for the WHOLE trip (never mention parts or blocks).
+- "holidays": ONLY real public holidays (national or religious) that fall within or right around these dates in that country, with their impact (closures, crowds). If there are none, return an empty array. Never add entries like "No holiday".
 - "events": max 4 well-known festivals, exhibitions or seasonal happenings in ${city} at this time of year (NOT club nights or parties — those are handled separately). Only ones you are confident about. Cover the WHOLE trip ${dates[0]} to ${dates[dates.length - 1]} for holidays and events.` : '- Return "holidays": [] and "events": [] (handled elsewhere).'}
 
 Reply ONLY with valid JSON, no markdown:
@@ -2075,7 +2079,8 @@ Reply ONLY with valid JSON, no markdown:
     const parts = await Promise.all(blocks.map((bd, bi) => runBlock(bd, bi)));
     if (!parts[0] && parts.every(x => !x)) return res.status(500).json({ error: 'Could not build the trip. Try again.' });
     const head = parts.find(Boolean);
-    const plan = { title: head.title, summary: head.summary, holidays: (parts[0] || {}).holidays || [], events: (parts[0] || {}).events || [],
+    const cleanTitle = t => String(t || '').replace(/\s*[\(\[]?\s*part\s*\d+(\s*(of|\/)\s*\d+)?\s*[\)\]]?\s*$/i, '').replace(/\s*[-–:]\s*$/, '').trim();
+    const plan = { title: cleanTitle(head.title) || city, summary: head.summary, holidays: (parts[0] || {}).holidays || [], events: (parts[0] || {}).events || [],
       days: parts.flatMap((x, bi) => x ? x.days : blocks[bi].map(date => ({ date, title: '', stops: [] }))) };
     // Same place suggested in two blocks → keep the first
     const seenNames = new Set();

@@ -46,7 +46,14 @@ router.put('/:id', async (req, res) => {
     if (emoji) trip.emoji = emoji;
     if (color) trip.color = color;
     if (req.body.plan && Array.isArray(req.body.plan.days)) {
-      trip.plan.days = req.body.plan.days.map(d => ({ date: d.date, theme: d.theme || '', places: (d.places || []).map(x => ({ place: x.place, time: x.time || '', duration: x.duration || '', tip: x.tip || '' })) }));
+      if (!trip.plan) trip.plan = {};
+      trip.plan.days = req.body.plan.days.map(d => ({ date: d.date, theme: d.theme || '', places: (d.places || []).map(x => ({ place: x.place, time: x.time || '', duration: x.duration || '', tip: x.tip || '' })),
+        events: (Array.isArray(d.events) ? d.events : []).slice(0, 12).map(e => ({ title: String(e.title || '').slice(0, 140), venue: String(e.venue || '').slice(0, 80), startTime: String(e.startTime || '').slice(0, 25), url: String(e.url || '').slice(0, 300), match: Number(e.match) || 0, why: String(e.why || '').slice(0, 80) })),
+        eventsCheckedAt: d.eventsCheckedAt || null }));
+      if (req.body.plan.city !== undefined) trip.plan.city = String(req.body.plan.city || '').slice(0, 80);
+      if (req.body.plan.summary !== undefined) trip.plan.summary = String(req.body.plan.summary || '').slice(0, 300);
+      if (!trip.plan.createdAt) trip.plan.createdAt = new Date();
+      if (req.body.plan.days[0]?.date) trip.startDate = req.body.plan.days[0].date;
       trip.markModified('plan');
     }
     if (req.body.clearPlan) { trip.plan = undefined; trip.startDate = ''; }
@@ -62,7 +69,9 @@ router.delete('/:id', async (req, res) => {
     if (!trip) return res.status(404).json({ error: 'Not found' });
     // Remove trip reference from places
     await Place.updateMany({ trip: req.params.id }, { $set: { trip: null } });
-    res.json({ ok: true });
+    // Places that were already on My map would now be there twice → keep one
+    const removed = await require('./places').dedupeMyMap(req.userId).catch(() => 0);
+    res.json({ ok: true, removedDuplicates: removed });
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
 

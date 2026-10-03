@@ -67,7 +67,8 @@ router.post('/:token/import', auth, async (req, res) => {
       const map = new Map(kept.map((p, i) => [String(p._id), newPlaces[i]?._id]));
       newTrip.startDate = sourceTripDoc.startDate || '';
       newTrip.plan = { summary: sourceTripDoc.plan.summary || '', createdAt: new Date(),
-        days: sourceTripDoc.plan.days.map(d => ({ date: d.date, theme: d.theme, places: d.places.filter(x => map.get(String(x.place))).map(x => ({ place: map.get(String(x.place)), time: x.time, duration: x.duration, tip: x.tip })) })) };
+        city: sourceTripDoc.plan.city || '',
+        days: sourceTripDoc.plan.days.map(d => ({ date: d.date, theme: d.theme, events: d.events || [], eventsCheckedAt: d.eventsCheckedAt, places: d.places.filter(x => map.get(String(x.place))).map(x => ({ place: map.get(String(x.place)), time: x.time, duration: x.duration, tip: x.tip })) })) };
       await newTrip.save();
     }
 

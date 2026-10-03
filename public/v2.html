@@ -911,9 +911,34 @@ function drawPlanView(){
       '<small>'+[x.time,x.duration].filter(Boolean).map(esc).join(' · ')+'</small>'+(x.tip?'<div class="tip">'+esc(x.tip)+'</div>':'')+'</div>'+
       '<select class="moveSel" aria-label="Move '+esc(p.name)+' to another day" onchange="movePlace('+j+',this.value)">'+opts()+'</select></div>';
   });
-  h+='</div><div class="two"><button class="btn dark" onclick="navDay()">Navigate day</button><button class="btn soft" onclick="showDay()">Show on map</button></div>'+
+  h+='</div>'+nightHtml(day)+'<div class="two"><button class="btn dark" onclick="navDay()">Navigate day</button><button class="btn soft" onclick="showDay()">Show on map</button></div>'+
     '<div class="two"><button class="btn soft" onclick="shareTrip(\''+t._id+'\')">Share by days</button><button class="btn soft" onclick="planForm()">Change dates</button></div></div>';
   openSheet(h);
+}
+function nightHtml(day){
+  var ev=day.events||[],checked=day.eventsCheckedAt?new Date(day.eventsCheckedAt):null;
+  var h='<div class="night"><div class="eyebrow" style="color:#5B3FC4">🎧 Parties this night</div>';
+  if(ev.length)h+=ev.slice(0,4).map(function(e){var tm=String(e.startTime||'').match(/T(\d{2}:\d{2})/);
+    return '<a class="clubLine" href="'+esc(e.url||'#')+'" target="_blank"><b>'+esc(e.title)+'</b><span>'+esc([e.venue,tm?tm[1]:'',e.why].filter(Boolean).join(' · '))+'</span>'+(e.match?'<span class="match" style="margin-top:4px">'+e.match+'% match</span>':'')+'</a>'}).join('')+
+    (ev.length>4?'<button class="moreLink" onclick="nightAll()">+'+(ev.length-4)+' more</button>':'');
+  else h+='<div class="sub" style="font-size:13.5px">'+(checked?'No parties found for this night yet.':'Not checked yet.')+'</div>';
+  h+='<button class="moreLink" id="nightBtn" onclick="checkNight()">'+(checked?'↻ Check again':'Check parties for this night')+'</button>'+
+    (checked?'<div class="sub" style="font-size:12px">Last checked '+checked.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+'. New parties are often added close to the date.</div>':'');
+  return h+'</div>';
+}
+function nightAll(){var d=planTrip.plan.days[planDay];openSheet('<div class="grab"></div><h2>Parties · '+esc(fmtD(d.date))+'</h2>'+(d.events||[]).map(clubLine).join('')+'<button class="btn soft" onclick="drawPlanView()">Back</button>')}
+async function checkNight(){
+  var t=planTrip,day=t.plan.days[planDay],b=$('nightBtn');if(b){b.disabled=true;b.textContent='Looking for parties…'}
+  try{
+    var city=t.plan.city;
+    if(!city){var p0=dayPlaces()[0]||places.find(function(p){return String(p.trip)===t._id});city=p0?await cityName({lat:p0.lat,lng:p0.lng}):'';if(city){t.plan.city=city}}
+    if(!city)throw new Error('Could not tell which city this trip is in');
+    var extra=[];try{extra=await goOutEvents(city,day.date,day.date)}catch(e){}
+    var r=await api('/ai/tonight',{method:'POST',body:{city:city,date:day.date,extraEvents:extra}});
+    day.events=(r.events||[]).slice(0,12);day.eventsCheckedAt=new Date().toISOString();
+    await api('/trips/'+t._id,{method:'PUT',body:{plan:{days:t.plan.days,city:city}}});
+    if(planTrip===t)drawPlanView();toast(day.events.length?day.events.length+' parties found':'No parties listed yet for this night');
+  }catch(e){toast(e.message);if(b){b.disabled=false;b.textContent='Check parties for this night'}}
 }
 async function movePlace(j,to){
   to=+to;if(to===planDay)return;
@@ -961,8 +986,9 @@ async function stopShare(id){
 }
 async function deleteTrip(id){
   if(!confirm('Delete this trip? Your places stay on the map.'))return;
-  try{await api('/trips/'+id,{method:'DELETE'});trips=trips.filter(function(x){return x._id!==id});
+  try{var r=await api('/trips/'+id,{method:'DELETE'});trips=trips.filter(function(x){return x._id!==id});
     places.forEach(function(p){if(String(p.trip)===id)p.trip=null});
+    if(r.removedDuplicates){places=await api('/places');toast(r.removedDuplicates+' place'+(r.removedDuplicates>1?'s were':' was')+' already on My map — kept once')}
     if(tripFilter===id)tripFilter='';closeSheet();renderTrips();renderChips();renderMarkers()}catch(e){toast(e.message)}
 }
 async function shareUrl(url,title){
@@ -1221,7 +1247,7 @@ function drawPlan(){
   (plan.days||[]).forEach(function(d,di){
     h+='<div style="margin-top:8px"><div class="eyebrow">Day '+(di+1)+' · '+esc(fmtDay(d.date))+'</div><h3 style="font-size:17px;margin-top:2px">'+esc(d.title||'')+'</h3></div>';
     (d.stops||[]).forEach(function(st){
-      var i=aiResults.push({name:st.name,why:(st.time?st.time+' · ':'')+(st.why||''),address:st.address,lat:st.lat,lng:st.lng,placeId:st.placeId})-1;
+      var i=aiResults.push({name:st.name,why:(st.time?st.time+' · ':'')+(st.why||''),address:st.address,lat:st.lat,lng:st.lng,placeId:st.placeId,day:di,time:st.time||'',tip:st.why||''})-1;
       h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(st.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"></button>'+
         '<button class="t" onclick="aiShow('+i+')"><b>'+esc(st.name)+'</b><small>'+esc(aiResults[i].why)+'</small></button>'+
         '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')">+ Add</button></div>';
@@ -1250,12 +1276,22 @@ async function savePlan(){
   var b=$('savePlanBtn');b.disabled=true;b.textContent='Saving…';
   try{
     var t=await api('/trips',{method:'POST',body:{name:plan.title||plan.city}});trips.unshift(t);aiTripId=t._id;
+    var ids=[];
     for(var i=0;i<aiResults.length;i++){
-      var p=aiResults[i];if(places.some(function(x){return x.placeId&&x.placeId===p.placeId&&String(x.trip)===t._id}))continue;
+      var p=aiResults[i];
       var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai',trip:t._id,notes:p.why}});
-      places.unshift(s);var ab=$('aiAdd'+i);if(ab){ab.disabled=true;ab.textContent='Saved'}
+      ids[i]=s._id;
+      var ex=places.findIndex(function(x){return x._id===s._id});if(ex>=0)places[ex]=s;else places.unshift(s); // the server reuses a place you already had
+      var ab=$('aiAdd'+i);if(ab){ab.disabled=true;ab.textContent='Saved'}
     }
-    renderChips();renderMarkers();b.textContent='✓ Saved to Trips';toast('Trip saved');
+    // Keep the whole plan: days, times, tips and each night's parties
+    var cb=window._clubByDay||{};
+    var days=(plan.days||[]).map(function(d,di){
+      return {date:d.date,theme:d.title||'',events:(cb[d.date]||[]).slice(0,12),eventsCheckedAt:(cb[d.date]||[]).length?new Date().toISOString():null,
+        places:aiResults.map(function(r,i){return r.day===di&&ids[i]?{place:ids[i],time:r.time,duration:'',tip:r.tip}:null}).filter(Boolean)};
+    });
+    var t2=await api('/trips/'+t._id,{method:'PUT',body:{plan:{days:days,city:plan.city||'',summary:plan.summary||''}}});Object.assign(t,t2);
+    renderChips();renderMarkers();renderTrips();b.textContent='✓ Saved to Trips';toast('Trip saved with its day plan');
   }catch(e){b.disabled=false;b.textContent='Save as a trip';toast(e.message)}
 }
 function aiTripPick(){
