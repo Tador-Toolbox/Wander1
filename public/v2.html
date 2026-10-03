@@ -161,18 +161,21 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .stars{display:flex;gap:4px}.star{font-size:30px;line-height:1;width:44px;height:44px;color:#D5DAE3;border-radius:10px}.star.on{color:#F2A900}
 .rateAsk{display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center;padding:4px 0 6px}.rateAsk .stars{margin:6px 0}.rateAsk .star{font-size:40px;width:54px;height:54px}.rateAsk .btn{align-self:stretch}
 .pinRate{background:#fff;padding:1px 5px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+#login .note{background:var(--blue-soft);color:var(--ink);padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45}
+.authTabs button.on{border-color:var(--ink);background:var(--ink);color:#fff}
+.linkBtn{color:var(--blue);font-weight:700;font-size:14px;padding:10px;align-self:center}
+#login h2{font-size:22px}#login .done{text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}
+#shared{height:100%;overflow:auto;background:var(--bg)}
+.sharedWrap{max-width:520px;margin:0 auto;padding:40px 20px 32px;display:flex;flex-direction:column;gap:12px}
+.sharedWrap h1{font-size:32px;line-height:1.15}
+.sharedList{display:flex;flex-direction:column;background:#fff;border-radius:16px;border:1px solid var(--line);overflow:hidden}
+.sRow{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:2px}.sRow:last-child{border-bottom:0}
+.sRow small{color:var(--muted);font-size:13px}
 </style></head><body>
 
 <!-- LOGIN -->
-<div id="login" class="hidden">
-  <h1>Wander</h1>
-  <p>Your places, your trips, one map.</p>
-  <label class="lbl">Email or username<input id="em" class="field" autocapitalize="none" autocomplete="username"></label>
-  <label class="lbl">Password<input id="pw" class="field" type="password" autocomplete="current-password"></label>
-  <div id="err"></div>
-  <button class="btn blue" onclick="login()">Log in</button>
-  <p style="font-size:14px;margin-top:8px">No account yet? <a href="/" style="color:var(--blue);font-weight:700">Sign up</a></p>
-</div>
+<div id="login" class="hidden"></div>
+<div id="shared" class="hidden"></div>
 
 <!-- APP -->
 <div id="app" class="hidden">
@@ -239,20 +242,132 @@ async function api(p,o){
   return d;
 }
 
-/* ---------- auth ---------- */
-async function login(){
-  $('err').textContent='';
-  try{
-    var r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('em').value,password:$('pw').value})});
-    var d=await r.json();if(!r.ok)throw new Error(d.error||'Login failed');
-    token=d.token;localStorage.setItem('wandr_token',token);start();
-  }catch(e){$('err').textContent=e.message}
+/* ---------- auth: log in / sign up / forgot / reset ---------- */
+var authMode='login',authNote='',pendingImport=null;
+function authView(mode,note){
+  authMode=mode||'login';if(note!==undefined)authNote=note;
+  var L=$('login'),h='<h1>Wander</h1>';
+  if(authNote)h+='<div class="note">'+authNote+'</div>';
+  if(authMode==='login'||authMode==='signup'){
+    h+='<div class="seg authTabs"><button class="'+(authMode==='signup'?'on':'')+'" onclick="authView(\'signup\')">Sign up</button><button class="'+(authMode==='login'?'on':'')+'" onclick="authView(\'login\')">Log in</button></div>';
+    if(authMode==='signup')h+='<label class="lbl">First name<input id="fn" class="field" autocomplete="given-name"></label>';
+    h+='<label class="lbl">'+(authMode==='signup'?'Email':'Email or username')+'<input id="em" class="field" type="'+(authMode==='signup'?'email':'text')+'" autocapitalize="none" autocomplete="'+(authMode==='signup'?'email':'username')+'"></label>'+
+      '<label class="lbl">Password<input id="pw" class="field" type="password" autocomplete="'+(authMode==='signup'?'new-password':'current-password')+'"'+(authMode==='signup'?' placeholder="At least 6 characters"':'')+'></label>'+
+      '<div id="err" role="alert"></div>'+
+      '<button class="btn blue" id="authGo" onclick="'+(authMode==='signup'?'signup()':'login()')+'">'+(authMode==='signup'?'Create account':'Log in')+'</button>'+
+      (authMode==='login'?'<button class="linkBtn" onclick="authView(\'forgot\')">Forgot password?</button>':'');
+  } else if(authMode==='forgot'){
+    h+='<h2>Reset your password</h2><p>Enter your email and we\'ll send you a link.</p>'+
+      '<label class="lbl">Email<input id="em" class="field" type="email" autocapitalize="none" autocomplete="email"></label>'+
+      '<div id="err" role="alert"></div><button class="btn blue" id="authGo" onclick="forgot()">Send reset link</button>'+
+      '<button class="linkBtn" onclick="authView(\'login\')">Back to log in</button>';
+  } else if(authMode==='reset'){
+    h+='<h2>Choose a new password</h2>'+
+      '<label class="lbl">New password<input id="pw" class="field" type="password" autocomplete="new-password" placeholder="At least 6 characters"></label>'+
+      '<label class="lbl">Repeat password<input id="pw2" class="field" type="password" autocomplete="new-password"></label>'+
+      '<div id="err" role="alert"></div><button class="btn blue" id="authGo" onclick="resetPw()">Save password</button>';
+  } else if(authMode==='sent'){
+    h+='<div class="done"><div style="font-size:44px">📧</div><h2>Check your email</h2><p>'+authSentMsg+'</p></div><button class="btn soft" onclick="authView(\'login\')">Back to log in</button>';
+  }
+  L.innerHTML=h;
+  L.querySelectorAll('input').forEach(function(i){i.addEventListener('keydown',function(e){if(e.key==='Enter'&&$('authGo'))$('authGo').click()})});
+  var f=L.querySelector('input');if(f&&authMode!=='sent')setTimeout(function(){f.focus()},50);
 }
-$('pw').addEventListener('keydown',function(e){if(e.key==='Enter')login()});
-function logout(){localStorage.removeItem('wandr_token');location.reload()}
+var authSentMsg='';
+function authBusy(on,label){var b=$('authGo');if(b){b.disabled=on;if(label)b.textContent=label}}
+function authErr(m){$('err').textContent=m||''}
+function authSent(msg){authSentMsg=msg;authView('sent')}
+async function postJSON(url,body){
+  var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  var d=await r.json().catch(function(){return{}});
+  if(!r.ok)throw new Error(d.error||'Something went wrong');
+  return d;
+}
+async function login(){
+  authErr('');authBusy(true,'Logging in…');
+  try{
+    var d=await postJSON('/api/auth/login',{email:$('em').value,password:$('pw').value});
+    token=d.token;localStorage.setItem('wandr_token',token);
+    if(pendingImport)return doImport();
+    start();
+  }catch(e){authErr(e.message);authBusy(false,'Log in')}
+}
+async function signup(){
+  authErr('');
+  var first=$('fn').value.trim(),email=$('em').value.trim(),pass=$('pw').value;
+  if(!first)return authErr('Please enter your first name');
+  if(!email)return authErr('Please enter your email');
+  if(pass.length<6)return authErr('Password must be at least 6 characters');
+  authBusy(true,'Creating account…');
+  try{
+    var handle=first.toLowerCase().replace(/[^a-z0-9]/g,'')+Math.floor(Math.random()*9999);
+    await postJSON('/api/auth/register',{firstName:first,lastName:'',handle:handle,email:email,password:pass,redirect:location.pathname});
+    authSent('We sent a link to <b>'+esc(email)+'</b>. Tap it to verify your account, then come back and log in.'+(pendingImport?' The shared trip will be saved right after.':''));
+  }catch(e){authErr(e.message);authBusy(false,'Create account')}
+}
+async function forgot(){
+  authErr('');var email=$('em').value.trim();if(!email)return authErr('Please enter your email');
+  authBusy(true,'Sending…');
+  try{await postJSON('/api/auth/forgot-password',{email:email,app:'v2'});authSent('If <b>'+esc(email)+'</b> has an account, we sent a link to reset the password. It works for 1 hour.')}
+  catch(e){authErr(e.message);authBusy(false,'Send reset link')}
+}
+async function resetPw(){
+  authErr('');var a=$('pw').value,b=$('pw2').value;
+  if(a.length<6)return authErr('Password must be at least 6 characters');
+  if(a!==b)return authErr('The passwords don\'t match');
+  authBusy(true,'Saving…');
+  try{
+    await postJSON('/api/auth/reset-password',{token:new URLSearchParams(location.search).get('token'),password:a});
+    history.replaceState(null,'','/V2');authView('login','✓ Password changed. Log in with your new password.');
+  }catch(e){authErr(e.message);authBusy(false,'Save password')}
+}
+function logout(){localStorage.removeItem('wandr_token');location.href='/V2'}
+
+/* ---------- shared trip link: /V2/trip/<token> ---------- */
+var sharedData=null;
+async function openShared(tok){
+  pendingImport=tok;
+  var S=$('shared');S.classList.remove('hidden');
+  S.innerHTML='<div class="loading" style="margin-top:40vh"><div class="spin"></div>Opening trip…</div>';
+  try{
+    var r=await fetch('/api/share/'+encodeURIComponent(tok));var d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Trip not found');
+    sharedData=d;
+  }catch(e){
+    S.innerHTML='<div class="sharedWrap"><h1>Wander</h1><h2>This link doesn\'t work</h2><p class="sub">'+esc(e.message)+'. The owner may have turned the link off.</p><a class="btn blue" style="text-decoration:none" href="/V2">Open Wander</a></div>';
+    pendingImport=null;return;
+  }
+  var t=sharedData.trip,ps=sharedData.places||[];
+  S.innerHTML='<div class="sharedWrap"><div class="eyebrow">A trip shared with you</div><h1>'+esc((t.emoji?t.emoji+' ':'')+t.name)+'</h1>'+
+    '<p class="sub">'+ps.length+(ps.length===1?' place':' places')+'</p>'+
+    '<button class="btn blue" id="impBtn" onclick="importShared()">Save this trip to my Wander</button>'+
+    '<div class="sharedList">'+ps.map(function(p){return '<div class="sRow"><b>'+esc(p.name)+'</b><small>'+esc(p.location||'')+'</small></div>'}).join('')+'</div>'+
+    (token?'<a class="linkBtn" href="/V2">Open my map without saving</a>':'')+'</div>';
+}
+function importShared(){
+  if(token)return doImport();
+  $('shared').classList.add('hidden');$('login').classList.remove('hidden');
+  authView('signup','Sign up or log in to save <b>'+esc(sharedData.trip.name)+'</b> to your map.');
+}
+async function doImport(){
+  var b=$('impBtn');if(b){b.disabled=true;b.textContent='Saving…'}
+  try{
+    var r=await fetch('/api/share/'+encodeURIComponent(pendingImport)+'/import',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token}});
+    var d=await r.json().catch(function(){return{}});
+    if(r.status===401){localStorage.removeItem('wandr_token');token=null;return importShared()}
+    if(!r.ok)throw new Error(d.error||'Could not save the trip');
+    pendingImport=null;history.replaceState(null,'','/V2');
+    $('shared').classList.add('hidden');
+    importedTrip=d.trip;start();
+  }catch(e){
+    if(b){b.disabled=false;b.textContent='Save this trip to my Wander'}
+    toast(e.message);if(!$('login').classList.contains('hidden'))authErr(e.message);
+  }
+}
+var importedTrip=null;
 
 async function start(){
-  $('login').classList.add('hidden');$('app').classList.remove('hidden');
+  $('login').classList.add('hidden');$('shared').classList.add('hidden');$('app').classList.remove('hidden');
   api('/auth/me').then(function(u){user=u.user||u}).catch(function(){});
   var k=await (await fetch('/api/config/maps-key')).json();
   window.__boot=initMap;
@@ -292,6 +407,7 @@ async function initMap(){
   try{ var r=await Promise.all([api('/places'),api('/trips')]); places=r[0];trips=r[1].filter(function(t){return !t.isShared}); }
   catch(e){toast(e.message)}
   renderChips();renderMarkers();
+  if(importedTrip){var it=importedTrip;importedTrip=null;toast('"'+it.name+'" saved to your trips');showTrip(it._id);return}
   locate(false);
 }
 function locate(userAsked){
@@ -710,7 +826,7 @@ async function shareTrip(id){
   try{
     var r=await api('/trips/'+id+'/share',{method:'POST'});
     var t=trips.find(function(x){return x._id===id});if(t)t.shareToken=r.token;renderTrips();
-    shareUrl(location.origin+'/trip/'+r.token,t?t.name:'Trip');
+    shareUrl(location.origin+'/V2/trip/'+r.token,t?t.name:'Trip');
   }catch(e){toast(e.message)}
 }
 function tripMenu(id){
@@ -1189,6 +1305,12 @@ function openSettings(){
     '<button class="btn danger" onclick="logout()">Log out</button>');
 }
 
-if(token)start();else $('login').classList.remove('hidden');
+(function boot(){
+  var path=location.pathname,m=path.match(/\/trip\/([A-Za-z0-9]+)/);
+  if(m)return openShared(m[1]);
+  if(/reset-password/.test(path)&&new URLSearchParams(location.search).get('token')){$('login').classList.remove('hidden');return authView('reset','')}
+  if(token)return start();
+  $('login').classList.remove('hidden');authView('login');
+})();
 </script>
 </body></html>

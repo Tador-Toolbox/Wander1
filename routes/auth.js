@@ -186,7 +186,8 @@ router.post('/forgot-password', async (req, res) => {
     user.verifyExpires = resetExpires;
     await user.save();
 
-    const resetUrl = `${process.env.APP_URL || 'https://wander1.onrender.com'}/reset-password?token=${resetToken}`;
+    const resetPath = req.body.app === 'v2' ? '/V2/reset-password' : '/reset-password';
+    const resetUrl = `${process.env.APP_URL || 'https://wander1.onrender.com'}${resetPath}?token=${resetToken}`;
 
     await resend.emails.send({
       from: 'Wandr <noreply@yovix.com>',

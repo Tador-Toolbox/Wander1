@@ -309,7 +309,7 @@ app.get('/admin/errors', (req, res) => {
 });
 
 // V2 (simple design) - same API and accounts
-app.get(['/V2','/v2'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'v2.html')));
+app.get(['/V2','/v2','/V2/*','/v2/*'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'v2.html'))); // /V2/trip/:token, /V2/reset-password
 
 // SPA fallback - serves index.html for all non-API routes
 app.get('*', (req, res) => {
