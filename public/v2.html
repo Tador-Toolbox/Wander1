@@ -366,7 +366,7 @@ function startAdd(){
   go('vMap');
   openSheet('<h2>Add a place</h2>'+
     '<button class="aiBtn" onclick="closeSheet();$(\'search\').focus()"><span class="aiIco" style="background:var(--blue-soft);color:var(--blue)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><span><b>Search</b><small>Type a place name</small></span></button>'+
-    '<label class="aiBtn" style="cursor:pointer"><input type="file" accept="image/*" style="display:none" onchange="fromPhoto(this.files[0])"><span class="aiIco" style="background:#FFF3E0;color:#C2551A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><b>From a photo</b><small>We find where it was taken</small></span></label>'+
+    '<label class="aiBtn" style="cursor:pointer"><input type="file" accept="image/*" style="display:none" onchange="fromPhoto(this.files[0])"><span class="aiIco" style="background:#FFF3E0;color:#C2551A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><b>From a photo</b><small>AI reads the photo and finds the place</small></span></label>'+
     '<button class="aiBtn" onclick="addHere()"><span class="aiIco" style="background:#E7F4EC;color:#1E7A45"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg></span><span><b>Where I am now</b><small>Places around you</small></span></button>'+
     '<button class="aiBtn" onclick="go(\'vAI\');buildTripForm()"><span class="aiIco" style="background:#F3F1FB;color:#5B3FC4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg></span><span><b>Build a trip</b><small>AI plans your days in a city</small></span></button>');
 }
@@ -380,16 +380,66 @@ function loadExifr(){
 var photoUrl='';
 async function fromPhoto(file){
   if(!file)return;
-  openSheet('<h2>Reading photo…</h2><div class="loading"><div class="spin"></div>Finding where it was taken</div>');
+  photoUrl=URL.createObjectURL(file);
+  var ph='<div class="photo" style="background-image:url(\''+photoUrl+'\')"></div>';
+  openSheet(ph+'<h2>Scanning photo…</h2><div class="loading"><div class="spin"></div>Reading signs and finding where it was taken</div>');
   try{
-    var ex=await loadExifr();var g=await ex.gps(file).catch(function(){return null});
-    if(!g||g.latitude==null){
-      openSheet('<h2>No location in this photo</h2><p class="sub" style="font-size:15px;line-height:1.5">This photo has no GPS data.<br><br>On iPhone: when picking the photo, tap <b>Options</b> at the top and turn on <b>Location</b>, then try again.</p><button class="btn soft" onclick="startAdd()">Back</button>');
+    var ex=await loadExifr().catch(function(){return null});
+    var g=ex?await ex.gps(file).catch(function(){return null}):null;
+    var pos=null,noGps=false;
+    if(g&&g.latitude!=null)pos={lat:g.latitude,lng:g.longitude};
+    else{noGps=true;pos=await getPos()}
+    if(!pos){
+      openSheet('<h2>No location in this photo</h2><p class="sub" style="font-size:15px;line-height:1.5">This photo has no GPS data and your location is blocked.<br><br>On iPhone: when picking the photo, tap <b>Options</b> at the top and turn on <b>Location</b>, then try again.</p><button class="btn soft" onclick="startAdd()">Back</button>');
       return;
     }
-    photoUrl=URL.createObjectURL(file);
-    nearbyPicker({lat:g.latitude,lng:g.longitude},'Where was this photo taken?',photoUrl);
+    map.panTo(pos);map.setZoom(17);
+    var near=await nearbyList(pos,photoUrl);
+    var b64=await shrinkPhoto(file);
+    var r=await api('/ai/photo-scan',{method:'POST',body:{imageBase64:b64,mimeType:'image/jpeg',lat:pos.lat,lng:pos.lng,nearby:near.map(function(p){return p.name})}}).catch(function(){return {places:[],ideas:[]}});
+    var ai=(r.places||[]).map(function(p){return {name:p.name,location:p.address||'',placeId:p.placeId,lat:p.lat,lng:p.lng,photo:photoUrl}});
+    var ids=ai.map(function(p){return p.placeId});
+    nearList=ai.concat(near.filter(function(p){return ids.indexOf(p.placeId)<0}));
+    scanIdeas=r.ideas||[];scanPos=pos;
+    var h=ph+'<h2>Where was this photo taken?</h2>'+(noGps?'<div class="sub">No GPS in the photo, so I used where you are now.</div>':'');
+    if(ai.length){
+      h+='<div class="eyebrow">✦ AI scan — looks like</div>';
+      ai.forEach(function(p,i){h+='<button class="listItem" onclick="pickNear('+i+')" style="border:2px solid #CFE0FF"><span><b>✦ '+esc(p.name)+'</b><small>'+esc(p.location)+'</small></span></button>'});
+    }
+    if(scanIdeas.length){
+      h+='<div class="eyebrow">Name ideas for this spot</div><div style="display:flex;gap:6px;flex-wrap:wrap">';
+      scanIdeas.forEach(function(n,i){h+='<button class="btn soft" style="width:auto;padding:8px 14px;font-size:14px" onclick="pickIdea('+i+')">'+esc(n)+'</button>'});
+      h+='</div>';
+    }
+    if(nearList.length>ai.length){
+      h+='<div class="eyebrow">Places nearby</div>';
+      for(var i=ai.length;i<nearList.length;i++)h+='<button class="listItem" onclick="pickNear('+i+')"><span><b>'+esc(nearList[i].name)+'</b><small>'+esc(nearList[i].location)+'</small></span></button>';
+    }
+    h+='<button class="listItem" onclick="pickSpot('+pos.lat+','+pos.lng+')"><span><b>📍 Just this spot</b><small>Save the exact location</small></span></button>';
+    openSheet(h);
   }catch(e){openSheet('<h2>Something went wrong</h2><p class="sub">'+esc(e.message)+'</p>')}
+}
+var scanIdeas=[],scanPos=null;
+function pickIdea(i){pending={name:scanIdeas[i],location:'',placeId:'',lat:scanPos.lat,lng:scanPos.lng,photo:photoUrl};openAdd()}
+function shrinkPhoto(file){
+  return new Promise(function(res,rej){
+    var img=new Image();
+    img.onload=function(){
+      var m=1280,w=img.width,h=img.height,k=Math.min(1,m/Math.max(w,h));
+      var c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      res(c.toDataURL('image/jpeg',0.8).split(',')[1]);
+    };
+    img.onerror=function(){rej(new Error('Could not read this photo'))};
+    img.src=photoUrl;
+  });
+}
+function nearbyList(pos,img){
+  return new Promise(function(res){
+    new google.maps.places.PlacesService(map).nearbySearch({location:pos,rankBy:google.maps.places.RankBy.DISTANCE,type:'point_of_interest'},function(r,st){
+      res((st==='OK'&&r?r:[]).slice(0,8).map(function(p){return {name:p.name,location:p.vicinity||'',placeId:p.place_id,lat:p.geometry.location.lat(),lng:p.geometry.location.lng(),photo:img||(p.photos&&p.photos[0]?p.photos[0].getUrl({maxWidth:800}):'')}}));
+    });
+  });
 }
 function addHere(){
   photoUrl='';

@@ -145,6 +145,28 @@ async function verifyPlace(o) {
   };
 }
 
+// Photo scan: is this AI-read name a real, open place right where the photo was taken?
+async function verifyNear(o) {
+  const key = process.env.GOOGLE_MAPS_API_KEY;
+  const { name, lat, lng } = o;
+  if (!name || lat == null || !key) return { ok: false, reason: 'missing data' };
+  if ((o.closed || []).some(n => sameName(n, name))) return { ok: false, reason: 'blacklisted (closed)' };
+  const here = { lat: +lat, lng: +lng };
+  const search = q => getJSON(`${GOOGLE}/textsearch/json?query=${encodeURIComponent(q)}&location=${lat},${lng}&radius=500&key=${key}`).then(d => d.results || []);
+  const close = c => c.geometry?.location && km(here, c.geometry.location) <= 1;
+  let cands = await search(`"${name}"`);
+  let hit = cands.find(c => sameName(name, c.name) && close(c));
+  if (!hit) { cands = await search(name); hit = cands.find(c => sameName(name, c.name) && close(c)); }
+  if (!hit) return { ok: false, reason: `not found within 1 km (got "${cands[0]?.name || '-'}")` };
+  const d = await details(hit.place_id, key) || hit;
+  const status = d.business_status || hit.business_status;
+  if (status === 'CLOSED_PERMANENTLY' || d.permanently_closed) return { ok: false, reason: 'Google: permanently closed' };
+  if (status === 'CLOSED_TEMPORARILY') return { ok: false, reason: 'Google: temporarily closed' };
+  if ((o.closed || []).some(n => sameName(n, d.name))) return { ok: false, reason: 'blacklisted (closed)' };
+  const loc = d.geometry?.location || hit.geometry?.location;
+  return { ok: true, place: { name: d.name, address: d.formatted_address || hit.formatted_address || '', lat: loc.lat, lng: loc.lng, placeId: d.place_id || hit.place_id, types: d.types || [], distM: Math.round(km(here, loc) * 1000) } };
+}
+
 async function closedList(city) {
   try {
     const VenueBlacklist = require('../models/VenueBlacklist');
@@ -155,4 +177,4 @@ async function closedList(city) {
   } catch { return []; }
 }
 
-module.exports = { verifyPlace, closedList, sameName, openOnDate };
+module.exports = { verifyPlace, verifyNear, closedList, sameName, openOnDate };

@@ -1706,6 +1706,71 @@ router.post('/preferences', auth, async (req, res) => {
 });
 
 /* ─────────────────────────────────────────
+   POST /api/ai/photo-scan  (V2 "From a photo")
+   V1 AI scan (image + location → names) + verification:
+   each name must be a real, open Google place within 1 km of the photo.
+   Returns { places: [verified], ideas: [names that didn't verify] }
+───────────────────────────────────────── */
+router.post('/photo-scan', auth, async (req, res) => {
+  try {
+    const { imageBase64, mimeType, lat, lng, nearby = [] } = req.body;
+    if (!imageBase64 || lat == null) return res.status(400).json({ error: 'Need a photo and a location' });
+    const geminiKey = process.env.GEMINI_API_KEY, mapsKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!geminiKey) return res.status(500).json({ error: 'AI not configured' });
+
+    let address = `${lat},${lng}`, city = '';
+    if (mapsKey) {
+      const g = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${mapsKey}`).then(r => r.json()).catch(() => ({}));
+      const r0 = g.results?.[0];
+      if (r0) {
+        address = r0.formatted_address;
+        city = (r0.address_components || []).find(c => c.types.includes('locality'))?.long_name || '';
+      }
+    }
+    const near = (Array.isArray(nearby) ? nearby : []).slice(0, 15).map(String);
+    const prompt = `You are helping a user save a place in a travel app from a photo they took.
+
+GPS location: ${address}.
+${near.length ? `Google places within a few hundred metres: ${near.join(' | ')}.\n` : ''}Analyze the image carefully — look for visible signs, logos or branding, menus, type of establishment (cafe, restaurant, bar, club, viewpoint, beach, hotel, museum, market, street, park, etc.), architecture and vibe.
+
+Combine what you SEE with the location to suggest 3 place names.
+Rules:
+- If you can read a sign or brand, the first name MUST be exactly that name.
+- If the photo clearly matches one of the nearby Google places, use its exact name.
+- Otherwise give short, specific names (2-5 words), not generic like "Nice Place".
+- Respond ONLY with a JSON array of exactly 3 strings. No markdown.`;
+
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ inline_data: { mime_type: mimeType || 'image/jpeg', data: imageBase64 } }, { text: prompt }] }],
+        generationConfig: { maxOutputTokens: 2000, temperature: 0.3 }
+      })
+    });
+    const data = await r.json();
+    const raw = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+    let names = [];
+    try { names = JSON.parse((raw.match(/\[[\s\S]*\]/) || ['[]'])[0]); } catch {}
+    names = (Array.isArray(names) ? names : []).filter(n => typeof n === 'string' && n.trim()).slice(0, 3);
+    console.log('[photo-scan]', address, '→ AI:', names);
+
+    const vp = require('../services/verifyPlace');
+    const closed = await vp.closedList(city);
+    const checks = await Promise.all(names.map(n => vp.verifyNear({ name: n, lat, lng, closed }).catch(e => ({ ok: false, reason: e.message }))));
+    const places = [], ideas = [];
+    checks.forEach((v, i) => {
+      console.log('[photo-scan]', names[i], v.ok ? `✅ ${v.place.name} (${v.place.distM}m)` : `❌ ${v.reason}`);
+      if (v.ok) { if (!places.some(p => p.placeId === v.place.placeId)) places.push(v.place); }
+      else if (!/closed/i.test(v.reason)) ideas.push(names[i]);
+    });
+    res.json({ places, ideas, address });
+  } catch (err) {
+    console.error('[photo-scan] ❌', err.message);
+    res.status(500).json({ error: 'AI scan failed', places: [], ideas: [] });
+  }
+});
+
+/* ─────────────────────────────────────────
    POST /api/ai/place-name-suggestions
    Accepts a base64 image + address,
    returns 3 AI-suggested place names
