@@ -386,22 +386,23 @@ async function fromPhoto(file){
   try{
     var ex=await loadExifr().catch(function(){return null});
     var g=ex?await ex.gps(file).catch(function(){return null}):null;
-    var pos=null,noGps=false;
-    if(g&&g.latitude!=null)pos={lat:g.latitude,lng:g.longitude};
-    else{noGps=true;pos=await getPos()}
-    if(!pos){
-      openSheet('<h2>No location in this photo</h2><p class="sub" style="font-size:15px;line-height:1.5">This photo has no GPS data and your location is blocked.<br><br>On iPhone: when picking the photo, tap <b>Options</b> at the top and turn on <b>Location</b>, then try again.</p><button class="btn soft" onclick="startAdd()">Back</button>');
+    var pos=(g&&g.latitude!=null)?{lat:g.latitude,lng:g.longitude}:null,noGps=!pos;
+    if(pos){map.panTo(pos);map.setZoom(17)}
+    var near=pos?await nearbyList(pos,photoUrl):[];
+    var b64=await shrinkPhoto(file);
+    var body={imageBase64:b64,mimeType:'image/jpeg',nearby:near.map(function(p){return p.name})};
+    if(pos){body.lat=pos.lat;body.lng=pos.lng}
+    var r=await api('/ai/photo-scan',{method:'POST',body:body}).catch(function(){return {places:[],ideas:[]}});
+    if(noGps&&!(r.places||[]).length){
+      openSheet(ph+'<h2>Couldn\'t recognise this place</h2><p class="sub" style="font-size:15px;line-height:1.5">The photo has no location and the AI couldn\'t find a matching place.<br><br>Try <b>Search</b>, or on iPhone turn on <b>Location</b> under <b>Options</b> when picking the photo.</p><button class="btn soft" onclick="startAdd()">Back</button>');
       return;
     }
-    map.panTo(pos);map.setZoom(17);
-    var near=await nearbyList(pos,photoUrl);
-    var b64=await shrinkPhoto(file);
-    var r=await api('/ai/photo-scan',{method:'POST',body:{imageBase64:b64,mimeType:'image/jpeg',lat:pos.lat,lng:pos.lng,nearby:near.map(function(p){return p.name})}}).catch(function(){return {places:[],ideas:[]}});
+    if(noGps){map.panTo({lat:r.places[0].lat,lng:r.places[0].lng});map.setZoom(16)}
     var ai=(r.places||[]).map(function(p){return {name:p.name,location:p.address||'',placeId:p.placeId,lat:p.lat,lng:p.lng,photo:photoUrl}});
     var ids=ai.map(function(p){return p.placeId});
     nearList=ai.concat(near.filter(function(p){return ids.indexOf(p.placeId)<0}));
     scanIdeas=r.ideas||[];scanPos=pos;
-    var h=ph+'<h2>Where was this photo taken?</h2>'+(noGps?'<div class="sub">No GPS in the photo, so I used where you are now.</div>':'');
+    var h=ph+'<h2>Where was this photo taken?</h2>'+(noGps?'<div class="sub">No location in the photo — found by the AI from the photo itself.</div>':'');
     if(ai.length){
       h+='<div class="eyebrow">✦ AI scan — looks like</div>';
       ai.forEach(function(p,i){h+='<button class="listItem" onclick="pickNear('+i+')" style="border:2px solid #CFE0FF"><span><b>✦ '+esc(p.name)+'</b><small>'+esc(p.location)+'</small></span></button>'});
@@ -415,7 +416,7 @@ async function fromPhoto(file){
       h+='<div class="eyebrow">Places nearby</div>';
       for(var i=ai.length;i<nearList.length;i++)h+='<button class="listItem" onclick="pickNear('+i+')"><span><b>'+esc(nearList[i].name)+'</b><small>'+esc(nearList[i].location)+'</small></span></button>';
     }
-    h+='<button class="listItem" onclick="pickSpot('+pos.lat+','+pos.lng+')"><span><b>📍 Just this spot</b><small>Save the exact location</small></span></button>';
+    if(pos)h+='<button class="listItem" onclick="pickSpot('+pos.lat+','+pos.lng+')"><span><b>📍 Just this spot</b><small>Save the exact location</small></span></button>';
     openSheet(h);
   }catch(e){openSheet('<h2>Something went wrong</h2><p class="sub">'+esc(e.message)+'</p>')}
 }
@@ -456,7 +457,7 @@ function nearbyPicker(pos,title,img){
     nearList=(st==='OK'&&r?r:[]).slice(0,8).map(function(p){return {name:p.name,location:p.vicinity||'',placeId:p.place_id,lat:p.geometry.location.lat(),lng:p.geometry.location.lng(),photo:img||(p.photos&&p.photos[0]?p.photos[0].getUrl({maxWidth:800}):'')}});
     var h=(img?'<div class="photo" style="background-image:url(\''+img+'\')"></div>':'')+'<h2>'+esc(title)+'</h2>';
     nearList.forEach(function(p,i){h+='<button class="listItem" onclick="pickNear('+i+')"><span><b>'+esc(p.name)+'</b><small>'+esc(p.location)+'</small></span></button>'});
-    h+='<button class="listItem" onclick="pickSpot('+pos.lat+','+pos.lng+')"><span><b>📍 Just this spot</b><small>Save the exact location</small></span></button>';
+    if(pos)h+='<button class="listItem" onclick="pickSpot('+pos.lat+','+pos.lng+')"><span><b>📍 Just this spot</b><small>Save the exact location</small></span></button>';
     openSheet(h);
   });
 }

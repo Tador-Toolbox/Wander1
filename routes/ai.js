@@ -1714,12 +1714,13 @@ router.post('/preferences', auth, async (req, res) => {
 router.post('/photo-scan', auth, async (req, res) => {
   try {
     const { imageBase64, mimeType, lat, lng, nearby = [] } = req.body;
-    if (!imageBase64 || lat == null) return res.status(400).json({ error: 'Need a photo and a location' });
+    if (!imageBase64) return res.status(400).json({ error: 'No photo' });
+    const hasGps = lat != null && lng != null;
     const geminiKey = process.env.GEMINI_API_KEY, mapsKey = process.env.GOOGLE_MAPS_API_KEY;
     if (!geminiKey) return res.status(500).json({ error: 'AI not configured' });
 
-    let address = `${lat},${lng}`, city = '';
-    if (mapsKey) {
+    let address = hasGps ? `${lat},${lng}` : '', city = '';
+    if (mapsKey && hasGps) {
       const g = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${mapsKey}`).then(r => r.json()).catch(() => ({}));
       const r0 = g.results?.[0];
       if (r0) {
@@ -1730,15 +1731,15 @@ router.post('/photo-scan', auth, async (req, res) => {
     const near = (Array.isArray(nearby) ? nearby : []).slice(0, 15).map(String);
     const prompt = `You are helping a user save a place in a travel app from a photo they took.
 
-GPS location: ${address}.
+${hasGps ? `GPS location: ${address}.` : 'The photo has NO location data — identify the place and its city from the photo alone (signs, language, landmarks, architecture).'}
 ${near.length ? `Google places within a few hundred metres: ${near.join(' | ')}.\n` : ''}Analyze the image carefully — look for visible signs, logos or branding, menus, type of establishment (cafe, restaurant, bar, club, viewpoint, beach, hotel, museum, market, street, park, etc.), architecture and vibe.
 
-Combine what you SEE with the location to suggest 3 place names.
+Combine what you SEE${hasGps ? ' with the location' : ''} to suggest 3 place names.
 Rules:
 - If you can read a sign or brand, the first name MUST be exactly that name.
 - If the photo clearly matches one of the nearby Google places, use its exact name.
 - Otherwise give short, specific names (2-5 words), not generic like "Nice Place".
-- Respond ONLY with a JSON array of exactly 3 strings. No markdown.`;
+${hasGps ? '- Respond ONLY with a JSON array of exactly 3 strings. No markdown.' : '- Respond ONLY with a JSON array of exactly 3 objects: [{"name":"...","city":"City, Country"}]. Use the city you think it is in; if you cannot tell, use "". No markdown.'}`;
 
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1751,17 +1752,17 @@ Rules:
     const raw = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
     let names = [];
     try { names = JSON.parse((raw.match(/\[[\s\S]*\]/) || ['[]'])[0]); } catch {}
-    names = (Array.isArray(names) ? names : []).filter(n => typeof n === 'string' && n.trim()).slice(0, 3);
-    console.log('[photo-scan]', address, '→ AI:', names);
+    names = (Array.isArray(names) ? names : []).map(n => typeof n === 'string' ? { name: n } : { name: n?.name, city: n?.city || '' }).filter(n => n.name && String(n.name).trim()).slice(0, 3);
+    console.log('[photo-scan]', address || 'no GPS', '→ AI:', JSON.stringify(names));
 
     const vp = require('../services/verifyPlace');
-    const closed = await vp.closedList(city);
-    const checks = await Promise.all(names.map(n => vp.verifyNear({ name: n, lat, lng, closed }).catch(e => ({ ok: false, reason: e.message }))));
+    const closed = await vp.closedList(city || names[0]?.city || '');
+    const checks = await Promise.all(names.map(n => vp.verifyNear(hasGps ? { name: n.name, lat, lng, closed } : { name: n.name, city: n.city, closed }).catch(e => ({ ok: false, reason: e.message }))));
     const places = [], ideas = [];
     checks.forEach((v, i) => {
-      console.log('[photo-scan]', names[i], v.ok ? `✅ ${v.place.name} (${v.place.distM}m)` : `❌ ${v.reason}`);
+      console.log('[photo-scan]', names[i].name, v.ok ? `✅ ${v.place.name} (${v.place.distM}m)` : `❌ ${v.reason}`);
       if (v.ok) { if (!places.some(p => p.placeId === v.place.placeId)) places.push(v.place); }
-      else if (!/closed/i.test(v.reason)) ideas.push(names[i]);
+      else if (hasGps && !/closed/i.test(v.reason)) ideas.push(names[i].name);
     });
     res.json({ places, ideas, address });
   } catch (err) {

@@ -148,16 +148,23 @@ async function verifyPlace(o) {
 // Photo scan: is this AI-read name a real, open place right where the photo was taken?
 async function verifyNear(o) {
   const key = process.env.GOOGLE_MAPS_API_KEY;
-  const { name, lat, lng } = o;
-  if (!name || lat == null || !key) return { ok: false, reason: 'missing data' };
+  // With GPS: must be within 1 km of the photo. Without GPS: within MAX_KM of the city the AI recognised.
+  const { name } = o;
+  if (!name || !key) return { ok: false, reason: 'missing data' };
   if ((o.closed || []).some(n => sameName(n, name))) return { ok: false, reason: 'blacklisted (closed)' };
-  const here = { lat: +lat, lng: +lng };
-  const search = q => getJSON(`${GOOGLE}/textsearch/json?query=${encodeURIComponent(q)}&location=${lat},${lng}&radius=500&key=${key}`).then(d => d.results || []);
-  const close = c => c.geometry?.location && km(here, c.geometry.location) <= 1;
-  let cands = await search(`"${name}"`);
+  let here = o.lat != null ? { lat: +o.lat, lng: +o.lng } : null, maxKm = 1, radius = 500, extra = '';
+  if (!here) {
+    if (!o.city) return { ok: false, reason: 'no location and no city' };
+    here = await cityCenter(o.city, key);
+    if (!here) return { ok: false, reason: `city not found: ${o.city}` };
+    maxKm = MAX_KM; radius = 40000; extra = ` ${o.city}`;
+  }
+  const search = q => getJSON(`${GOOGLE}/textsearch/json?query=${encodeURIComponent(q)}&location=${here.lat},${here.lng}&radius=${radius}&key=${key}`).then(d => d.results || []);
+  const close = c => c.geometry?.location && km(here, c.geometry.location) <= maxKm;
+  let cands = await search(`"${name}"${extra}`);
   let hit = cands.find(c => sameName(name, c.name) && close(c));
-  if (!hit) { cands = await search(name); hit = cands.find(c => sameName(name, c.name) && close(c)); }
-  if (!hit) return { ok: false, reason: `not found within 1 km (got "${cands[0]?.name || '-'}")` };
+  if (!hit) { cands = await search(name + extra); hit = cands.find(c => sameName(name, c.name) && close(c)); }
+  if (!hit) return { ok: false, reason: `not found within ${maxKm} km (got "${cands[0]?.name || '-'}")` };
   const d = await details(hit.place_id, key) || hit;
   const status = d.business_status || hit.business_status;
   if (status === 'CLOSED_PERMANENTLY' || d.permanently_closed) return { ok: false, reason: 'Google: permanently closed' };
