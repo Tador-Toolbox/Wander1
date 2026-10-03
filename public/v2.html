@@ -393,6 +393,7 @@ async function fromPhoto(file){
     var body={imageBase64:b64,mimeType:'image/jpeg',nearby:near.map(function(p){return p.name})};
     if(pos){body.lat=pos.lat;body.lng=pos.lng}
     var r=await api('/ai/photo-scan',{method:'POST',body:body}).catch(function(){return {places:[],ideas:[]}});
+    if(noGps&&!(r.places||[]).length&&(r.ideas||[]).length){scanIdeas=r.ideas;return ideaSearch(0)}
     if(noGps&&!(r.places||[]).length){
       openSheet(ph+'<h2>Couldn\'t recognise this place</h2><p class="sub" style="font-size:15px;line-height:1.5">The photo has no location and the AI couldn\'t find a matching place.<br><br>Try <b>Search</b>, or on iPhone turn on <b>Location</b> under <b>Options</b> when picking the photo.</p><button class="btn soft" onclick="startAdd()">Back</button>');
       return;
@@ -408,8 +409,8 @@ async function fromPhoto(file){
       ai.forEach(function(p,i){h+='<button class="listItem" onclick="pickNear('+i+')" style="border:2px solid #CFE0FF"><span><b>✦ '+esc(p.name)+'</b><small>'+esc(p.location)+'</small></span></button>'});
     }
     if(scanIdeas.length){
-      h+='<div class="eyebrow">Name ideas for this spot</div><div style="display:flex;gap:6px;flex-wrap:wrap">';
-      scanIdeas.forEach(function(n,i){h+='<button class="btn soft" style="width:auto;padding:8px 14px;font-size:14px" onclick="pickIdea('+i+')">'+esc(n)+'</button>'});
+      h+='<div class="eyebrow">'+(noGps?'Other names the AI read':'Name ideas for this spot')+'</div><div style="display:flex;gap:6px;flex-wrap:wrap">';
+      scanIdeas.forEach(function(n,i){h+='<button class="btn soft" style="width:auto;padding:8px 14px;font-size:14px" onclick="'+(noGps?'ideaSearch':'pickIdea')+'('+i+')">'+esc(noGps?n.name:n)+'</button>'});
       h+='</div>';
     }
     if(nearList.length>ai.length){
@@ -421,6 +422,21 @@ async function fromPhoto(file){
   }catch(e){openSheet('<h2>Something went wrong</h2><p class="sub">'+esc(e.message)+'</p>')}
 }
 var scanIdeas=[],scanPos=null;
+// No GPS and the check didn't confirm a place: like V1, show what the AI read and let the user pick from Google results
+function ideaSearch(i){
+  var idea=scanIdeas[i],ph='<div class="photo" style="background-image:url(\''+photoUrl+'\')"></div>';
+  var q=idea.name+' '+(idea.address||'')+' '+(idea.city||'');
+  openSheet(ph+'<h2>'+esc(idea.name)+'</h2><div class="loading"><div class="spin"></div>Looking it up</div>');
+  new google.maps.places.PlacesService(map).textSearch({query:q.trim()},function(res,st){
+    nearList=(st==='OK'&&res?res:[]).slice(0,6).map(function(p){return {name:p.name,location:p.formatted_address||'',placeId:p.place_id,lat:p.geometry.location.lat(),lng:p.geometry.location.lng(),photo:photoUrl}});
+    var h=ph+'<div class="eyebrow">✦ AI read from the photo</div><h2>'+esc(idea.name)+'</h2>'+(idea.city?'<div class="sub">'+esc(idea.city)+'</div>':'');
+    if(nearList.length){h+='<div class="eyebrow">Pick the right one</div>';nearList.forEach(function(p,j){h+='<button class="listItem" onclick="pickNear('+j+')"><span><b>'+esc(p.name)+'</b><small>'+esc(p.location)+'</small></span></button>'})}
+    else h+='<p class="sub">Not found on Google.</p>';
+    if(scanIdeas.length>1){h+='<div class="eyebrow">Other names the AI read</div><div style="display:flex;gap:6px;flex-wrap:wrap">';scanIdeas.forEach(function(o,j){if(j!==i)h+='<button class="btn soft" style="width:auto;padding:8px 14px;font-size:14px" onclick="ideaSearch('+j+')">'+esc(o.name)+'</button>'});h+='</div>'}
+    h+='<button class="btn soft" onclick="startAdd()">Back</button>';
+    openSheet(h);
+  });
+}
 function pickIdea(i){pending={name:scanIdeas[i],location:'',placeId:'',lat:scanPos.lat,lng:scanPos.lng,photo:photoUrl};openAdd()}
 function shrinkPhoto(file){
   return new Promise(function(res,rej){

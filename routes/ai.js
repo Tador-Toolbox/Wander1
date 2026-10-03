@@ -1764,7 +1764,7 @@ ${hasGps ? '- Respond ONLY with a JSON array of exactly 3 strings. No markdown.'
     checks.forEach((v, i) => {
       console.log('[photo-scan]', names[i].name, v.ok ? `✅ ${v.place.name} (${v.place.distM}m)` : `❌ ${v.reason}`);
       if (v.ok) { if (!places.some(p => p.placeId === v.place.placeId)) places.push(v.place); }
-      else if (hasGps && !/closed/i.test(v.reason)) ideas.push(names[i].name);
+      else if (!/closed/i.test(v.reason)) ideas.push(hasGps ? names[i].name : { name: names[i].name, city: names[i].city || '', address: names[i].address || '' });
     });
     res.json({ places, ideas, address });
   } catch (err) {
