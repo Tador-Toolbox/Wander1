@@ -865,19 +865,19 @@ function openPlan(id){
 function planForm(){
   var t=planTrip,n=countFor(t._id);
   if(!n)return openSheet('<div class="grab"></div><h2>'+esc(t.name)+'</h2><p class="sub">Add places to this trip first, then plan it by days.</p>');
-  var sug=Math.max(1,Math.min(14,Math.ceil(n/4))),today=new Date().toISOString().slice(0,10);
-  var cur=(t.plan&&t.plan.days&&t.plan.days.length)||sug;
+  var sug=Math.max(1,Math.min(14,Math.ceil(n/4)));
+  var pd=t.plan&&t.plan.days&&t.plan.days.length?t.plan.days:null;
+  rp={from:pd?pd[0].date:null,to:pd?pd[pd.length-1].date:null,month:null,max:14};
+  var m0=rp.from?new Date(rp.from+'T12:00:00'):new Date();rp.month=new Date(m0.getFullYear(),m0.getMonth(),1);
   var h='<div class="grab"></div><div class="eyebrow">Plan by days</div><h2>'+esc(t.name)+'</h2><div class="sub">'+n+(n===1?' place':' places')+'. The AI puts nearby places on the same day, orders each day for a short route and avoids days a place is closed.</div>'+
-    '<label class="lbl">First day<input type="date" class="field" id="plStart" min="'+today+'" value="'+(t.startDate||'')+'"></label>'+
-    '<label class="lbl">Number of days<select class="field" id="plDays">';
-  for(var i=1;i<=14;i++)h+='<option value="'+i+'"'+(i===cur?' selected':'')+'>'+i+(i===1?' day':' days')+(i===sug?' (suggested)':'')+'</option>';
-  h+='</select></label><div id="plErr" class="sub" style="color:#B42318"></div><button class="btn blue" onclick="runPlan()">Plan my days</button>';
+    '<div class="sub" style="font-weight:600;color:var(--ink)">Tap your first day, then your last day <span style="color:var(--muted);font-weight:500">(about '+sug+(sug>1?' days':' day')+' suggested for '+n+(n===1?' place':' places')+')</span></div>'+
+    '<div id="rp"></div><div id="rpHint" class="sub"></div><div id="plErr" class="sub" style="color:#B42318"></div><button class="btn blue" onclick="runPlan()">Plan my days</button>';
   if(t.plan&&t.plan.days&&t.plan.days.length)h+='<button class="btn soft" onclick="drawPlanView()">Back to the plan</button>';
-  openSheet(h);
+  openSheet(h);drawRP();
 }
 async function runPlan(){
-  var d=$('plStart').value,n=$('plDays').value;
-  if(!d){$('plErr').textContent='Pick the first day of the trip';return}
+  if(!rp.from){$('plErr').textContent='Tap the first day of the trip';return}
+  var d=rp.from,n=rp.to?Math.round((new Date(rp.to)-new Date(rp.from))/864e5)+1:1;
   openSheet('<h2>Planning '+esc(planTrip.name)+'…</h2><div class="loading"><div class="spin"></div>Grouping places by area, checking opening days and weather</div>');
   try{
     var r=await api('/ai/plan-days/'+planTrip._id,{method:'POST',body:{startDate:d,days:n}});
@@ -1116,7 +1116,7 @@ async function aiEvents(more){
 }
 /* ---- Build a trip ---- */
 var plan=null;
-var rp={from:null,to:null,month:null};
+var rp={from:null,to:null,month:null,max:7};
 function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function drawRP(){
   var m=rp.month,y=m.getFullYear(),mo=m.getMonth(),first=new Date(y,mo,1).getDay(),days=new Date(y,mo+1,0).getDate(),today=ymd(new Date());
@@ -1142,7 +1142,7 @@ function rpPick(k){
   else if(k<rp.from){rp.from=k}
   else{
     var n=Math.round((new Date(k)-new Date(rp.from))/864e5)+1;
-    if(n>7){toast('Up to 7 days for now');return}
+    if(n>(rp.max||7)){toast('Up to '+(rp.max||7)+' days');return}
     rp.to=k;
   }
   drawRP();
