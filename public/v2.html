@@ -187,6 +187,8 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .tip{font-size:13.5px;color:var(--ink);opacity:.85;line-height:1.4}
 .moveSel{flex:none;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;padding:0 6px}
 .pinNum{background:#12203A;padding:2px 7px;border-radius:999px}
+.pace3{grid-template-columns:1fr 1fr 1fr}.pace3 button{height:auto;padding:8px 4px;flex-direction:column;gap:1px;color:var(--ink)}.pace3 button small{font-size:12px;font-weight:600;color:var(--muted)}
+.pace3 button.on{border-color:var(--ink);background:var(--ink);color:#fff}.pace3 button.on small{color:#C9D1DD}
 </style></head><body>
 
 <!-- LOGIN -->
@@ -1147,15 +1149,19 @@ function rpPick(k){
   }
   drawRP();
 }
+var btPace='balanced';
+function setPace(v){btPace=v;document.querySelectorAll('#btPace button').forEach(function(b,i){b.className=['relaxed','balanced','packed'][i]===v?'on':''})}
 function buildTripForm(){
   var t=new Date(),d=function(x){return new Date(t.getTime()+x*86400000).toISOString().slice(0,10)};
   openSheet('<h2>Build a trip</h2>'+
     '<label class="lbl">City or destination<input class="field" id="btCity" placeholder="e.g. Seoul"></label>'+
     '<div class="lbl">Dates<div class="sub" id="rpHint" style="font-weight:600">Tap your arrival day, then your last day</div></div><div id="rp"></div>'+
+    '<div class="lbl">How busy should the days be?<div class="seg pace3" id="btPace">'+
+      [['relaxed','Relaxed','2–3 a day'],['balanced','Balanced','4 a day'],['packed','Packed','6 a day']].map(function(o){return '<button class="'+(o[0]===btPace?'on':'')+'" onclick="setPace(\''+o[0]+'\')"><b>'+o[1]+'</b><small>'+o[2]+'</small></button>'}).join('')+'</div></div>'+
     '<label class="lbl">What are you looking for?<textarea class="field" id="btWish" style="height:90px" placeholder="e.g. street food, techno clubs at night, one day of nature, not too many museums"></textarea></label>'+
-    '<div class="sub" style="margin-top:-6px">Up to 7 days. Holidays and events for those dates are included.</div>'+
+    '<div class="sub" style="margin-top:-6px">Up to 14 days. Holidays and events for those dates are included.</div>'+
     '<button class="btn blue" onclick="buildTrip()">Build my trip</button>');
-  rp={from:null,to:null,month:new Date(t.getFullYear(),t.getMonth(),1)};drawRP();
+  rp={from:null,to:null,month:new Date(t.getFullYear(),t.getMonth(),1),max:14};drawRP();
   try{new google.maps.places.Autocomplete($('btCity'),{types:['(regions)'],fields:['name']}).addListener('place_changed',function(){})}catch(e){}
 }
 /* Go-Out: fetched by the phone (it filters by the visitor's country; allows any origin) */
@@ -1184,9 +1190,10 @@ async function goOutEvents(city,from,to){
 async function buildTrip(){
   var city=$('btCity').value.trim(),from=rp.from,to=rp.to||rp.from,wish=$('btWish').value.trim();
   if(!city){toast('Enter a city');return}if(!from){toast('Tap your arrival day');return}
-  closeSheet();aiMode=null;aiTripId=null;aiLoading('Building your trip to '+city+'… (about 20 seconds)');
+  var nd=Math.round((new Date(to)-new Date(from))/864e5)+1;
+  closeSheet();aiMode=null;aiTripId=null;aiLoading('Building your '+nd+'-day trip to '+city+'… ('+(nd>8?'about a minute':nd>4?'about 40 seconds':'about 20 seconds')+')');
   var extra=[];try{extra=await goOutEvents(city,from,to||from)}catch(e){}
-  try{plan=await api('/ai/build-trip',{method:'POST',body:{city:city,startDate:from,endDate:to||from,wishes:wish,extraEvents:extra}});drawPlan()}
+  try{plan=await api('/ai/build-trip',{method:'POST',body:{city:city,startDate:from,endDate:to||from,wishes:wish,pace:btPace,extraEvents:extra}});drawPlan()}
   catch(e){aiErr(e)}
 }
 function fmtDay(iso){var d=new Date(iso+'T12:00:00');return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}

@@ -1996,10 +1996,13 @@ Reply ONLY with valid JSON, no markdown:
 router.post('/build-trip', auth, async (req, res) => {
   try {
     const { city = '', startDate = '', endDate = '', wishes = '' } = req.body;
+    // Pace: how full each day is (relaxed 2-3 stops, balanced 4, packed 6)
+    const PACE = { relaxed: { n: 3, txt: '2 or 3 stops per day, relaxed with free time' }, balanced: { n: 4, txt: '4 or 5 stops per day' }, packed: { n: 6, txt: '6 or 7 stops per day, a full and busy schedule' } };
+    const pace = PACE[req.body.pace] || PACE.balanced;
     if (!city.trim() || !startDate) return res.status(400).json({ error: 'City and start date are required' });
     const start = new Date(startDate), end = new Date(endDate || startDate);
     if (isNaN(start) || isNaN(end) || end < start) return res.status(400).json({ error: 'Check the dates' });
-    const nDays = Math.min(7, Math.round((end - start) / 86400000) + 1);
+    const nDays = Math.min(14, Math.round((end - start) / 86400000) + 1);
     const dates = Array.from({ length: nDays }, (_, i) => new Date(start.getTime() + i * 86400000).toISOString().slice(0, 10));
 
     const User = require('../models/User');
@@ -2023,24 +2026,28 @@ router.post('/build-trip', auth, async (req, res) => {
     clubEvents = require('../services/eventDedupe').mergeEvents(goOutEvents, phoneEvents, clubEvents)
       .sort((a, b) => String(a.startTime || a.date).localeCompare(String(b.startTime || b.date)));
     const weatherP = require('../services/weather').tripWeather(city, dates).catch(() => null);
-    const prompt = `You are an expert local travel planner. Build a day-by-day trip.
+    // Long trips are planned in blocks of up to 4 days (one AI answer per block, run in parallel) so the JSON never gets cut off
+    const blocks = [];
+    for (let i = 0; i < dates.length; i += 4) blocks.push(dates.slice(i, i + 4));
+    const mkPrompt = (bd, bi) => `You are an expert local travel planner. Build a day-by-day trip.
 
 City / destination: ${city}
-Dates: ${dates[0]} to ${dates[dates.length - 1]} (${nDays} day${nDays > 1 ? 's' : ''})
+${blocks.length > 1 ? `The whole trip is ${dates[0]} to ${dates[dates.length - 1]} (${nDays} days). Plan ONLY part ${bi + 1} of ${blocks.length}: ` : ''}Dates: ${bd[0]} to ${bd[bd.length - 1]} (${bd.length} day${bd.length > 1 ? 's' : ''})
+${blocks.length > 1 ? `Other parts are planned separately — for variety, focus part ${bi + 1} on ${['the classic highlights and the old town', 'local neighbourhoods and food', 'hidden gems, markets and nature nearby', 'day-trip style spots and lesser-known areas'][bi % 4]}.\n` : ''}
 What the traveler is looking for: ${wishes || 'a good mix of highlights, food and local spots'}
 Traveler taste tags: ${taste}
 ${p.atmosphere ? 'Nightlife atmosphere preference: ' + p.atmosphere : ''}${buildFeedbackContext(user?.feedbackLoop)}
 
 Rules:
 - Use ONLY real, specific places that exist on Google Maps in or near ${city}.
-- 4 or 5 stops per day (some may be filtered out after verification), in a sensible geographic order, with a rough time (e.g. "09:30").
+- ${pace.txt} (some may be filtered out after verification), in a sensible geographic order, with a rough time (e.g. "09:30").
 - Make sure each place is open on that weekday (e.g. many museums close on Mondays).
 - Match the traveler's wishes above all.
 - NEVER suggest these places, they are permanently closed: ${closedNames.join(', ') || 'none'}.
 - Only suggest nightclubs you are sure are currently operating.
-${clubEvents.length ? '- REAL club events on these dates (from a live listing). If the traveler wants nightlife, use these for evening stops (stop name = the venue name, why = event title):\n' + clubEvents.map(e => `  ${e.date}: "${e.title}" at ${e.venue}${e.artists.length ? ' with ' + e.artists.join(', ') : ''}`).join('\n') : ''}
-- "holidays": ONLY real public holidays (national or religious) that fall within or right around these dates in that country, with their impact (closures, crowds). If there are none, return an empty array. Never add entries like "No holiday".
-- "events": max 4 well-known festivals, exhibitions or seasonal happenings in ${city} at this time of year (NOT club nights or parties — those are handled separately). Only ones you are confident about.
+${bdEvents(bd).length ? '- REAL club events on these dates (from a live listing). If the traveler wants nightlife, use these for evening stops (stop name = the venue name, why = event title):\n' + bdEvents(bd).map(e => `  ${e.date}: "${e.title}" at ${e.venue}${e.artists.length ? ' with ' + e.artists.join(', ') : ''}`).join('\n') : ''}
+${bi === 0 ? `- "holidays": ONLY real public holidays (national or religious) that fall within or right around these dates in that country, with their impact (closures, crowds). If there are none, return an empty array. Never add entries like "No holiday".
+- "events": max 4 well-known festivals, exhibitions or seasonal happenings in ${city} at this time of year (NOT club nights or parties — those are handled separately). Only ones you are confident about. Cover the WHOLE trip ${dates[0]} to ${dates[dates.length - 1]} for holidays and events.` : '- Return "holidays": [] and "events": [] (handled elsewhere).'}
 
 Reply ONLY with valid JSON, no markdown:
 {
@@ -2050,29 +2057,45 @@ Reply ONLY with valid JSON, no markdown:
  "events": [{"when":"dates or 'all month'","name":"","note":"short"}],
  "days": [{"date":"YYYY-MM-DD","title":"theme of the day","stops":[{"time":"09:30","name":"exact place name","why":"max 10 words"}]}]
 }`;
-    // Long multi-day plans need a big token budget (2000 default truncated the JSON)
-    let raw = await callGemini(prompt, 8000);
-    let plan = extractJSON(raw);
-    if (!plan || !Array.isArray(plan.days)) {
-      console.log('[ai/build-trip] parse failed, len', (raw || '').length, 'tail:', (raw || '').slice(-200));
-      raw = await callGemini(prompt + '\n\nKeep it compact: max 4 stops per day, "why" max 6 words, max 4 holidays and 4 events. Output must be complete valid JSON.', 8000);
-      plan = extractJSON(raw);
-    }
-    if (!plan || !Array.isArray(plan.days)) {
-      console.log('[ai/build-trip] parse failed twice, tail:', (raw || '').slice(-200));
-      return res.status(500).json({ error: 'Could not build the trip. Try again.' });
-    }
+    const bdEvents = bd => clubEvents.filter(e => e.date >= bd[0] && e.date <= bd[bd.length - 1]);
+    const runBlock = async (bd, bi) => {
+      const prompt = mkPrompt(bd, bi);
+      // Long multi-day plans need a big token budget (2000 default truncated the JSON)
+      let raw = await callGemini(prompt, 8000);
+      let part = extractJSON(raw);
+      if (!part || !Array.isArray(part.days)) {
+        console.log('[ai/build-trip] block', bi, 'parse failed, len', (raw || '').length, 'tail:', (raw || '').slice(-200));
+        raw = await callGemini(prompt + `\n\nKeep it compact: max ${pace.n} stops per day, "why" max 6 words, max 4 holidays and 4 events. Output must be complete valid JSON.`, 8000);
+        part = extractJSON(raw);
+      }
+      if (!part || !Array.isArray(part.days)) { console.log('[ai/build-trip] block', bi, 'failed twice'); return null; }
+      part.days = bd.map((date, i) => ({ ...(part.days.find(d => d.date === date) || part.days[i] || { title: '', stops: [] }), date }));
+      return part;
+    };
+    const parts = await Promise.all(blocks.map((bd, bi) => runBlock(bd, bi)));
+    if (!parts[0] && parts.every(x => !x)) return res.status(500).json({ error: 'Could not build the trip. Try again.' });
+    const head = parts.find(Boolean);
+    const plan = { title: head.title, summary: head.summary, holidays: (parts[0] || {}).holidays || [], events: (parts[0] || {}).events || [],
+      days: parts.flatMap((x, bi) => x ? x.days : blocks[bi].map(date => ({ date, title: '', stops: [] }))) };
+    // Same place suggested in two blocks → keep the first
+    const seenNames = new Set();
+    plan.days.forEach(d => { d.stops = (d.stops || []).filter(st => { const k = String(st.name || '').toLowerCase().trim(); if (!k || seenNames.has(k)) return false; seenNames.add(k); return true; }); });
+    console.log(`[ai/build-trip] ${city} ${nDays} days, pace ${req.body.pace || 'balanced'}, ${blocks.length} block(s)`);
 
     const key = process.env.GOOGLE_MAPS_API_KEY;
     const vp = require('../services/verifyPlace');
     const dropped = [];
-    await Promise.all(plan.days.slice(0, nDays).flatMap((d, di) => (d.stops || []).slice(0, 5).map(async s => {
-      const v = await vp.verifyPlace({ name: s.name, city, why: s.why, date: dates[di], closed: closedNames });
+    // Verify all stops, max 8 at a time (long trips have many stops)
+    const jobs = plan.days.slice(0, nDays).flatMap((d, di) => (d.stops || []).slice(0, pace.n + 1).map(s => async () => {
+      const v = await vp.verifyPlace({ name: s.name, city, why: s.why, date: dates[di], closed: closedNames }).catch(e => ({ ok: false, reason: e.message }));
       if (!v.ok) { dropped.push(`${s.name}: ${v.reason}`); return; }
       Object.assign(s, v.place);
-    })));
+    }));
+    let next = 0;
+    await Promise.all(Array.from({ length: Math.min(8, jobs.length) }, async () => { while (next < jobs.length) await jobs[next++](); }));
     if (dropped.length) console.log('[ai/build-trip] dropped stops:', dropped.join('; '));
-    plan.days = plan.days.slice(0, nDays).map((d, i) => ({ ...d, date: dates[i], stops: (d.stops || []).filter(s => s.lat != null).slice(0, 4) }));
+    plan.days = plan.days.slice(0, nDays).map((d, i) => ({ ...d, date: dates[i], stops: (d.stops || []).filter(s => s.lat != null).slice(0, pace.n) }));
+    plan.pace = req.body.pace || 'balanced';
     plan.droppedCount = dropped.length;
     plan.clubEvents = clubEvents;
     plan.weather = await weatherP;
