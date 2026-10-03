@@ -157,6 +157,10 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .todo .t{flex:1;text-align:left;min-width:0}.todo b{display:block;font-size:15px}.todo small{color:var(--muted);font-size:13px}
 .todo.done b{text-decoration:line-through;color:var(--muted)}
 .pac-container{z-index:100;border-radius:12px;margin-top:6px;font-family:Manrope,sans-serif}
+.rateRow{display:flex;align-items:center;justify-content:space-between;gap:10px}.lblTxt{font-size:14px;color:var(--muted,#5B6577);font-weight:600}
+.stars{display:flex;gap:4px}.star{font-size:30px;line-height:1;width:44px;height:44px;color:#D5DAE3;border-radius:10px}.star.on{color:#F2A900}
+.rateAsk{display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center;padding:4px 0 6px}.rateAsk .stars{margin:6px 0}.rateAsk .star{font-size:40px;width:54px;height:54px}.rateAsk .btn{align-self:stretch}
+.pinRate{background:#fff;padding:1px 5px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
 </style></head><body>
 
 <!-- LOGIN -->
@@ -266,11 +270,11 @@ function go(v){
 }
 
 /* ---------- map ---------- */
-function pinIcon(status){
+function pinIcon(status,rated){
   var c=status==='been'?'#1F5FD6':status==='tobe'?'#C2551A':'#12203A';
   var filled=status!=='tobe';
   var svg='<svg xmlns="http://www.w3.org/2000/svg" width="30" height="38" viewBox="0 0 30 38"><path d="M15 37C15 37 2 22 2 14a13 13 0 0 1 26 0c0 8-13 23-13 23Z" fill="'+(filled?c:'#fff')+'" stroke="'+c+'" stroke-width="2.5"/><circle cx="15" cy="14" r="5" fill="'+(filled?'#fff':c)+'"/></svg>';
-  return {url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg),scaledSize:new google.maps.Size(30,38),anchor:new google.maps.Point(15,37)};
+  return {url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg),scaledSize:new google.maps.Size(30,38),anchor:new google.maps.Point(15,37),labelOrigin:new google.maps.Point(15,-8)};
 }
 async function initMap(){
   map=new google.maps.Map($('map'),{center:{lat:32.08,lng:34.78},zoom:12,disableDefaultUI:true,gestureHandling:'greedy',clickableIcons:false,
@@ -317,7 +321,8 @@ function renderMarkers(){
   markers.forEach(function(m){m.setMap(null)});markers=[];
   var list=visible();
   list.forEach(function(p){
-    var m=new google.maps.Marker({map:map,position:{lat:p.lat,lng:p.lng},title:p.name,icon:pinIcon(p.status)});
+    var m=new google.maps.Marker({map:map,position:{lat:p.lat,lng:p.lng},title:p.name,icon:pinIcon(p.status,p.rating),
+      label:p.rating?{text:'★'+p.rating,fontSize:'11px',fontWeight:'800',color:'#12203A',className:'pinRate'}:null});
     m.addListener('click',function(){openPlace(p)});markers.push(m);
   });
   var been=list.filter(function(p){return p.status==='been'}).length;
@@ -517,6 +522,7 @@ function openPlace(p){
     '<div class="photo" id="plPhoto"></div>'+
     '<div><h2>'+esc(p.name)+'</h2><div class="sub">'+esc(p.location||'')+'</div></div>'+
     segHtml(p.status,'setStatus')+
+    (p.status==='been'?'<div class="rateRow"><span class="lblTxt">Your rating</span>'+starsHtml(p.rating||0,'ratePlace')+'</div>':'')+
     '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
     '<label class="lbl">Notes<textarea class="field" id="plNotes" placeholder="Add a note…" onblur="saveNotes()">'+esc(p.notes||'')+'</textarea></label>'+
     '<div class="two"><button class="btn soft" id="navBtn" onclick="toggleNav()">Navigate</button>'+
@@ -537,7 +543,32 @@ async function updatePlace(fields){
   try{var p=await api('/places/'+cur._id,{method:'PUT',body:fields});Object.assign(cur,p);renderMarkers();}
   catch(e){toast(e.message)}
 }
-async function setStatus(s){await updatePlace({status:s});var p=cur;openPlace(p)}
+async function setStatus(s){
+  var was=cur.status;await updatePlace({status:s});var p=cur;
+  if(s==='been'&&was!=='been'&&!p.rating)rateAsk(p,function(){openPlace(p)});else openPlace(p);
+}
+/* Ratings: asked when a place is marked visited; teaches the AI your taste */
+function starsHtml(r,fn){
+  var h='<div class="stars" role="radiogroup" aria-label="Rating">';
+  for(var i=1;i<=5;i++)h+='<button class="star'+(i<=r?' on':'')+'" role="radio" aria-checked="'+(i===r)+'" aria-label="'+i+' star'+(i>1?'s':'')+'" onclick="'+fn+'('+i+')">★</button>';
+  return h+'</div>';
+}
+var rateNext=null;
+function rateAsk(p,next){
+  cur=p;rateNext=next;
+  openSheet('<div class="grab"></div><div class="rateAsk"><div class="eyebrow">You visited</div><h2>'+esc(p.name)+'</h2><div class="sub">How was it?</div>'+
+    starsHtml(0,'rateAndGo')+'<div class="sub" style="font-size:13px">Your ratings help the AI suggest places you\'ll like.</div>'+
+    '<button class="btn soft" onclick="rateDone()">Skip</button></div>');
+}
+async function rateAndGo(n){
+  document.querySelectorAll('.rateAsk .star').forEach(function(b,i){b.classList.toggle('on',i<n)});
+  await updatePlace({rating:n});toast('Thanks! Rated '+n+'★');setTimeout(rateDone,350);
+}
+function rateDone(){var f=rateNext;rateNext=null;if(f)f();else closeSheet()}
+async function ratePlace(n){
+  if(!cur)return;if(cur.rating===n)n=0; // tap the same star again to clear
+  await updatePlace({rating:n});openPlace(cur);
+}
 function saveNotes(){var v=$('plNotes').value;if(cur&&v!==(cur.notes||''))updatePlace({notes:v})}
 /* Navigate: choose the app (Google Maps / Waze / Apple Maps; KakaoMap + NaverMap in Korea) — links as in V1 */
 var navP=null;
@@ -653,7 +684,10 @@ function openTodo(tripId){
 }
 async function toggleTodo(i){
   var p=places[i];cur=p;
-  try{await updatePlace({status:p.status==='been'?'tobe':'been'});openTodo();renderTrips()}catch(e){toast(e.message)}
+  var toBeen=p.status!=='been';
+  try{await updatePlace({status:toBeen?'been':'tobe'});renderTrips();
+    if(toBeen&&!p.rating)rateAsk(p,function(){openTodo()});else openTodo();
+  }catch(e){toast(e.message)}
 }
 function focusPlaceObj(i){var p=places[i];go('vMap');map.panTo({lat:p.lat,lng:p.lng});map.setZoom(16);openPlace(p)}
 function renderTrips(){

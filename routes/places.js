@@ -25,6 +25,18 @@ router.post('/', async (req, res) => {
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
 
+const SKIP_TYPES = ['point_of_interest', 'establishment', 'food', 'store', 'premise', 'political', 'locality', 'geocode'];
+async function googleTags(placeId) {
+  try {
+    const key = process.env.GOOGLE_MAPS_API_KEY;
+    if (!key) return [];
+    const d = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=types&key=${key}`).then(r => r.json());
+    const tags = (d.result?.types || []).filter(t => !SKIP_TYPES.includes(t)).map(t => t.replace(/_/g, '-')).slice(0, 4);
+    console.log('[places] tags from Google', placeId, tags);
+    return tags;
+  } catch (e) { console.log('[places] google tags error', e.message); return []; }
+}
+
 // PUT /api/places/:id
 router.put('/:id', async (req, res) => {
   try {
@@ -37,6 +49,10 @@ router.put('/:id', async (req, res) => {
     if (req.body.isPublic   !== undefined) place.isPublic   = !!req.body.isPublic;
     if (req.body.visibility !== undefined) place.visibility = req.body.visibility||'private';
     if (req.body.status     !== undefined) place.status     = req.body.status||'none';
+    // Rated a place with no tags (V2 adds places without tags) → take its type from Google so the AI can learn
+    if (req.body.rating !== undefined && place.rating !== oldRating && !(place.tags || []).length && place.placeId) {
+      place.tags = await googleTags(place.placeId);
+    }
     await place.save();
     if (req.body.rating !== undefined && place.rating !== oldRating && (place.tags || []).length) {
       try { await require('./ai').updateFeedbackLoop(req.userId, place.tags, place.rating, oldRating); }

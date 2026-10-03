@@ -904,12 +904,12 @@ router.post('/right-now', auth, async (req, res) => {
 
     // Load user's AI profile for taste context
     const User = require('../models/User');
-    const user = await User.findById(req.userId).select('aiProfile');
+    const user = await User.findById(req.userId).select('aiProfile feedbackLoop');
     const profile = user?.aiProfile;
 
-    const tasteContext = profile?.tags?.length
+    const tasteContext = (profile?.tags?.length
       ? `User taste profile: ${profile.tags.join(', ')}`
-      : 'No taste profile yet — suggest universally appealing ideas';
+      : 'No taste profile yet — suggest universally appealing ideas') + buildFeedbackContext(user?.feedbackLoop);
 
     const locationContext = locationStr && locationStr !== 'your current location'
       ? `User is currently in: ${locationStr}`
@@ -997,9 +997,10 @@ router.post('/event-discover', auth, async (req, res) => {
 
     // Load Identity Cube
     const User = require('../models/User');
-    const user = await User.findById(req.userId).select('aiProfile');
+    const user = await User.findById(req.userId).select('aiProfile feedbackLoop');
     const profile = user?.aiProfile;
     if (!profile?.analyzedAt) return res.status(400).json({ error: 'Build your AI profile first.' });
+    const ratingContext = buildFeedbackContext(user?.feedbackLoop);
 
     const { tags=[], summary='', musicGenres=[], eventGoal='', atmosphere='', soundVibe='', aestheticTags=[], crowdSize='' } = profile;
 
@@ -1071,7 +1072,7 @@ Mission/Goal: ${eventGoal||'not set'}
 Atmosphere: ${atmosphere||'any'}
 Sound Preference: ${soundVibe||'any'}
 Crowd Size Preference: ${crowdSize||'any'} (Intimate=<200, Mid-size=200-500, Big Room=500+) — if multiple sizes listed, venue matches any of them
-Crowd Size Preference: ${crowdSize||'any'}
+Crowd Size Preference: ${crowdSize||'any'}${ratingContext}
 
 == CURRENT CONTEXT ==
 Location: ${locationStr} | Time: ${timeLabel} (${hour}:00) | Day: ${dayOfWeek} | Date: ${dateStr}
