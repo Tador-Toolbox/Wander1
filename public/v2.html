@@ -520,7 +520,7 @@ function openPlace(p){
     '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
     '<label class="lbl">Notes<textarea class="field" id="plNotes" placeholder="Add a note…" onblur="saveNotes()">'+esc(p.notes||'')+'</textarea></label>'+
     '<div class="two"><button class="btn dark" onclick="toggleNav()">Navigate</button>'+
-    '<button class="btn soft" onclick="sharePlace()">Share</button></div>'+navBox(p)+
+    '<button class="btn soft" onclick="toggleShare()">Share</button></div>'+navBox(p,true)+
     '<button class="btn danger" onclick="deletePlace()">Delete place</button>'+
     '<button class="reportBtn" onclick="reportClosed(cur.name,cur.location||\'\')">Is this place closed? Report it</button>');
   var ph=(p.coverPhoto)||(p.photos&&p.photos[0]&&(p.photos[0].url||p.photos[0]));
@@ -554,18 +554,25 @@ function navLinks(p){
   var order=(inKorea(p)?['naver','kakao']:[]).concat(['google','waze']).concat(/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)?['apple']:[]);
   return order.map(function(k){var o=L[k];o.key=k;return o});
 }
-function navBox(p){
+function navBox(p,ownShare){
   navP=p;
   if(p.lat==null)return '';
   var links=navLinks(p),h='<div id="navBox" style="display:none;flex-direction:column;gap:8px">';
   if(inKorea(p))h+='<div class="sub">In Korea, Naver or Kakao give the best directions.</div>';
   h+='<div class="two">';
   links.forEach(function(o){h+='<button class="btn soft" style="color:'+o.color+'" onclick="navOpen(\''+o.key+'\')">'+o.label+'</button>'});
-  h+='</div><div class="eyebrow" style="margin-top:4px">Send location to a friend</div><div style="display:flex;gap:6px;flex-wrap:wrap">';
-  links.forEach(function(o){h+='<button class="btn soft" style="width:auto;height:38px;padding:0 12px;font-size:13px;color:'+o.color+'" onclick="navShare(\''+o.key+'\')">↗ '+o.label+'</button>'});
-  return h+'</div></div>';
+  h+='</div>'+(ownShare?'':shareHtml(links))+'</div>';
+  // Share button (saved places) opens its own chooser
+  if(ownShare)h+='<div id="shareBox" style="display:none;flex-direction:column;gap:8px">'+shareHtml(links)+'</div>';
+  return h;
 }
-function toggleNav(){var b=$('navBox');if(!b)return;b.style.display=b.style.display==='none'?'flex':'none';if(b.style.display==='flex')b.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function shareHtml(links){
+  var h='<div class="eyebrow" style="margin-top:4px">Send location as</div><div class="two">';
+  links.forEach(function(o){h+='<button class="btn soft" style="color:'+o.color+'" onclick="navShare(\''+o.key+'\')">↗ '+o.label+'</button>'});
+  return h+'</div>';
+}
+function toggleShare(){var b=$('shareBox'),n=$('navBox');if(!b)return;if(n)n.style.display='none';b.style.display=b.style.display==='none'?'flex':'none';if(b.style.display==='flex')b.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function toggleNav(){var b=$('navBox'),sb=$('shareBox');if(!b)return;if(sb)sb.style.display='none';b.style.display=b.style.display==='none'?'flex':'none';if(b.style.display==='flex')b.scrollIntoView({behavior:'smooth',block:'nearest'})}
 function navFind(k){return navLinks(navP).filter(function(o){return o.key===k})[0]}
 function navOpen(k){
   var o=navFind(k);if(!o)return;
