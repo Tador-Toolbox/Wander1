@@ -225,6 +225,7 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
       <button class="aiBtn" onclick="aiNow()"><span class="aiIco" style="background:#FFF3E0;color:#C2551A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7Z"/></svg></span><span><b>What to do now</b><small>3 ideas near you</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
       <button class="aiBtn" onclick="aiEvents()"><span class="aiIco" style="background:#FDECEF;color:#B4234A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></span><span><b>Events near you</b><small>Top picks for today</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
       <button class="aiBtn" onclick="aiTripPick()"><span class="aiIco" style="background:var(--blue-soft);color:var(--blue)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 16l20-8-6 14-3-6-6-2Z"/></svg></span><span><b>Ideas for my trip</b><small>Places to add to a trip</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+      <button class="aiBtn" onclick="tripEventsPick()"><span class="aiIco" style="background:#F3F1FB;color:#5B3FC4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span><b>Events for my trip</b><small>Add parties to a trip · 1–2 weeks before</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
       <button class="aiBtn" onclick="buildTripForm()"><span class="aiIco" style="background:#E7F4EC;color:#1E7A45"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg></span><span><b>Build a trip</b><small>City, dates and what you're into</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
     </div>
     <div id="aiRes" class="hidden"></div>
@@ -921,7 +922,10 @@ function nightHtml(day){
   if(ev.length)h+=ev.slice(0,4).map(function(e){var tm=String(e.startTime||'').match(/T(\d{2}:\d{2})/);
     return '<a class="clubLine" href="'+esc(e.url||'#')+'" target="_blank"><b>'+esc(e.title)+'</b><span>'+esc([e.venue,tm?tm[1]:'',e.why].filter(Boolean).join(' · '))+'</span>'+(e.match?'<span class="match" style="margin-top:4px">'+e.match+'% match</span>':'')+'</a>'}).join('')+
     (ev.length>4?'<button class="moreLink" onclick="nightAll()">+'+(ev.length-4)+' more</button>':'');
-  else h+='<div class="sub" style="font-size:13.5px">'+(checked?'No parties found for this night yet.':'Not checked yet.')+'</div>';
+  var du=daysUntil(day.date);
+  if(du>EVENT_WINDOW)return h+tooFarHtml(day.date)+'</div>';
+  if(du<0)return h+(ev.length?'':'<div class="sub" style="font-size:13.5px">This night has passed.</div>')+'</div>';
+  if(!ev.length)h+='<div class="sub" style="font-size:13.5px">'+(checked?'No parties found for this night yet.':'Not checked yet.')+'</div>';
   h+='<button class="moreLink" id="nightBtn" onclick="checkNight()">'+(checked?'↻ Check again':'Check parties for this night')+'</button>'+
     (checked?'<div class="sub" style="font-size:12px">Last checked '+checked.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+'. New parties are often added close to the date.</div>':'');
   return h+'</div>';
@@ -957,6 +961,92 @@ function showDay(){
   var ps=dayPlaces();if(!ps.length)return;
   dayFilter={ids:ps.map(function(p){return p._id}),label:'Day '+(planDay+1)};
   tripFilter=planTrip._id;closeSheet();go('vMap');renderChips();renderMarkers();fitAll();
+}
+/* ---------- Events: only listed ~1–2 weeks ahead ---------- */
+var EVENT_WINDOW=14;
+function daysUntil(date){var t=new Date();t.setHours(12,0,0,0);return Math.round((new Date(date+'T12:00:00')-t)/864e5)}
+function eventsOpenFrom(date){var d=new Date(date+'T12:00:00');d.setDate(d.getDate()-EVENT_WINDOW);return d}
+function tooFarHtml(date){
+  return '<div class="sub" style="font-size:13.5px;line-height:1.45">📅 Too far ahead to suggest parties. Events are usually listed only 1–2 weeks before. Check again from <b>'+eventsOpenFrom(date).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+'</b>.</div>';
+}
+
+/* Ask AI → "Events for my trip": pick a trip, find parties for its nights, add one to a day */
+var tevTrip=null,tevNights=[];
+function tripEventsPick(){
+  var withPlan=trips.filter(function(t){return t.plan&&t.plan.days&&t.plan.days.length});
+  var h='<div class="grab"></div><h2>Add events to a trip</h2><div class="sub">Parties are listed about 1–2 weeks before, so this works for trips starting soon.</div>';
+  if(!withPlan.length)h+='<div class="empty" style="padding:12px">None of your trips has dates yet. Open Trips and tap 📅 Plan by days first.</div>';
+  withPlan.forEach(function(t){
+    var first=t.plan.days[0].date,last=t.plan.days[t.plan.days.length-1].date,du=daysUntil(first),ended=daysUntil(last)<0;
+    var note=ended?'Trip is over':du>EVENT_WINDOW?'Too early · from '+eventsOpenFrom(first).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):du<=0?'Happening now':'Starts in '+du+(du===1?' day':' days');
+    h+='<button class="listItem" onclick="tripEvents(\''+t._id+'\')"'+(ended?' disabled style="opacity:.5"':'')+'><span class="sq" style="background:'+colorFor(t)+'"></span><span><b>'+esc(t.name)+'</b><small>'+esc(planDates(t))+' · '+esc(note)+'</small></span></button>';
+  });
+  openSheet(h);
+}
+async function tripEvents(id){
+  var t=tripById(id);if(!t)return;tevTrip=t;closeSheet();go('vAI');
+  var days=t.plan.days,first=days[0].date;
+  if(daysUntil(first)>EVENT_WINDOW){
+    $('aiHome').classList.add('hidden');$('aiRes').classList.remove('hidden');
+    $('aiRes').innerHTML='<button class="back" onclick="aiBack()">‹ Back</button><h2>'+esc(t.name)+'</h2><div class="sub">'+esc(planDates(t))+'</div>'+
+      '<div class="wx far" style="margin-top:12px">Too early for events<small>Events are usually listed only 1–2 weeks before. Come back from '+eventsOpenFrom(first).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})+'.</small></div>';
+    return;
+  }
+  aiLoading('Looking for parties during '+t.name+'…');
+  try{
+    var city=t.plan.city;
+    if(!city){var p0=places.find(function(p){return String(p.trip)===t._id});city=p0?await cityName({lat:p0.lat,lng:p0.lng}):'';t.plan.city=city}
+    if(!city)throw new Error('could not tell which city this trip is in');
+    var nights=days.map(function(d,i){return {i:i,date:d.date}}).filter(function(n){var du=daysUntil(n.date);return du>=0&&du<=EVENT_WINDOW});
+    var extraAll=[];try{extraAll=await goOutEvents(city,nights[0].date,nights[nights.length-1].date)}catch(e){}
+    tevNights=[];
+    for(var k=0;k<nights.length;k++){
+      var n=nights[k];
+      var r=await api('/ai/tonight',{method:'POST',body:{city:city,date:n.date,extraEvents:extraAll}}).catch(function(){return {events:[]}});
+      tevNights.push({i:n.i,date:n.date,events:(r.events||[]).slice(0,8)});
+      days[n.i].events=(r.events||[]).slice(0,12);days[n.i].eventsCheckedAt=new Date().toISOString();
+    }
+    api('/trips/'+t._id,{method:'PUT',body:{plan:{days:days,city:city}}}).catch(function(){});
+    drawTripEvents();
+  }catch(e){aiErr(e)}
+}
+function drawTripEvents(){
+  var t=tevTrip,days=t.plan.days,later=days.filter(function(d){return daysUntil(d.date)>EVENT_WINDOW});
+  var h='<button class="back" onclick="aiBack()">‹ Back</button><h2>Parties during '+esc(t.name)+'</h2><div class="sub">Tap + to add a party to that day of your trip.</div>';
+  tevNights.forEach(function(n,ni){
+    h+='<div class="eyebrow" style="margin-top:14px">Day '+(n.i+1)+' · '+esc(fmtD(n.date,{weekday:'long',day:'numeric',month:'short'}))+'</div>';
+    if(!n.events.length){h+='<div class="sub" style="font-size:13.5px">No parties listed for this night yet.</div>';return}
+    n.events.forEach(function(e,ei){
+      var tm=String(e.startTime||'').match(/T(\d{2}:\d{2})/);
+      h+='<div class="sug"><a class="t" href="'+esc(e.url||'#')+'" target="_blank" style="text-decoration:none;color:inherit"><b>'+esc(e.title)+'</b><small>'+esc([e.venue,tm?tm[1]:'',e.why].filter(Boolean).join(' · '))+'</small>'+(e.match?'<span class="match" style="margin-top:4px">'+e.match+'% match</span>':'')+'</a>'+
+        '<button class="add" id="tev'+ni+'_'+ei+'" onclick="addTripEvent('+ni+','+ei+')">+ Day '+(n.i+1)+'</button></div>';
+    });
+  });
+  if(later.length)h+='<div class="wx far" style="margin-top:14px">'+later.length+(later.length>1?' later nights':' later night')+' not checked yet<small>Events are listed only 1–2 weeks before. Check again from '+eventsOpenFrom(later[0].date).toLocaleDateString('en-GB',{day:'numeric',month:'short'})+'.</small></div>';
+  $('aiRes').innerHTML=h;
+}
+async function addTripEvent(ni,ei){
+  var n=tevNights[ni],e=n.events[ei],t=tevTrip,b=$('tev'+ni+'_'+ei);b.disabled=true;b.textContent='Adding…';
+  try{
+    // find the venue on Google so the party shows on the map and in the day's route
+    var city=t.plan.city||'';
+    var hit=await new Promise(function(res){
+      if(!e.venue||!window.google)return res(null);
+      new google.maps.places.PlacesService(map).textSearch({query:e.venue+' '+city},function(r,st){res(st==='OK'&&r&&r[0]?r[0]:null)});
+    });
+    var day=t.plan.days[n.i],tm=String(e.startTime||'').match(/T(\d{2}:\d{2})/);
+    var tip='🎧 '+e.title+(tm?' · '+tm[1]:'');
+    if(hit){
+      var s=await api('/places',{method:'POST',body:{name:hit.name,location:hit.formatted_address||'',placeId:hit.place_id,lat:hit.geometry.location.lat(),lng:hit.geometry.location.lng(),status:'tobe',source:'event',trip:t._id,notes:tip+(e.url?' '+e.url:'')}});
+      var ex=places.findIndex(function(x){return x._id===s._id});if(ex>=0)places[ex]=s;else places.unshift(s);
+      t.plan.days.forEach(function(d){d.places=d.places.filter(function(x){return String(x.place)!==s._id})});
+      day.places.push({place:s._id,time:'night',duration:'',tip:tip});
+    }
+    day.events=day.events||[];
+    if(!day.events.some(function(x){return x.title===e.title}))day.events.unshift(e);
+    var r=await api('/trips/'+t._id,{method:'PUT',body:{plan:{days:t.plan.days}}});Object.assign(t,r);
+    renderMarkers();renderTrips();b.textContent='✓ Added';toast(hit?'Added to Day '+(n.i+1)+' of '+t.name:'Saved to Day '+(n.i+1)+' (venue not found on the map)');
+  }catch(err){b.disabled=false;b.textContent='+ Day '+(n.i+1);toast(err.message)}
 }
 async function newTrip(){
   var n=prompt('Trip name');if(!n)return;
@@ -1238,6 +1328,7 @@ function drawPlan(){
     '<div class="sub" style="margin-top:-6px">'+esc(fmtDay(plan.startDate))+' – '+esc(fmtDay(plan.endDate))+'</div>'+
     (plan.summary?'<p style="font-size:15px;line-height:1.5">'+esc(plan.summary)+'</p>':'');
   var W=plan.weather;
+  if(plan.startDate&&daysUntil(plan.startDate)>EVENT_WINDOW)h+='<div class="holLine" style="background:#F3F1FB;color:#3F2A99">🎧 <b>Parties: too far ahead</b><span>Events are listed only 1–2 weeks before. Save the trip, then check each night from '+esc(eventsOpenFrom(plan.startDate).toLocaleDateString('en-GB',{day:'numeric',month:'short'}))+' (or use Ask AI → Events for my trip).</span></div>';
   if(W&&W.summary)h+='<div class="holLine" style="background:#EAF3FD;color:#1B4F8A">'+(W.kind==='forecast'?'🌤 <b>Forecast: ':'🌤 <b>Typical weather: ')+esc(W.summary)+'</b><span>'+(W.kind==='forecast'?'From the weather forecast for your dates.':'Estimate based on the same dates in past years.')+'</span></div>';
   // holidays: one compact line each, or a single all-clear line
   h+=hol.length?hol.map(function(x){return '<div class="holLine">🗓 <b>'+esc(x.date?fmtDay(x.date):'')+' — '+esc(x.name)+'</b>'+(x.note?'<span>'+esc(x.note)+'</span>':'')+'</div>'}).join('')
