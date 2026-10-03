@@ -519,8 +519,8 @@ function openPlace(p){
     segHtml(p.status,'setStatus')+
     '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
     '<label class="lbl">Notes<textarea class="field" id="plNotes" placeholder="Add a note…" onblur="saveNotes()">'+esc(p.notes||'')+'</textarea></label>'+
-    '<div class="two"><button class="btn dark" onclick="toggleNav()">Navigate</button>'+
-    '<button class="btn soft" onclick="toggleShare()">Share</button></div>'+navBox(p,true)+
+    '<div class="two"><button class="btn soft" id="navBtn" onclick="toggleNav()">Navigate</button>'+
+    '<button class="btn soft" id="shareBtn" onclick="toggleShare()">Share</button></div>'+navBox(p,true)+
     '<button class="btn danger" onclick="deletePlace()">Delete place</button>'+
     '<button class="reportBtn" onclick="reportClosed(cur.name,cur.location||\'\')">Is this place closed? Report it</button>');
   var ph=(p.coverPhoto)||(p.photos&&p.photos[0]&&(p.photos[0].url||p.photos[0]));
@@ -559,7 +559,7 @@ function navBox(p,ownShare){
   if(p.lat==null)return '';
   var links=navLinks(p),h='<div id="navBox" style="display:none;flex-direction:column;gap:8px">';
   if(inKorea(p))h+='<div class="sub">In Korea, Naver or Kakao give the best directions.</div>';
-  h+='<div class="two">';
+  h+='<div class="eyebrow" style="margin-top:4px">Open in</div><div class="two">';
   links.forEach(function(o){h+='<button class="btn soft" style="color:'+o.color+'" onclick="navOpen(\''+o.key+'\')">'+o.label+'</button>'});
   h+='</div>'+(ownShare?'':shareHtml(links))+'</div>';
   // Share button (saved places) opens its own chooser
@@ -571,8 +571,11 @@ function shareHtml(links){
   links.forEach(function(o){h+='<button class="btn soft" style="color:'+o.color+'" onclick="navShare(\''+o.key+'\')">↗ '+o.label+'</button>'});
   return h+'</div>';
 }
-function toggleShare(){var b=$('shareBox'),n=$('navBox');if(!b)return;if(n)n.style.display='none';b.style.display=b.style.display==='none'?'flex':'none';if(b.style.display==='flex')b.scrollIntoView({behavior:'smooth',block:'nearest'})}
-function toggleNav(){var b=$('navBox'),sb=$('shareBox');if(!b)return;if(sb)sb.style.display='none';b.style.display=b.style.display==='none'?'flex':'none';if(b.style.display==='flex')b.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function navActive(){ // pressed button turns dark so you see which chooser is open
+  [['navBtn','navBox'],['shareBtn','shareBox']].forEach(function(x){var b=$(x[0]),box=$(x[1]);if(b)b.className='btn '+(box&&box.style.display==='flex'?'dark':'soft')});
+}
+function toggleShare(){var b=$('shareBox'),n=$('navBox');if(!b)return;if(n)n.style.display='none';b.style.display=b.style.display==='none'?'flex':'none';navActive();if(b.style.display==='flex')b.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function toggleNav(){var b=$('navBox'),sb=$('shareBox');if(!b)return;if(sb)sb.style.display='none';b.style.display=b.style.display==='none'?'flex':'none';navActive();if(b.style.display==='flex')b.scrollIntoView({behavior:'smooth',block:'nearest'})}
 function navFind(k){return navLinks(navP).filter(function(o){return o.key===k})[0]}
 function navOpen(k){
   var o=navFind(k);if(!o)return;
@@ -1055,7 +1058,7 @@ function aiShow(i){
     evBlock(p.ev)+
     '<div id="dtInfo" class="sub">Loading details…</div>'+
     '<button class="btn blue" id="dtAdd" onclick="aiAdd('+i+')">+ Add to map or trip</button>'+
-    '<div class="two"><button class="btn dark" onclick="toggleNav()">Navigate</button>'+
+    '<div class="two"><button class="btn soft" id="navBtn" onclick="toggleNav()">Navigate</button>'+
     '<button class="btn soft" onclick="closeSheet();go(\'vMap\');map.panTo({lat:'+p.lat+',lng:'+p.lng+'});map.setZoom(16)">Show on map</button></div>'+navBox({name:p.name,lat:p.lat,lng:p.lng,placeId:p.placeId,location:p.address})+
     '<button class="reportBtn" onclick="reportClosed(aiResults['+i+'].name,aiResults['+i+'].address)">Is this place closed? Report it</button>');
   var b=$('aiAdd'+i);if(b&&b.disabled){$('dtAdd').disabled=true;$('dtAdd').textContent='✓ Saved';$('dtAdd').className='btn soft'}
