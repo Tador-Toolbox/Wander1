@@ -519,8 +519,8 @@ function openPlace(p){
     segHtml(p.status,'setStatus')+
     '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
     '<label class="lbl">Notes<textarea class="field" id="plNotes" placeholder="Add a note…" onblur="saveNotes()">'+esc(p.notes||'')+'</textarea></label>'+
-    '<div class="two"><a class="btn dark" style="text-decoration:none" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+(p.placeId?'&destination_place_id='+encodeURIComponent(p.placeId):'')+'">Navigate</a>'+
-    '<button class="btn soft" onclick="sharePlace()">Share</button></div>'+
+    '<div class="two"><button class="btn dark" onclick="toggleNav()">Navigate</button>'+
+    '<button class="btn soft" onclick="sharePlace()">Share</button></div>'+navBox(p)+
     '<button class="btn danger" onclick="deletePlace()">Delete place</button>'+
     '<button class="reportBtn" onclick="reportClosed(cur.name,cur.location||\'\')">Is this place closed? Report it</button>');
   var ph=(p.coverPhoto)||(p.photos&&p.photos[0]&&(p.photos[0].url||p.photos[0]));
@@ -539,6 +539,50 @@ async function updatePlace(fields){
 }
 async function setStatus(s){await updatePlace({status:s});var p=cur;openPlace(p)}
 function saveNotes(){var v=$('plNotes').value;if(cur&&v!==(cur.notes||''))updatePlace({notes:v})}
+/* Navigate: choose the app (Google Maps / Waze / Apple Maps; KakaoMap + NaverMap in Korea) — links as in V1 */
+var navP=null;
+function inKorea(p){return (p.lat>=33&&p.lat<=38.7&&p.lng>=124.5&&p.lng<=131.9)||/korea|대한민국|한국/i.test(p.location||'')}
+function navLinks(p){
+  var n=encodeURIComponent(String(p.name||'destination').replace(/,/g,' '));
+  var L={
+    google:{label:'Google Maps',color:'#1A73E8',url:'https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+(p.placeId?'&destination_place_id='+encodeURIComponent(p.placeId):''),share:p.placeId?'https://www.google.com/maps/search/?api=1&query='+n+'&query_place_id='+p.placeId:'https://www.google.com/maps/search/?api=1&query='+p.lat+','+p.lng},
+    waze:{label:'Waze',color:'#0099CC',url:'https://waze.com/ul?ll='+p.lat+','+p.lng+'&navigate=yes'},
+    apple:{label:'Apple Maps',color:'#111',url:'https://maps.apple.com/?daddr='+p.lat+','+p.lng+'&q='+n},
+    kakao:{label:'KakaoMap',color:'#B89400',url:'https://map.kakao.com/link/to/'+n+','+p.lat+','+p.lng},
+    naver:{label:'NaverMap',color:'#02A34A',url:'https://map.naver.com/v5/search/'+p.lat+','+p.lng,app:'nmap://route/public?dlat='+p.lat+'&dlng='+p.lng+'&dname='+n+'&appname=wander1'}
+  };
+  var order=(inKorea(p)?['naver','kakao']:[]).concat(['google','waze']).concat(/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)?['apple']:[]);
+  return order.map(function(k){var o=L[k];o.key=k;return o});
+}
+function navBox(p){
+  navP=p;
+  if(p.lat==null)return '';
+  var links=navLinks(p),h='<div id="navBox" style="display:none;flex-direction:column;gap:8px">';
+  if(inKorea(p))h+='<div class="sub">In Korea, Naver or Kakao give the best directions.</div>';
+  h+='<div class="two">';
+  links.forEach(function(o){h+='<button class="btn soft" style="color:'+o.color+'" onclick="navOpen(\''+o.key+'\')">'+o.label+'</button>'});
+  h+='</div><div class="eyebrow" style="margin-top:4px">Send location to a friend</div><div style="display:flex;gap:6px;flex-wrap:wrap">';
+  links.forEach(function(o){h+='<button class="btn soft" style="width:auto;height:38px;padding:0 12px;font-size:13px;color:'+o.color+'" onclick="navShare(\''+o.key+'\')">↗ '+o.label+'</button>'});
+  return h+'</div></div>';
+}
+function toggleNav(){var b=$('navBox');if(!b)return;b.style.display=b.style.display==='none'?'flex':'none';if(b.style.display==='flex')b.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function navFind(k){return navLinks(navP).filter(function(o){return o.key===k})[0]}
+function navOpen(k){
+  var o=navFind(k);if(!o)return;
+  if(o.app){ // Naver: try the app, fall back to the website (as V1)
+    location.href=o.app;
+    setTimeout(function(){if(!document.hidden)window.open(o.url,'_blank')},1200);
+    return;
+  }
+  window.open(o.url,'_blank');
+}
+function navShare(k){
+  var o=navFind(k);if(!o)return;
+  var url=o.share||o.url,name=navP.name||'this place';
+  var text='📍 '+name+'\n'+url+'\n\n✦ Sent from Wander\n'+location.origin+'/V2';
+  if(navigator.share)navigator.share({title:name,text:text}).catch(function(){});
+  else window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+}
 async function sharePlace(){
   var url='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(cur.name)+(cur.placeId?'&query_place_id='+cur.placeId:'');
   shareUrl(url,cur.name);
@@ -1004,8 +1048,8 @@ function aiShow(i){
     evBlock(p.ev)+
     '<div id="dtInfo" class="sub">Loading details…</div>'+
     '<button class="btn blue" id="dtAdd" onclick="aiAdd('+i+')">+ Add to map or trip</button>'+
-    '<div class="two"><a class="btn dark" style="text-decoration:none" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lng+(p.placeId?'&destination_place_id='+encodeURIComponent(p.placeId):'')+'">Navigate</a>'+
-    '<button class="btn soft" onclick="closeSheet();go(\'vMap\');map.panTo({lat:'+p.lat+',lng:'+p.lng+'});map.setZoom(16)">Show on map</button></div>'+
+    '<div class="two"><button class="btn dark" onclick="toggleNav()">Navigate</button>'+
+    '<button class="btn soft" onclick="closeSheet();go(\'vMap\');map.panTo({lat:'+p.lat+',lng:'+p.lng+'});map.setZoom(16)">Show on map</button></div>'+navBox({name:p.name,lat:p.lat,lng:p.lng,placeId:p.placeId,location:p.address})+
     '<button class="reportBtn" onclick="reportClosed(aiResults['+i+'].name,aiResults['+i+'].address)">Is this place closed? Report it</button>');
   var b=$('aiAdd'+i);if(b&&b.disabled){$('dtAdd').disabled=true;$('dtAdd').textContent='✓ Saved';$('dtAdd').className='btn soft'}
   if(!p.placeId){$('dtInfo').textContent='';return}
