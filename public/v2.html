@@ -190,6 +190,11 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .pace3{grid-template-columns:1fr 1fr 1fr}.pace3 button{height:auto;padding:8px 4px;flex-direction:column;gap:1px;color:var(--ink)}.pace3 button small{font-size:12px;font-weight:600;color:var(--muted)}
 .pace3 button.on{border-color:var(--ink);background:var(--ink);color:#fff}.pace3 button.on small{color:#C9D1DD}
 .wxChip{display:inline-flex;align-items:center;gap:6px;margin-top:6px;background:var(--soft);border-radius:999px;padding:4px 10px;font-size:13.5px;font-weight:700}.wxChip span{font-weight:600;font-size:11.5px;color:#8A5A00;background:#FFF1D6;border-radius:999px;padding:1px 6px}
+.bRow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}.bRow.off{opacity:.55}
+.bImg{flex:none;width:56px;height:56px;border-radius:12px;background:#DDE3EA center/cover no-repeat}
+.bInfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.bInfo small{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bSel{width:100%;height:36px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:700;font-size:14px;padding:0 6px}
+.bRow .tick{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:#fff;color:#fff;font-weight:800}.bRow .tick.on{background:var(--blue);border-color:var(--blue)}
 </style></head><body>
 
 <!-- LOGIN -->
@@ -518,7 +523,7 @@ function startAdd(){
   go('vMap');
   openSheet('<h2>Add a place</h2><div class="sub">A place you want to visit, or one you\'ve been to</div>'+
     '<button class="aiBtn" onclick="closeSheet();$(\'search\').focus()"><span class="aiIco" style="background:var(--blue-soft);color:var(--blue)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><span><b>Search</b><small>Type a place name</small></span></button>'+
-    '<label class="aiBtn" style="cursor:pointer"><input type="file" accept="image/*" style="display:none" onchange="fromPhoto(this.files[0])"><span class="aiIco" style="background:#FFF3E0;color:#C2551A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><b>From a photo</b><small>AI reads the photo and finds the place</small></span></label>'+
+    '<label class="aiBtn" style="cursor:pointer"><input type="file" accept="image/*" multiple style="display:none" onchange="fromPhotos(this.files)"><span class="aiIco" style="background:#FFF3E0;color:#C2551A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><b>From photos</b><small>Pick one or more — AI finds the places</small></span></label>'+
     '<button class="aiBtn" onclick="addHere()"><span class="aiIco" style="background:#E7F4EC;color:#1E7A45"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg></span><span><b>Where I am now</b><small>Places around you</small></span></button>'+
     '<button class="aiBtn" onclick="go(\'vAI\');buildTripForm()"><span class="aiIco" style="background:#F3F1FB;color:#5B3FC4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg></span><span><b>Build a trip</b><small>AI plans your days in a city</small></span></button>');
 }
@@ -572,6 +577,84 @@ async function fromPhoto(file){
     if(pos)h+='<button class="listItem" onclick="pickSpot('+pos.lat+','+pos.lng+')"><span><b>📍 Just this spot</b><small>Save the exact location</small></span></button>';
     openSheet(h);
   }catch(e){openSheet('<h2>Something went wrong</h2><p class="sub">'+esc(e.message)+'</p>')}
+}
+/* ---------- Add places from several photos ---------- */
+var batch=[];
+function fromPhotos(files){
+  files=Array.prototype.slice.call(files||[]);
+  if(!files.length)return;
+  if(files.length===1)return fromPhoto(files[0]);
+  if(files.length>12){toast('Up to 12 photos at a time — using the first 12');files=files.slice(0,12)}
+  batch=files.map(function(f){return {file:f,url:URL.createObjectURL(f),state:'wait',opts:[],pick:-1,on:true}});
+  drawBatch();runBatch();
+}
+async function runBatch(){
+  var ex=await loadExifr().catch(function(){return null}),next=0;
+  async function one(b){
+    try{
+      var g=ex?await ex.gps(b.file).catch(function(){return null}):null;
+      var pos=g&&g.latitude!=null?{lat:g.latitude,lng:g.longitude}:null;
+      var near=pos?await nearbyList(pos,''):[];
+      var body={imageBase64:await shrinkFile(b.file),mimeType:'image/jpeg',nearby:near.map(function(p){return p.name})};
+      if(pos){body.lat=pos.lat;body.lng=pos.lng}
+      var r=await api('/ai/photo-scan',{method:'POST',body:body}).catch(function(){return {places:[]}});
+      var ai=(r.places||[]).map(function(p){return {name:p.name,location:p.address||'',placeId:p.placeId,lat:p.lat,lng:p.lng,ai:true}});
+      var ids=ai.map(function(p){return p.placeId});
+      b.opts=ai.concat(near.filter(function(p){return ids.indexOf(p.placeId)<0}).slice(0,5));
+      if(pos)b.opts.push({name:'Just this spot',location:'',placeId:'',lat:pos.lat,lng:pos.lng,spot:true});
+      b.pick=b.opts.length?0:-1;b.noGps=!pos;
+      b.state=b.opts.length?'ok':'none';
+      var p0=b.opts[0];
+      if(p0&&places.some(function(x){return (p0.placeId&&x.placeId===p0.placeId)}))b.dup=true;
+      if(b.dup||b.state==='none')b.on=false;
+    }catch(e){b.state='none';b.on=false}
+    drawBatch();
+  }
+  // 2 photos at a time
+  await Promise.all([0,1].map(async function(){while(next<batch.length)await one(batch[next++])}));
+}
+function shrinkFile(file){
+  return new Promise(function(res,rej){
+    var u=URL.createObjectURL(file),img=new Image();
+    img.onload=function(){var m=1280,k=Math.min(1,m/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',0.8).split(',')[1])};
+    img.onerror=function(){rej(new Error('Could not read a photo'))};img.src=u;
+  });
+}
+function drawBatch(){
+  var done=batch.filter(function(b){return b.state!=='wait'}).length,sel=batch.filter(function(b){return b.on&&b.pick>=0}).length;
+  var h='<div class="grab"></div><h2>Add places from photos</h2><div class="sub">'+(done<batch.length?'Finding places… '+done+' of '+batch.length:'Tick the ones to add. Tap a name to pick another place.')+'</div>';
+  batch.forEach(function(b,i){
+    var p=b.opts[b.pick];
+    h+='<div class="bRow'+(b.on?'':' off')+'"><div class="bImg" style="background-image:url(\''+b.url+'\')"></div><div class="bInfo">';
+    if(b.state==='wait')h+='<b>…</b><small>Reading photo</small>';
+    else if(b.state==='none')h+='<b>Couldn\'t find a place</b><small>'+(b.noGps?'No location in this photo':'Nothing recognised')+'</small>';
+    else{
+      h+='<select class="bSel" aria-label="Place for photo '+(i+1)+'" onchange="batch['+i+'].pick=+this.value;batch['+i+'].on=true;drawBatch()">'+
+        b.opts.map(function(o,k){return '<option value="'+k+'"'+(k===b.pick?' selected':'')+'>'+(o.ai?'✦ ':'')+esc(o.name)+'</option>'}).join('')+'</select>'+
+        '<small>'+esc(p.location||'')+(b.dup?' · already on your map':'')+(b.noGps?' · found from the photo':'')+'</small>';
+    }
+    h+='</div>'+(b.state==='ok'?'<button class="tick'+(b.on?' on':'')+'" aria-label="'+(b.on?'Don\'t add':'Add')+'" onclick="batch['+i+'].on=!batch['+i+'].on;drawBatch()">'+(b.on?'✓':'')+'</button>':'')+'</div>';
+  });
+  if(done===batch.length){
+    h+='<div class="seg" id="bStatus"><button class="'+(batchStatus==='been'?'been':'')+'" onclick="batchStatus=\'been\';drawBatch()">✓ Visited</button><button class="'+(batchStatus==='tobe'?'tobe':'')+'" onclick="batchStatus=\'tobe\';drawBatch()">Want to go</button></div>'+
+      '<label class="lbl">Trip<select class="field" id="bTrip" onchange="batchTrip=this.value===\'__new\'?\'\':this.value;if(this.value===\'__new\')tripChange(this,\'add\')">'+tripOptions(batchTrip)+'</select></label>'+
+      '<button class="btn blue" id="bGo" onclick="saveBatch()"'+(sel?'':' disabled')+'>Add '+sel+(sel===1?' place':' places')+'</button>';
+  }
+  openSheet(h);
+}
+var batchStatus='been',batchTrip='';
+async function saveBatch(){
+  var trip=$('bTrip').value;if(trip==='__new')trip='';batchTrip=trip;
+  var b=$('bGo');b.disabled=true;b.textContent='Adding…';var n=0;
+  try{
+    for(var i=0;i<batch.length;i++){
+      var x=batch[i];if(!x.on||x.pick<0)continue;var p=x.opts[x.pick];
+      var name=p.spot?(prompt('Name this spot (photo '+(i+1)+')','My spot')||'My spot'):p.name;
+      var s=await api('/places',{method:'POST',body:{name:name,location:p.location,placeId:p.placeId,lat:p.lat,lng:p.lng,status:batchStatus,source:'photo',trip:trip||null}});
+      var k=places.findIndex(function(q){return q._id===s._id});if(k>=0)places[k]=s;else places.unshift(s);n++;
+    }
+    closeSheet();renderMarkers();renderTrips();fitAll();toast(n+(n===1?' place added':' places added'));
+  }catch(e){b.disabled=false;b.textContent='Try again';toast(e.message)}
 }
 var scanIdeas=[],scanPos=null;
 // No GPS and the check didn't confirm a place: like V1, show what the AI read and let the user pick from Google results
