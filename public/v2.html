@@ -189,6 +189,7 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .pinNum{background:#12203A;padding:2px 7px;border-radius:999px}
 .pace3{grid-template-columns:1fr 1fr 1fr}.pace3 button{height:auto;padding:8px 4px;flex-direction:column;gap:1px;color:var(--ink)}.pace3 button small{font-size:12px;font-weight:600;color:var(--muted)}
 .pace3 button.on{border-color:var(--ink);background:var(--ink);color:#fff}.pace3 button.on small{color:#C9D1DD}
+.wxChip{display:inline-flex;align-items:center;gap:6px;margin-top:6px;background:var(--soft);border-radius:999px;padding:4px 10px;font-size:13.5px;font-weight:700}.wxChip span{font-weight:600;font-size:11.5px;color:#8A5A00;background:#FFF1D6;border-radius:999px;padding:1px 6px}
 </style></head><body>
 
 <!-- LOGIN -->
@@ -1336,7 +1337,9 @@ function drawPlan(){
   // city events as chips
   if(cityEv.length)h+='<div class="evChips">'+cityEv.slice(0,6).map(function(x,i){return '<button class="evChip" onclick="showCityEv('+i+')">✨ '+esc(x.name.replace(/\s*\(.*?\)\s*/g,' ').trim())+'</button>'}).join('')+'</div>';
   (plan.days||[]).forEach(function(d,di){
-    h+='<div style="margin-top:8px"><div class="eyebrow">Day '+(di+1)+' · '+esc(fmtDay(d.date))+'</div><h3 style="font-size:17px;margin-top:2px">'+esc(d.title||'')+'</h3></div>';
+    var wd=plan.weather&&plan.weather.days&&plan.weather.days[d.date];
+    h+='<div style="margin-top:8px"><div class="eyebrow">Day '+(di+1)+' · '+esc(fmtDay(d.date))+'</div><h3 style="font-size:17px;margin-top:2px">'+esc(d.title||'')+'</h3>'+
+      (wd?'<div class="wxChip">'+wd.icon+' '+wd.min+'–'+wd.max+'°C'+(wd.rain!=null?' · '+wd.rain+'% rain':'')+(plan.weather.kind==='typical'?' <span>typical</span>':'')+'</div>':'')+'</div>';
     (d.stops||[]).forEach(function(st){
       var i=aiResults.push({name:st.name,why:(st.time?st.time+' · ':'')+(st.why||''),address:st.address,lat:st.lat,lng:st.lng,placeId:st.placeId,day:di,time:st.time||'',tip:st.why||''})-1;
       h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(st.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"></button>'+
