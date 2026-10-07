@@ -412,7 +412,7 @@ async function start(){
   var k=await (await fetch('/api/config/maps-key')).json();
   window.__boot=initMap;
   var s=document.createElement('script');
-  s.src='https://maps.googleapis.com/maps/api/js?key='+k.key+'&libraries=places&callback=__boot';s.async=true;
+  s.src='https://maps.googleapis.com/maps/api/js?key='+k.key+'&libraries=places&language=en&callback=__boot';s.async=true;
   document.head.appendChild(s);
 }
 
