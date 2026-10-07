@@ -200,6 +200,7 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .addrBtn span:last-child{color:var(--blue);font-weight:700;font-size:13px}
 .langCard{background:var(--soft);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
 .langCard .lName{font-size:22px;font-weight:800;line-height:1.25}.langCard .lAddr{font-size:16px;line-height:1.4}.langCard .moreLink{align-self:flex-start;padding:4px 0}
+.locName{font-size:17px;font-weight:700;color:var(--muted);margin-top:2px}.locName:empty{display:none}
 </style></head><body>
 
 <!-- LOGIN -->
@@ -756,7 +757,7 @@ function openPlace(p){
   cur=p;
   openSheet('<div class="grab"></div>'+
     '<div class="photo" id="plPhoto"></div>'+
-    '<div><h2>'+esc(p.name)+'</h2><button class="addrBtn" onclick="showLocal(cur,\'openPlace(cur)\')">'+esc(p.location||'Show the address')+'<span>🌐 Local language</span></button></div>'+
+    '<div><h2>'+esc(p.name)+'</h2><div class="locName" id="locName"></div><button class="addrBtn" onclick="showLocal(cur,\'openPlace(cur)\')">'+esc(p.location||'Show the address')+'<span>🌐 Local language</span></button></div>'+
     segHtml(p.status,'setStatus')+
     (p.status==='been'?'<div class="rateRow"><span class="lblTxt">Your rating</span>'+starsHtml(p.rating||0,'ratePlace')+'</div>':'')+
     '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
@@ -765,6 +766,7 @@ function openPlace(p){
     '<button class="btn soft" id="shareBtn" onclick="toggleShare()">Share</button></div>'+navBox(p,true)+
     '<button class="btn danger" onclick="deletePlace()">Delete place</button>'+
     '<button class="reportBtn" onclick="reportClosed(cur.name,cur.location||\'\')">Is this place closed? Report it</button>');
+  fillLocalName(p);
   var ph=(p.coverPhoto)||(p.photos&&p.photos[0]&&(p.photos[0].url||p.photos[0]));
   if(ph)$('plPhoto').style.backgroundImage='url("'+ph+'")';
   else if(p.placeId&&window.google){
@@ -1055,13 +1057,27 @@ function showDay(){
 /* ---------- Address in English + the local language (to show a driver) ---------- */
 var LANG_NAME={el:'Greek',he:'Hebrew',ko:'Korean',ja:'Japanese','zh-CN':'Chinese','zh-TW':'Chinese','zh-HK':'Chinese',th:'Thai',ru:'Russian',uk:'Ukrainian',bg:'Bulgarian',sr:'Serbian',mk:'Macedonian',ka:'Georgian',hy:'Armenian',ar:'Arabic',tr:'Turkish',fa:'Persian',hi:'Hindi',ne:'Nepali',si:'Sinhala',bn:'Bengali',vi:'Vietnamese',km:'Khmer',lo:'Lao',my:'Burmese',id:'Indonesian',ms:'Malay',fil:'Filipino',es:'Spanish',pt:'Portuguese',fr:'French',it:'Italian',de:'German',nl:'Dutch',pl:'Polish',cs:'Czech',sk:'Slovak',hu:'Hungarian',ro:'Romanian',hr:'Croatian',sl:'Slovenian',sv:'Swedish',no:'Norwegian',da:'Danish',fi:'Finnish',is:'Icelandic',et:'Estonian',lv:'Latvian',lt:'Lithuanian',sq:'Albanian',bs:'Bosnian',am:'Amharic',mn:'Mongolian'};
 var RTL_LANGS=['he','ar','fa'];
+var localCache={};
+function localFetch(p){
+  var k=p.placeId||(p.lat+','+p.lng);
+  if(!localCache[k])localCache[k]=api('/ai/local-name?'+(p.placeId?'placeId='+encodeURIComponent(p.placeId):'lat='+p.lat+'&lng='+p.lng)).catch(function(e){delete localCache[k];throw e});
+  return localCache[k];
+}
+// Local-language name under the title (e.g. Greek in Greece), when it differs from English
+function fillLocalName(p){
+  if(!p||!p.placeId)return;
+  localFetch(p).then(function(r){
+    var el=$('locName');if(!el||!r.local||!r.local.name||r.local.name===p.name||(r.en&&r.local.name===r.en.name))return;
+    if(RTL_LANGS.indexOf(r.local.lang)>=0)el.dir='rtl';
+    el.textContent=r.local.name;el.title=LANG_NAME[r.local.lang]||'';
+  }).catch(function(){});
+}
 async function showLocal(p,back){
   if(!p)return;
   var bk='<button class="btn soft" onclick="'+back+'">Back</button>';
   openSheet('<div class="grab"></div><h2>'+esc(p.name)+'</h2><div class="loading"><div class="spin"></div>Getting the local name</div>');
   try{
-    var q=p.placeId?'placeId='+encodeURIComponent(p.placeId):'lat='+p.lat+'&lng='+p.lng;
-    var r=await api('/ai/local-name?'+q);
+    var r=await localFetch(p);
     var card=function(label,x,lang){
       if(!x)return '';var dir=RTL_LANGS.indexOf(lang)>=0?' dir="rtl"':'';
       var txt=(p.placeId&&x.name?x.name+'\n':'')+x.address;
@@ -1627,13 +1643,14 @@ function evBlock(e){
 function aiShow(i){
   var p=aiResults[i];
   openSheet('<div class="photo" id="dtPhoto"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></div>'+
-    '<div><h2>'+esc(p.name)+'</h2>'+(p.why?'<div class="sub" style="color:var(--ink);font-weight:600">'+esc(p.why)+'</div>':'')+'<button class="addrBtn" onclick="showLocal(aiResults['+i+'],\'aiShow('+i+')\')"><span id="dtAddr">'+esc(p.address||'Show the address')+'</span><span>🌐 Local language</span></button></div>'+
+    '<div><h2>'+esc(p.name)+'</h2><div class="locName" id="locName"></div>'+(p.why?'<div class="sub" style="color:var(--ink);font-weight:600">'+esc(p.why)+'</div>':'')+'<button class="addrBtn" onclick="showLocal(aiResults['+i+'],\'aiShow('+i+')\')"><span id="dtAddr">'+esc(p.address||'Show the address')+'</span><span>🌐 Local language</span></button></div>'+
     evBlock(p.ev)+
     '<div id="dtInfo" class="sub">Loading details…</div>'+
     '<button class="btn blue" id="dtAdd" onclick="aiAdd('+i+')">+ Add to map or trip</button>'+
     '<div class="two"><button class="btn soft" id="navBtn" onclick="toggleNav()">Navigate</button>'+
     '<button class="btn soft" onclick="closeSheet();go(\'vMap\');map.panTo({lat:'+p.lat+',lng:'+p.lng+'});map.setZoom(16)">Show on map</button></div>'+navBox({name:p.name,lat:p.lat,lng:p.lng,placeId:p.placeId,location:p.address})+
     '<button class="reportBtn" onclick="reportClosed(aiResults['+i+'].name,aiResults['+i+'].address)">Is this place closed? Report it</button>');
+  fillLocalName(p);
   var b=$('aiAdd'+i);if(b&&b.disabled){$('dtAdd').disabled=true;$('dtAdd').textContent='✓ Saved';$('dtAdd').className='btn soft'}
   if(!p.placeId){$('dtInfo').textContent='';return}
   new google.maps.places.PlacesService(map).getDetails({placeId:p.placeId,fields:['formatted_address','rating','user_ratings_total','opening_hours','utc_offset_minutes','formatted_phone_number','website','url','photos','price_level','business_status']},function(d,st){
