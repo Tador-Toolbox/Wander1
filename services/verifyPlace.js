@@ -190,4 +190,4 @@ async function closedList(city) {
   } catch { return []; }
 }
 
-module.exports = { verifyPlace, verifyNear, closedList, sameName, openOnDate };
+module.exports = { cityCenter, verifyPlace, verifyNear, closedList, sameName, openOnDate };

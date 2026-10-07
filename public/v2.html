@@ -195,6 +195,7 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .bInfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.bInfo small{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bSel{width:100%;height:36px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:700;font-size:14px;padding:0 6px}
 .bRow .tick{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:#fff;color:#fff;font-weight:800}.bRow .tick.on{background:var(--blue);border-color:var(--blue)}
+.shopWhy.ok{color:#1E7A45;font-weight:600}.shopWhy.no{color:#B42318;font-weight:600}
 </style></head><body>
 
 <!-- LOGIN -->
@@ -231,6 +232,7 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
       <button class="aiBtn" onclick="aiNow()"><span class="aiIco" style="background:#FFF3E0;color:#C2551A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7Z"/></svg></span><span><b>What to do now</b><small>3 ideas near you</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
       <button class="aiBtn" onclick="aiEvents()"><span class="aiIco" style="background:#FDECEF;color:#B4234A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></span><span><b>Events near you</b><small>Top picks for today</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
       <button class="aiBtn" onclick="aiTripPick()"><span class="aiIco" style="background:var(--blue-soft);color:var(--blue)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 16l20-8-6 14-3-6-6-2Z"/></svg></span><span><b>Ideas for my trip</b><small>Places to add to a trip</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+      <button class="aiBtn" onclick="shopForm()"><span class="aiIco" style="background:#FFF6E0;color:#9A6400"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 8h14l-1 12H6Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></span><span><b>Find shopping</b><small>Malls, markets and shopping streets</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
       <button class="aiBtn" onclick="tripEventsPick()"><span class="aiIco" style="background:#F3F1FB;color:#5B3FC4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span><b>Events for my trip</b><small>Add parties to a trip · 1–2 weeks before</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
       <button class="aiBtn" onclick="buildTripForm()"><span class="aiIco" style="background:#E7F4EC;color:#1E7A45"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg></span><span><b>Build a trip</b><small>City, dates and what you're into</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
     </div>
@@ -1045,6 +1047,66 @@ function showDay(){
   var ps=dayPlaces();if(!ps.length)return;
   dayFilter={ids:ps.map(function(p){return p._id}),label:'Day '+(planDay+1)};
   tripFilter=planTrip._id;closeSheet();go('vMap');renderChips();renderMarkers();fitAll();
+}
+/* ---------- Find shopping: malls, markets (open days), shopping streets ---------- */
+var shopData=null;
+function shopForm(){
+  openSheet('<div class="grab"></div><h2>Find shopping</h2><div class="sub">Malls, markets and shopping streets. Markets show which days they are open.</div>'+
+    '<button class="btn blue" onclick="closeSheet();findShopping(\'\')">📍 Near me</button>'+
+    '<div class="sub" style="text-align:center">or</div>'+
+    '<label class="lbl">Area or city<input class="field" id="shopArea" placeholder="e.g. Jaffa, Athens, Shibuya"></label>'+
+    '<button class="btn soft" onclick="var a=$(\'shopArea\').value.trim();if(!a){toast(\'Type an area\');return}closeSheet();findShopping(a)">Search this area</button>');
+  try{new google.maps.places.Autocomplete($('shopArea'),{types:['(regions)'],fields:['name']})}catch(e){}
+}
+async function findShopping(area){
+  go('vAI');aiMode='shop';aiTripId=null;aiLoading('Finding shopping places'+(area?' in '+area:' near you')+'…');
+  try{
+    var body={area:area};
+    if(!area){var pos=await getPos();if(!pos)throw new Error('location is blocked — type an area instead');body.lat=pos.lat;body.lng=pos.lng}
+    shopData=await api('/ai/shopping',{method:'POST',body:body});shopData.area=area;
+    drawShopping();
+  }catch(e){aiErr(e)}
+}
+function dayRange(days){ // ['Sun','Mon','Tue'] → 'Sun–Tue'
+  var N=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],ix=days.map(function(d){return N.indexOf(d)}).filter(function(i){return i>=0}).sort(),out=[],st=0;
+  for(var k=1;k<=ix.length;k++){if(k===ix.length||ix[k]!==ix[k-1]+1){out.push(k-st>2?N[ix[st]]+'–'+N[ix[k-1]]:ix.slice(st,k).map(function(i){return N[i]}).join(', '));st=k}}
+  return out.join(', ');
+}
+function shopWhy(p,today){
+  if(p.kind==='market'){
+    if(!p.openDays)return 'Open days unknown — check before you go';
+    var all=p.openDays.length===7;
+    return (p.openToday?'✓ Open today':'✕ Closed today')+' · '+(p.note||(all?'every day':'open '+dayRange(p.openDays)));
+  }
+  if(p.kind==='mall')return (p.openToday===false?'✕ Closed today':p.hoursToday?'Today '+p.hoursToday:'')+(p.rating?' · ★'+p.rating:'');
+  return p.why||p.address||'';
+}
+function drawShopping(){
+  var d=shopData;aiResults=[];
+  var h='<button class="back" onclick="aiBack()">‹ Back</button><h2 class="display" style="font-size:22px">Shopping '+(d.area?'in '+esc(d.area):'near you')+'</h2>';
+  var sec=function(title,icon,list){
+    if(!list.length)return;
+    h+='<h3 style="font-size:17px;margin-top:10px">'+icon+' '+title+'</h3>';
+    list.forEach(function(p){
+      var why=shopWhy(p,d.today);
+      var i=aiResults.push({name:p.name,why:why,address:p.address,lat:p.lat,lng:p.lng,placeId:p.placeId})-1;
+      var saved=p.placeId&&places.some(function(x){return x.placeId===p.placeId});
+      var cls=p.kind==='market'?(p.openToday?' ok':p.openDays?' no':''):'';
+      h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(p.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"></button>'+
+        '<button class="t" onclick="aiShow('+i+')"><b>'+esc(p.name)+'</b><small class="shopWhy'+cls+'">'+esc(why)+'</small></button>'+
+        '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')"'+(saved?' disabled>Saved':'>+ Add')+'</button></div>';
+    });
+  };
+  // markets open today first
+  var mk=(d.markets||[]).slice().sort(function(a,b){return (b.openToday===true)-(a.openToday===true)});
+  sec('Markets','🧺',mk);sec('Malls','🛍️',d.malls||[]);sec('Shopping streets','🚶',d.streets||[]);
+  if(!aiResults.length)h+='<div class="loading">No shopping places found here.</div>';
+  else if(mk.some(function(m){return m.daysFromWeb}))h+='<div class="sub" style="font-size:12px;margin-top:8px">Some market days come from a web search — worth confirming before you go.</div>';
+  $('aiRes').innerHTML=h;
+  aiResults.forEach(function(p,i){
+    if(!p.placeId||!window.google)return;
+    new google.maps.places.PlacesService(map).getDetails({placeId:p.placeId,fields:['photos']},function(r){var el=$('aiTh'+i);if(el&&r&&r.photos&&r.photos[0])el.style.backgroundImage='url("'+r.photos[0].getUrl({maxWidth:300})+'")'});
+  });
 }
 /* ---------- Events: only listed ~1–2 weeks ahead ---------- */
 var EVENT_WINDOW=14;

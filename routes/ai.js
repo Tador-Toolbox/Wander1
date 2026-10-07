@@ -410,6 +410,83 @@ router.get('/trip-weather/:tripId', auth, async (req, res) => {
 });
 
 /* ─────────────────────────────────────────
+   POST /api/ai/shopping  { area? , lat?, lng? }
+   Malls, markets and shopping streets near a place.
+   Markets: open days from Google hours; if Google has none, a web check (many markets run only on some days).
+───────────────────────────────────────── */
+router.post('/shopping', auth, async (req, res) => {
+  try {
+    const key = process.env.GOOGLE_MAPS_API_KEY;
+    const vp = require('../services/verifyPlace');
+    const area = String(req.body.area || '').trim();
+    let center = req.body.lat != null ? { lat: +req.body.lat, lng: +req.body.lng } : null;
+    if (!center && area) center = await vp.cityCenter(area, key);
+    if (!center) return res.status(400).json({ error: 'Type an area or allow location' });
+    const get = async u => { try { return await (await fetch(u)).json(); } catch { return {}; } };
+    const ts = q => get(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(q)}&location=${center.lat},${center.lng}&radius=12000&key=${key}`).then(d => d.results || []);
+    const near = (r, km = 25) => { const l = r.geometry?.location; if (!l) return false; const dx = (l.lat - center.lat) * 111, dy = (l.lng - center.lng) * 111 * Math.cos(center.lat * Math.PI / 180); return Math.sqrt(dx * dx + dy * dy) <= km; };
+    const where = area ? ' in ' + area : '';
+    const [malls, markets, flea] = await Promise.all([ts('shopping mall' + where), ts('market' + where), ts('flea market bazaar' + where)]);
+    const MARKET_RE = /market|shuk|souk|bazaar|bazar|flea|שוק|mercado|marché|markt|mercato|αγορά|시장/i;
+    const pick = (list, test, n) => { const seen = new Set(); return list.filter(r => near(r) && r.business_status !== 'CLOSED_PERMANENTLY' && test(r) && !seen.has(r.place_id) && seen.add(r.place_id)).sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0)).slice(0, n); };
+    const mallList = pick(malls, r => (r.types || []).includes('shopping_mall') || /mall|center|centre|קניון|outlet/i.test(r.name), 8);
+    const marketList = pick([...markets, ...flea], r => MARKET_RE.test(r.name) && !(r.types || []).includes('supermarket') && !(r.types || []).includes('grocery_or_supermarket'), 8);
+
+    const DAYN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date().getDay();
+    const details = id => get(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${id}&fields=opening_hours,business_status&key=${key}`).then(d => d.result || {});
+    const shape = async (r, kind) => {
+      const d = await details(r.place_id);
+      if (d.business_status === 'CLOSED_PERMANENTLY' || d.business_status === 'CLOSED_TEMPORARILY') return null;
+      const per = d.opening_hours?.periods || [];
+      const always = per.length === 1 && !per[0].close;
+      const openDays = always ? [0, 1, 2, 3, 4, 5, 6] : [...new Set(per.map(x => x.open?.day).filter(x => x != null))].sort();
+      const wt = d.opening_hours?.weekday_text || [];
+      const hoursToday = wt.length ? (wt[(today + 6) % 7] || '').replace(/^[^:]+:\s*/, '') : '';
+      return { kind, name: r.name, address: r.formatted_address || '', lat: r.geometry.location.lat, lng: r.geometry.location.lng, placeId: r.place_id,
+        rating: r.rating || null, reviews: r.user_ratings_total || 0, openDays: openDays.length ? openDays.map(i => DAYN[i]) : null, openToday: openDays.length ? openDays.includes(today) : null, hoursToday };
+    };
+    let [mallOut, marketOut] = await Promise.all([Promise.all(mallList.map(r => shape(r, 'mall'))), Promise.all(marketList.map(r => shape(r, 'market')))]);
+    mallOut = mallOut.filter(Boolean); marketOut = marketOut.filter(Boolean);
+
+    // Markets Google has no hours for + famous shopping streets: one web-grounded AI check
+    const noHours = marketOut.filter(m => !m.openDays);
+    let streets = [];
+    try {
+      const gk = process.env.GEMINI_API_KEY;
+      const placeLabel = area || `${center.lat.toFixed(3)},${center.lng.toFixed(3)}`;
+      const prompt = `Area: ${placeLabel}.
+1) For each market below, search the web: on which weekdays is it open (many markets run only on certain days)? Answer days as Sun..Sat, and a short note (e.g. "Fridays 8:00-14:00"). If permanently closed say closed:true.
+${noHours.map((m, i) => `[${i}] ${m.name} — ${m.address}`).join('\n') || '(none)'}
+2) Suggest up to 4 well-known SHOPPING STREETS or shopping districts in this area (not malls, not markets above), real names as on Google Maps.
+Reply ONLY JSON: {"markets":[{"i":0,"days":["Fri"],"note":"","closed":false}],"streets":[{"name":"","why":"max 8 words"}]}`;
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${gk}`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], tools: [{ googleSearch: {} }], generationConfig: { temperature: 0.2, maxOutputTokens: 3000 } }) });
+      const dj = await r.json();
+      const out = extractJSON((dj.candidates?.[0]?.content?.parts || []).map(x => x.text || '').join('')) || {};
+      (out.markets || []).forEach(x => {
+        const m = noHours[Number(x.i)]; if (!m) return;
+        if (x.closed) { m.closed = true; return; }
+        const days = (x.days || []).map(d => DAYN.find(n => String(d).toLowerCase().startsWith(n.toLowerCase()))).filter(Boolean);
+        if (days.length) { m.openDays = days; m.openToday = days.includes(DAYN[today]); m.daysFromWeb = true; }
+        if (x.note) m.note = String(x.note).slice(0, 80);
+      });
+      marketOut = marketOut.filter(m => !m.closed);
+      streets = (await Promise.all((out.streets || []).slice(0, 4).map(async st => {
+        const hit = (await ts(st.name + (area ? ' ' + area : ''))).find(x => near(x));
+        return hit ? { kind: 'street', name: hit.name, address: hit.formatted_address || '', lat: hit.geometry.location.lat, lng: hit.geometry.location.lng, placeId: hit.place_id, why: String(st.why || '').slice(0, 60) } : null;
+      }))).filter(Boolean);
+    } catch (e) { console.log('[ai/shopping] web check error', e.message); }
+
+    console.log(`[ai/shopping] ${area || 'GPS'}: ${mallOut.length} malls, ${marketOut.length} markets (${noHours.length} checked on web), ${streets.length} streets`);
+    res.json({ malls: mallOut, markets: marketOut, streets, today: DAYN[today] });
+  } catch (e) {
+    console.error('[ai/shopping]', e.message);
+    res.status(500).json({ error: 'Could not search shopping places' });
+  }
+});
+
+/* ─────────────────────────────────────────
    POST /api/ai/story/:tripId
 ───────────────────────────────────────── */
 router.post('/story/:tripId', auth, async (req, res) => {
