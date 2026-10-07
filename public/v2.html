@@ -196,6 +196,10 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .bSel{width:100%;height:36px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:700;font-size:14px;padding:0 6px}
 .bRow .tick{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:#fff;color:#fff;font-weight:800}.bRow .tick.on{background:var(--blue);border-color:var(--blue)}
 .shopWhy.ok{color:#1E7A45;font-weight:600}.shopWhy.no{color:#B42318;font-weight:600}
+.addrBtn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:0;color:var(--muted);font-size:14px;line-height:1.4}
+.addrBtn span:last-child{color:var(--blue);font-weight:700;font-size:13px}
+.langCard{background:var(--soft);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.langCard .lName{font-size:22px;font-weight:800;line-height:1.25}.langCard .lAddr{font-size:16px;line-height:1.4}.langCard .moreLink{align-self:flex-start;padding:4px 0}
 </style></head><body>
 
 <!-- LOGIN -->
@@ -752,7 +756,7 @@ function openPlace(p){
   cur=p;
   openSheet('<div class="grab"></div>'+
     '<div class="photo" id="plPhoto"></div>'+
-    '<div><h2>'+esc(p.name)+'</h2><div class="sub">'+esc(p.location||'')+'</div></div>'+
+    '<div><h2>'+esc(p.name)+'</h2><button class="addrBtn" onclick="showLocal(cur,\'openPlace(cur)\')">'+esc(p.location||'Show the address')+'<span>🌐 Local language</span></button></div>'+
     segHtml(p.status,'setStatus')+
     (p.status==='been'?'<div class="rateRow"><span class="lblTxt">Your rating</span>'+starsHtml(p.rating||0,'ratePlace')+'</div>':'')+
     '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
@@ -1048,6 +1052,29 @@ function showDay(){
   dayFilter={ids:ps.map(function(p){return p._id}),label:'Day '+(planDay+1)};
   tripFilter=planTrip._id;closeSheet();go('vMap');renderChips();renderMarkers();fitAll();
 }
+/* ---------- Address in English + the local language (to show a driver) ---------- */
+var LANG_NAME={el:'Greek',he:'Hebrew',ko:'Korean',ja:'Japanese','zh-CN':'Chinese','zh-TW':'Chinese','zh-HK':'Chinese',th:'Thai',ru:'Russian',uk:'Ukrainian',bg:'Bulgarian',sr:'Serbian',mk:'Macedonian',ka:'Georgian',hy:'Armenian',ar:'Arabic',tr:'Turkish',fa:'Persian',hi:'Hindi',ne:'Nepali',si:'Sinhala',bn:'Bengali',vi:'Vietnamese',km:'Khmer',lo:'Lao',my:'Burmese',id:'Indonesian',ms:'Malay',fil:'Filipino',es:'Spanish',pt:'Portuguese',fr:'French',it:'Italian',de:'German',nl:'Dutch',pl:'Polish',cs:'Czech',sk:'Slovak',hu:'Hungarian',ro:'Romanian',hr:'Croatian',sl:'Slovenian',sv:'Swedish',no:'Norwegian',da:'Danish',fi:'Finnish',is:'Icelandic',et:'Estonian',lv:'Latvian',lt:'Lithuanian',sq:'Albanian',bs:'Bosnian',am:'Amharic',mn:'Mongolian'};
+var RTL_LANGS=['he','ar','fa'];
+async function showLocal(p,back){
+  if(!p)return;
+  var bk='<button class="btn soft" onclick="'+back+'">Back</button>';
+  openSheet('<div class="grab"></div><h2>'+esc(p.name)+'</h2><div class="loading"><div class="spin"></div>Getting the local name</div>');
+  try{
+    var q=p.placeId?'placeId='+encodeURIComponent(p.placeId):'lat='+p.lat+'&lng='+p.lng;
+    var r=await api('/ai/local-name?'+q);
+    var card=function(label,x,lang){
+      if(!x)return '';var dir=RTL_LANGS.indexOf(lang)>=0?' dir="rtl"':'';
+      var txt=(p.placeId&&x.name?x.name+'\n':'')+x.address;
+      return '<div class="langCard"><div class="eyebrow">'+label+'</div>'+(p.placeId&&x.name?'<div class="lName"'+dir+'>'+esc(x.name)+'</div>':'')+'<div class="lAddr"'+dir+'>'+esc(x.address)+'</div>'+
+        '<button class="moreLink" onclick="copyTxt(this)" data-t="'+esc(txt)+'">Copy</button></div>';
+    };
+    var same=r.local&&r.en&&r.local.name===r.en.name&&r.local.address===r.en.address;
+    openSheet('<div class="grab"></div><h2>Show the driver</h2>'+
+      (r.local&&!same?card(LANG_NAME[r.local.lang]||'Local language',r.local,r.local.lang):'')+card('English',r.en,'en')+
+      (!r.local?'<div class="sub">English is used locally here.</div>':same?'<div class="sub">The local name is the same as in English.</div>':'')+bk);
+  }catch(e){openSheet('<h2>'+esc(p.name)+'</h2><p class="sub">'+esc(e.message)+'</p>'+bk)}
+}
+function copyTxt(b){var t=b.getAttribute('data-t');(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('Copied')}).catch(function(){prompt('Copy:',t)})}
 /* ---------- Find shopping: malls, markets (open days), shopping streets ---------- */
 var shopData=null;
 function shopForm(){
@@ -1600,7 +1627,7 @@ function evBlock(e){
 function aiShow(i){
   var p=aiResults[i];
   openSheet('<div class="photo" id="dtPhoto"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></div>'+
-    '<div><h2>'+esc(p.name)+'</h2>'+(p.why?'<div class="sub" style="color:var(--ink);font-weight:600">'+esc(p.why)+'</div>':'')+'<div class="sub" id="dtAddr">'+esc(p.address||'')+'</div></div>'+
+    '<div><h2>'+esc(p.name)+'</h2>'+(p.why?'<div class="sub" style="color:var(--ink);font-weight:600">'+esc(p.why)+'</div>':'')+'<button class="addrBtn" onclick="showLocal(aiResults['+i+'],\'aiShow('+i+')\')"><span id="dtAddr">'+esc(p.address||'Show the address')+'</span><span>🌐 Local language</span></button></div>'+
     evBlock(p.ev)+
     '<div id="dtInfo" class="sub">Loading details…</div>'+
     '<button class="btn blue" id="dtAdd" onclick="aiAdd('+i+')">+ Add to map or trip</button>'+

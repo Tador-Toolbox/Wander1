@@ -487,6 +487,32 @@ Reply ONLY JSON: {"markets":[{"i":0,"days":["Fri"],"note":"","closed":false}],"s
 });
 
 /* ─────────────────────────────────────────
+   GET /api/ai/local-name?placeId=&lat=&lng=
+   Place name + address in English and in the local language (e.g. Greek in Greece) — to show a driver
+───────────────────────────────────────── */
+const COUNTRY_LANG = { GR:'el', CY:'el', IL:'he', KR:'ko', JP:'ja', CN:'zh-CN', TW:'zh-TW', HK:'zh-HK', TH:'th', RU:'ru', UA:'uk', BG:'bg', RS:'sr', MK:'mk', GE:'ka', AM:'hy',
+  AE:'ar', SA:'ar', EG:'ar', JO:'ar', MA:'ar', TN:'ar', LB:'ar', QA:'ar', OM:'ar', BH:'ar', KW:'ar', TR:'tr', IR:'fa', IN:'hi', NP:'ne', LK:'si', BD:'bn', VN:'vi', KH:'km', LA:'lo', MM:'my',
+  ID:'id', MY:'ms', PH:'fil', ES:'es', MX:'es', AR:'es', CO:'es', PE:'es', CL:'es', CU:'es', PT:'pt', BR:'pt', FR:'fr', BE:'fr', IT:'it', DE:'de', AT:'de', CH:'de', NL:'nl', PL:'pl', CZ:'cs',
+  SK:'sk', HU:'hu', RO:'ro', HR:'hr', SI:'sl', SE:'sv', NO:'no', DK:'da', FI:'fi', IS:'is', EE:'et', LV:'lv', LT:'lt', AL:'sq', ME:'sr', BA:'bs', ET:'am', MN:'mn' };
+router.get('/local-name', auth, async (req, res) => {
+  try {
+    const key = process.env.GOOGLE_MAPS_API_KEY;
+    const { placeId, lat, lng } = req.query;
+    const get = async u => { try { return await (await fetch(u)).json(); } catch { return {}; } };
+    const det = lang => placeId
+      ? get(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=name,formatted_address,address_components&language=${lang}&key=${key}`).then(d => d.result || null)
+      : get(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=${lang}&key=${key}`).then(d => d.results?.[0] || null);
+    const en = await det('en');
+    if (!en) return res.status(404).json({ error: 'Not found' });
+    const cc = (en.address_components || []).find(c => c.types.includes('country'))?.short_name || '';
+    const lang = COUNTRY_LANG[cc];
+    const loc = lang ? await det(lang) : null;
+    const pack = r => r ? { name: r.name || '', address: r.formatted_address || '' } : null;
+    res.json({ en: pack(en), local: loc && lang ? { ...pack(loc), lang } : null, country: cc });
+  } catch (e) { console.error('[ai/local-name]', e.message); res.status(500).json({ error: 'Could not load the local name' }); }
+});
+
+/* ─────────────────────────────────────────
    POST /api/ai/story/:tripId
 ───────────────────────────────────────── */
 router.post('/story/:tripId', auth, async (req, res) => {
