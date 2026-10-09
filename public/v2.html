@@ -1183,27 +1183,45 @@ function isStay(p){return p&&p.source==='stay'}
 function stayForm(){
   go('vMap');
   openSheet('<div class="grab"></div><h2>Where I\'m staying</h2><div class="sub">Paste the address of your hotel or Airbnb — any language is fine.</div>'+
-    '<label class="lbl">Address<textarea class="field" id="stayAddr" style="height:80px" placeholder="e.g. Dimitrakopoulou 13, Athina, 117 42, Greece"></textarea></label>'+
+    '<label class="lbl">Address<input class="field" id="stayAddr" autocomplete="off" placeholder="Start typing, e.g. Dimitrakopoulou 13"></label>'+
     '<label class="lbl">Name (optional)<input class="field" id="stayName" placeholder="e.g. Airbnb Koukaki"></label>'+
-    '<label class="lbl">Trip<select class="field" id="stayTrip" onchange="tripChange(this,\'add\')">'+tripOptions(tripFilter||'')+'</select></label>'+
+    '<label class="lbl">Trip<select class="field" id="stayTrip" onchange="tripChange(this,\'add\');stayBias()">'+tripOptions(tripFilter||'')+'</select></label>'+
     '<div id="stayErr" class="sub" style="color:#B42318"></div><button class="btn blue" id="stayGo" onclick="stayFind()">Find on the map</button>');
+  // Suggestions list while typing (Google addresses), biased to the trip's area or the map
+  try{
+    stayAC=new google.maps.places.Autocomplete($('stayAddr'),{types:['address'],fields:['formatted_address','geometry','name']});
+    stayAC.addListener('place_changed',function(){var r=stayAC.getPlace();if(r&&r.geometry)stayConfirm(r.formatted_address||r.name,r.geometry)});
+    stayBias();
+  }catch(e){}
 }
+var stayAC=null;
+function stayArea(){
+  var t=$('stayTrip')&&$('stayTrip').value,ps=places.filter(function(p){return t&&String(p.trip)===t&&!isStay(p)});
+  if(ps.length){var b=new google.maps.LatLngBounds();ps.forEach(function(p){b.extend({lat:p.lat,lng:p.lng})});return b}
+  return map.getBounds();
+}
+function stayBias(){try{var b=stayArea();if(stayAC&&b)stayAC.setBounds(b)}catch(e){}}
 function geocodeAddr(q){
-  return new Promise(function(res){new google.maps.Geocoder().geocode({address:q},function(r,st){res(st==='OK'&&r&&r[0]?r[0]:null)})});
+  var b=null;try{b=stayArea()}catch(e){}
+  return new Promise(function(res){new google.maps.Geocoder().geocode(b?{address:q,bounds:b}:{address:q},function(r,st){res(st==='OK'&&r&&r[0]?r[0]:null)})});
 }
 async function stayFind(){
-  var raw=$('stayAddr').value.trim();if(!raw){$('stayErr').textContent='Paste the address';return}
+  var raw=$('stayAddr').value.trim();if(!raw){$('stayErr').textContent='Type or paste the address';return}
   var b=$('stayGo');b.disabled=true;b.textContent='Finding…';
   // Pasted addresses often mix languages (e.g. "…117 42, יוון") — try as is, then without the non-Latin/foreign parts
   var tries=[raw,raw.split(',').map(function(x){return x.trim()}).filter(function(x){return /[A-Za-z0-9Ͱ-ϿЀ-ӿ]/.test(x)}).join(', '),raw.split(',').slice(0,3).join(',')];
   var hit=null;for(var i=0;i<tries.length&&!hit;i++)if(tries[i])hit=await geocodeAddr(tries[i]);
   if(!hit){b.disabled=false;b.textContent='Find on the map';$('stayErr').textContent='Could not find this address. Check the street and number.';return}
-  var loc=hit.geometry.location;
-  stayPending={name:$('stayName').value.trim()||'Where I\'m staying',location:hit.formatted_address,lat:loc.lat(),lng:loc.lng(),trip:$('stayTrip').value==='__new'?'':$('stayTrip').value,rough:hit.geometry.location_type!=='ROOFTOP'};
+  b.disabled=false;b.textContent='Find on the map';
+  stayConfirm(hit.formatted_address,hit.geometry);
+}
+function stayConfirm(addr,geo){
+  var loc=geo.location;
+  stayPending={name:$('stayName').value.trim()||'Where I\'m staying',location:addr,lat:loc.lat(),lng:loc.lng(),trip:$('stayTrip').value==='__new'?'':$('stayTrip').value,rough:!!geo.location_type&&geo.location_type!=='ROOFTOP'};
   map.panTo(loc);map.setZoom(17);
   if(window._stayPreview)window._stayPreview.setMap(null);
   window._stayPreview=new google.maps.Marker({map:map,position:loc,icon:stayIcon(),zIndex:998});
-  openSheet('<div class="grab"></div><div class="eyebrow">Is this the right spot?</div><h2>'+esc(stayPending.name)+'</h2><div class="sub">'+esc(hit.formatted_address)+'</div>'+
+  openSheet('<div class="grab"></div><div class="eyebrow">Is this the right spot?</div><h2>'+esc(stayPending.name)+'</h2><div class="sub">'+esc(addr)+'</div>'+
     (stayPending.rough?'<div class="wx far">Approximate location<small>Google found the street but not the exact building. You can still save it.</small></div>':'')+
     '<button class="btn blue" onclick="staySave()">🏠 Save as where I\'m staying</button><button class="btn soft" onclick="stayCancel()">Change the address</button>');
 }
