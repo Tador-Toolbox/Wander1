@@ -321,7 +321,8 @@ router.post('/plan-days/:tripId', auth, async (req, res) => {
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
     const { startDate } = req.body;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate || '')) return res.status(400).json({ error: 'Pick a start date' });
-    const places = await Place.find({ trip: trip._id, user: req.userId }).select('name location lat lng tags notes placeId status');
+    const places = await Place.find({ trip: trip._id, user: req.userId, source: { $ne: 'stay' } }).select('name location lat lng tags notes placeId status');
+    const stay = await Place.findOne({ trip: trip._id, user: req.userId, source: 'stay' }).select('name location lat lng');
     if (!places.length) return res.status(400).json({ error: 'This trip has no places yet' });
     const nDays = Math.max(1, Math.min(14, parseInt(req.body.days) || Math.ceil(places.length / 4)));
     const start = new Date(startDate + 'T12:00:00Z');
@@ -355,7 +356,7 @@ ${dates.map((d, i) => `Day ${i + 1}: ${d} (${wd(d)})`).join('\n')}
 Places (use the exact id values):
 ${list}
 
-Rules:
+${stay ? `The traveler is staying at: ${stay.name} — ${stay.location} (lat:${stay.lat.toFixed(4)},lng:${stay.lng.toFixed(4)}). Start and end each day near there when it makes sense.\n` : ''}Rules:
 - Use EVERY place exactly once. Do not add new places.
 - Put places that are close to each other on the same day, and order each day so the route is short (no zig-zag).
 - Spread places evenly across the days.

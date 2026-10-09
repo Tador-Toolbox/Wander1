@@ -467,8 +467,8 @@ function locate(userAsked){
 }
 function visible(){
   return places.filter(function(p){
-    if(filter==='been'&&p.status!=='been')return false;
-    if(filter==='tobe'&&p.status==='been')return false;
+    if(!isStay(p)&&filter==='been'&&p.status!=='been')return false;
+    if(!isStay(p)&&filter==='tobe'&&p.status==='been')return false;
     if(tripFilter&&String(p.trip)!==tripFilter)return false;
     if(dayFilter&&dayFilter.ids.indexOf(p._id)<0)return false;
     return true;
@@ -483,7 +483,7 @@ function renderMarkers(){
   markers.forEach(function(m){m.setMap(null)});markers=[];
   var list=visible();
   list.forEach(function(p){
-    var m=new google.maps.Marker({map:map,position:{lat:p.lat,lng:p.lng},title:p.name,icon:pinIcon(p.status,p.rating),
+    var m=new google.maps.Marker({map:map,position:{lat:p.lat,lng:p.lng},title:p.name,icon:isStay(p)?stayIcon():pinIcon(p.status,p.rating),zIndex:isStay(p)?900:undefined,
       label:dayFilter?{text:String(dayFilter.ids.indexOf(p._id)+1),fontSize:'12px',fontWeight:'800',color:'#fff',className:'pinNum'}:p.rating?{text:'★'+p.rating,fontSize:'11px',fontWeight:'800',color:'#12203A',className:'pinRate'}:null});
     m.addListener('click',function(){openPlace(p)});markers.push(m);
   });
@@ -534,6 +534,7 @@ function startAdd(){
   go('vMap');
   openSheet('<h2>Add a place</h2><div class="sub">A place you want to visit, or one you\'ve been to</div>'+
     '<button class="aiBtn" onclick="closeSheet();$(\'search\').focus()"><span class="aiIco" style="background:var(--blue-soft);color:var(--blue)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><span><b>Search</b><small>Type a place name</small></span></button>'+
+    '<button class="aiBtn" onclick="stayForm()"><span class="aiIco" style="background:#F3F1FB;color:#5B3FC4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3Z"/></svg></span><span><b>Where I\'m staying</b><small>Hotel or Airbnb address</small></span></button>'+
     '<label class="aiBtn" style="cursor:pointer"><input type="file" accept="image/*" multiple style="display:none" onchange="fromPhotos(this.files)"><span class="aiIco" style="background:#FFF3E0;color:#C2551A"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></span><span><b>From photos</b><small>Pick one or more — AI finds the places</small></span></label>'+
     '<button class="aiBtn" onclick="addHere()"><span class="aiIco" style="background:#E7F4EC;color:#1E7A45"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg></span><span><b>Where I am now</b><small>Places around you</small></span></button>'+
     '<button class="aiBtn" onclick="go(\'vAI\');buildTripForm()"><span class="aiIco" style="background:#F3F1FB;color:#5B3FC4"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg></span><span><b>Build a trip</b><small>AI plans your days in a city</small></span></button>');
@@ -762,7 +763,7 @@ function openPlace(p){
   openSheet('<div class="grab"></div>'+
     '<div class="photo" id="plPhoto"></div>'+
     '<div><h2>'+esc(p.name)+'</h2><div class="locName" id="locName"></div><button class="addrBtn" onclick="showLocal(cur,\'openPlace(cur)\')">'+esc(p.location||'Show the address')+'<span>🌐 Local language</span></button></div>'+
-    segHtml(p.status,'setStatus')+
+    (isStay(p)?'<div class="eyebrow" style="color:#5B3FC4">🏠 Where I\'m staying</div>':segHtml(p.status,'setStatus'))+
     (p.status==='been'?'<div class="rateRow"><span class="lblTxt">Your rating</span>'+starsHtml(p.rating||0,'ratePlace')+'</div>':'')+
     '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
     '<label class="lbl">Notes<textarea class="field" id="plNotes" placeholder="Add a note…" onblur="saveNotes()">'+esc(p.notes||'')+'</textarea></label>'+
@@ -907,7 +908,7 @@ function loadTripPhotos(){
 function colorFor(t){var s=String(t._id||'');var n=0;for(var i=0;i<s.length;i++)n+=s.charCodeAt(i);return t.color&&t.color!=='#4a9eff'?t.color:COLORS[n%COLORS.length]}
 function countFor(id){return places.filter(function(p){return String(p.trip)===id}).length}
 function myMapCard(){
-  var mine=places.filter(function(p){return !p.trip}),todo=mine.filter(function(p){return p.status!=='been'}).length;
+  var mine=places.filter(function(p){return !p.trip&&!isStay(p)}),todo=mine.filter(function(p){return p.status!=='been'}).length;
   return '<article class="trip" style="border:2px solid var(--blue-soft)"><div class="body"><button style="padding:0;flex:none" onclick="openTodo(\'\')" aria-label="Open My map list"><span class="cover" style="background:var(--blue-soft);display:flex;align-items:center;justify-content:center;font-size:28px">📍</span></button>'+
     '<button class="open" onclick="openTodo(\'\')"><h3>My map</h3><small>'+todo+' to do · '+(mine.length-todo)+' done</small></button>'+
     '<button class="sq" aria-label="Show on map" onclick="tripFilter=\'\';go(\'vMap\');renderChips();renderMarkers()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg></button></div></article>';
@@ -916,7 +917,7 @@ function myMapCard(){
 var todoTrip='',todoShowDone=false;
 function openTodo(tripId){
   if(tripId!==undefined)todoTrip=tripId||'';
-  var mine=places.filter(function(p){return todoTrip?String(p.trip)===todoTrip:!p.trip});
+  var mine=places.filter(function(p){return !isStay(p)&&(todoTrip?String(p.trip)===todoTrip:!p.trip)});
   var todo=mine.filter(function(p){return p.status!=='been'}),done=mine.filter(function(p){return p.status==='been'});
   var row=function(p){var i=places.indexOf(p);return '<div class="todo'+(p.status==='been'?' done':'')+'"><button class="tick" aria-label="'+(p.status==='been'?'Mark as to do':'Mark as visited')+'" onclick="toggleTodo('+i+')">'+(p.status==='been'?'✓':'')+'</button><button class="t" onclick="closeSheet();focusPlaceObj('+i+')"><b>'+esc(p.name)+'</b><small>'+esc(p.location||'')+'</small></button></div>'};
   var title=todoTrip?tripName(todoTrip):'My map';
@@ -1050,7 +1051,8 @@ function dayPlaces(){return planTrip.plan.days[planDay].places.map(function(x){r
 function navDay(){
   var ps=dayPlaces();if(!ps.length)return;
   var ll=function(p){return p.lat+','+p.lng},last=ps[ps.length-1];
-  var url='https://www.google.com/maps/dir/?api=1&destination='+ll(last)+(ps.length>1?'&waypoints='+encodeURIComponent(ps.slice(0,-1).slice(0,9).map(ll).join('|')):'');
+  var home=stayFor(planTrip._id);
+  var url='https://www.google.com/maps/dir/?api=1'+(home?'&origin='+ll(home):'')+'&destination='+ll(last)+(ps.length>1?'&waypoints='+encodeURIComponent(ps.slice(0,-1).slice(0,9).map(ll).join('|')):'');
   window.open(url,'_blank');
 }
 function showDay(){
@@ -1175,6 +1177,50 @@ function plugShow(comps,label){
   if(String(d[1]).indexOf('/')>=0)h+='<div class="sub" style="font-size:13px">Voltage differs by region — check the label next to the socket.</div>';
   openSheet(h+'<button class="btn soft" onclick="plugForm()">Another destination</button>');
 }
+/* ---------- Where I'm staying (hotel / Airbnb address) ---------- */
+var stayPending=null;
+function isStay(p){return p&&p.source==='stay'}
+function stayForm(){
+  go('vMap');
+  openSheet('<div class="grab"></div><h2>Where I\'m staying</h2><div class="sub">Paste the address of your hotel or Airbnb — any language is fine.</div>'+
+    '<label class="lbl">Address<textarea class="field" id="stayAddr" style="height:80px" placeholder="e.g. Dimitrakopoulou 13, Athina, 117 42, Greece"></textarea></label>'+
+    '<label class="lbl">Name (optional)<input class="field" id="stayName" placeholder="e.g. Airbnb Koukaki"></label>'+
+    '<label class="lbl">Trip<select class="field" id="stayTrip" onchange="tripChange(this,\'add\')">'+tripOptions(tripFilter||'')+'</select></label>'+
+    '<div id="stayErr" class="sub" style="color:#B42318"></div><button class="btn blue" id="stayGo" onclick="stayFind()">Find on the map</button>');
+}
+function geocodeAddr(q){
+  return new Promise(function(res){new google.maps.Geocoder().geocode({address:q},function(r,st){res(st==='OK'&&r&&r[0]?r[0]:null)})});
+}
+async function stayFind(){
+  var raw=$('stayAddr').value.trim();if(!raw){$('stayErr').textContent='Paste the address';return}
+  var b=$('stayGo');b.disabled=true;b.textContent='Finding…';
+  // Pasted addresses often mix languages (e.g. "…117 42, יוון") — try as is, then without the non-Latin/foreign parts
+  var tries=[raw,raw.split(',').map(function(x){return x.trim()}).filter(function(x){return /[A-Za-z0-9Ͱ-ϿЀ-ӿ]/.test(x)}).join(', '),raw.split(',').slice(0,3).join(',')];
+  var hit=null;for(var i=0;i<tries.length&&!hit;i++)if(tries[i])hit=await geocodeAddr(tries[i]);
+  if(!hit){b.disabled=false;b.textContent='Find on the map';$('stayErr').textContent='Could not find this address. Check the street and number.';return}
+  var loc=hit.geometry.location;
+  stayPending={name:$('stayName').value.trim()||'Where I\'m staying',location:hit.formatted_address,lat:loc.lat(),lng:loc.lng(),trip:$('stayTrip').value==='__new'?'':$('stayTrip').value,rough:hit.geometry.location_type!=='ROOFTOP'};
+  map.panTo(loc);map.setZoom(17);
+  if(window._stayPreview)window._stayPreview.setMap(null);
+  window._stayPreview=new google.maps.Marker({map:map,position:loc,icon:stayIcon(),zIndex:998});
+  openSheet('<div class="grab"></div><div class="eyebrow">Is this the right spot?</div><h2>'+esc(stayPending.name)+'</h2><div class="sub">'+esc(hit.formatted_address)+'</div>'+
+    (stayPending.rough?'<div class="wx far">Approximate location<small>Google found the street but not the exact building. You can still save it.</small></div>':'')+
+    '<button class="btn blue" onclick="staySave()">🏠 Save as where I\'m staying</button><button class="btn soft" onclick="stayCancel()">Change the address</button>');
+}
+function stayCancel(){if(window._stayPreview){window._stayPreview.setMap(null);window._stayPreview=null}stayForm();if(stayPending){$('stayAddr').value=stayPending.location}}
+async function staySave(){
+  var p=stayPending;if(!p)return;
+  try{
+    var s=await api('/places',{method:'POST',body:{name:p.name,location:p.location,placeId:'',lat:p.lat,lng:p.lng,status:'none',source:'stay',trip:p.trip||null}});
+    places.unshift(s);if(window._stayPreview){window._stayPreview.setMap(null);window._stayPreview=null}
+    closeSheet();renderMarkers();renderTrips();toast('🏠 Saved — your stay is on the map');
+  }catch(e){toast(e.message)}
+}
+function stayIcon(){
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="38" height="46" viewBox="0 0 38 46"><path d="M19 45S2 27 2 17a17 17 0 0 1 34 0c0 10-17 28-17 28Z" fill="#5B3FC4" stroke="#fff" stroke-width="2.5"/><path d="M10 18 19 10l9 8v9h-6v-6h-6v6h-6Z" fill="#fff"/></svg>';
+  return {url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg),scaledSize:new google.maps.Size(38,46),anchor:new google.maps.Point(19,45)};
+}
+function stayFor(tripId){return places.find(function(p){return isStay(p)&&(tripId?String(p.trip)===tripId:true)})}
 /* ---------- Find shopping: malls, markets (open days), shopping streets ---------- */
 var shopData=null;
 function shopForm(){
