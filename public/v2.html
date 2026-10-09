@@ -796,6 +796,7 @@ function openPlace(p){
     '<div><h2>'+esc(p.name)+'</h2><div class="locName" id="locName"></div><button class="addrBtn" onclick="showLocal(cur,\'openPlace(cur)\')">'+esc(p.location||'Show the address')+'<span>🌐 Local language</span></button></div>'+
     (isStay(p)?'<div class="eyebrow" style="color:#5B3FC4">🏠 Where I\'m staying</div>':segHtml(p.status,'setStatus'))+
     (p.status==='been'?'<div class="rateRow"><span class="lblTxt">Your rating</span>'+starsHtml(p.rating||0,'ratePlace')+'</div>':'')+
+    (!isStay(p)&&placeCat(p)==='food'?tipCard(tipCountry(p.location)):'')+
     '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
     '<label class="lbl">Notes<textarea class="field" id="plNotes" placeholder="Add a note…" onblur="saveNotes()">'+esc(p.notes||'')+'</textarea></label>'+
     '<div class="two"><button class="btn soft" id="navBtn" onclick="toggleNav()">Navigate</button>'+
@@ -1032,15 +1033,16 @@ function drawPlanView(){
   var h='<div class="grab"></div><div id="planBox" style="display:flex;flex-direction:column;gap:12px"><div><div class="eyebrow">'+esc(planRange(t))+'</div><h2>'+esc(t.name)+'</h2>'+(t.plan.summary?'<div class="sub">'+esc(t.plan.summary)+'</div>':'')+'</div>'+
     '<div class="dayTabs">'+days.map(function(d,i){return '<button class="'+(i===planDay?'on':'')+'" onclick="planDay='+i+';drawPlanView()"><b>Day '+(i+1)+'</b><small>'+fmtD(d.date,{weekday:'short',day:'numeric'})+'</small></button>'}).join('')+'</div>'+
     '<div class="dayHead"><b>'+fmtD(day.date,{weekday:'long',day:'numeric',month:'long'})+'</b>'+(day.theme?'<span>'+esc(day.theme)+'</span>':'')+'</div>'+weatherLine(w,day.date)+'<div>';
+  var tripCC=tipCountry.apply(null,[t.name].concat(days.reduce(function(a,d){return a.concat(d.places.map(function(x){var q=placeById(x.place);return q?q.location:''}))},[])));
   if(!day.places.length)h+='<div class="empty" style="padding:12px">No places on this day.</div>';
   var opts=function(){return days.map(function(d,k){return '<option value="'+k+'"'+(k===planDay?' selected':'')+'>Day '+(k+1)+'</option>'}).join('')};
   day.places.forEach(function(x,j){
     var p=placeById(x.place);if(!p)return;
     h+='<div class="pStop'+(p.status==='been'?' done':'')+'"><span class="num">'+(j+1)+'</span><div class="pInfo"><button class="t" onclick="closeSheet();focusPlaceObj('+places.indexOf(p)+')"><b>'+esc(p.name)+'</b></button>'+
-      '<small>'+[x.time,x.duration].filter(Boolean).map(esc).join(' · ')+'</small>'+(x.tip?'<div class="tip">'+esc(x.tip)+'</div>':'')+'</div>'+
+      '<small>'+[x.time,x.duration].filter(Boolean).map(esc).join(' · ')+'</small>'+(x.tip?'<div class="tip">'+esc(x.tip)+'</div>':'')+(placeCat(p)==='food'?tipShort(tipCountry(p.location)||tripCC):'')+'</div>'+
       '<select class="moveSel" aria-label="Move '+esc(p.name)+' to another day" onchange="movePlace('+j+',this.value)">'+opts()+'</select></div>';
   });
-  h+='</div>'+nightHtml(day)+'<div class="two"><button class="btn dark" onclick="navDay()">Navigate day</button><button class="btn soft" onclick="showDay()">Show on map</button></div>'+
+  h+='</div>'+tipCard(tripCC)+nightHtml(day)+'<div class="two"><button class="btn dark" onclick="navDay()">Navigate day</button><button class="btn soft" onclick="showDay()">Show on map</button></div>'+
     '<div class="two"><button class="btn soft" onclick="shareTrip(\''+t._id+'\')">Share by days</button><button class="btn soft" onclick="planForm()">Change dates</button></div></div>';
   openSheet(h);
 }
@@ -1128,6 +1130,55 @@ async function showLocal(p,back){
   }catch(e){openSheet('<h2>'+esc(p.name)+'</h2><p class="sub">'+esc(e.message)+'</p>'+bk)}
 }
 function copyTxt(b){var t=b.getAttribute('data-t');(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('Copied')}).catch(function(){prompt('Copy:',t)})}
+/* ---------- Tipping: is service included, and what to leave, by country ---------- */
+// [included: 'yes' | 'no' | 'check' (often a service charge on the bill), what to leave]
+var TIPS={
+US:['no','18–20% at sit-down restaurants; $1–2 a drink at bars'],CA:['no','15–20% at restaurants'],MX:['no','10–15%'],
+GB:['check','Often a 12.5% service charge on the bill. If not, leave 10–12.5%'],IE:['check','If no service charge, leave 10–15%'],
+FR:['yes','Service is included by law. Round up or leave ~5% for great service'],DE:['no','Round up 5–10% and say the total when you pay'],
+AT:['no','Round up 5–10% and say the total when you pay'],CH:['yes','Included. Round up for good service'],
+IT:['check','“Coperto”/“servizio” may be on the bill. If not, round up or 5–10%'],ES:['yes','Not expected. Leave small change or 5–10% for great service'],
+PT:['no','5–10%'],GR:['no','5–10% at restaurants; round up at cafés and tavernas'],CY:['check','Often 10% service on the bill. If not, leave ~10%'],
+NL:['yes','Included. Round up or 5–10% for good service'],BE:['yes','Included. Round up for good service'],LU:['yes','Included. Round up'],
+SE:['yes','Included. Round up if you like'],NO:['yes','Included. Round up if you like'],DK:['yes','Included. Round up if you like'],FI:['yes','Included. Tipping is not expected'],IS:['yes','Included. Tipping is not expected'],
+PL:['no','~10%'],CZ:['no','~10%, round up'],SK:['no','5–10%'],HU:['check','Often 10–15% service on the bill — then no extra. If not, leave 10%'],
+HR:['no','~10%'],SI:['no','5–10%'],RO:['no','~10%'],BG:['no','~10%'],RS:['no','~10%'],ME:['no','~10%'],AL:['no','~10%'],MT:['no','5–10%'],
+TR:['no','5–10%'],GE:['check','Often 10% service on the bill. If not, leave ~10%'],IL:['no','12–15%. Tip in cash; it can\'t always be added to the card'],
+AE:['check','Often a service charge on the bill. If not, leave 10–15%'],EG:['check','10–15%, even when there is a service charge'],MA:['no','~10%'],JO:['check','Often 10% service on the bill. Add 5% extra'],
+JP:['yes','No tipping. Leaving money can confuse or offend'],KR:['yes','No tipping'],CN:['yes','No tipping'],HK:['check','Usually 10% service on the bill. Leave small change'],
+SG:['check','10% service charge is on the bill. No extra needed'],TW:['check','Upscale places add 10%. Otherwise no tipping'],TH:['check','Not expected. Leave ~10% or round up if no service charge'],
+VN:['no','Not expected; 5–10% is appreciated'],ID:['check','Service charge is often on the bill. Extra is optional'],MY:['check','Service charge is often on the bill. Extra is optional'],
+PH:['check','Service charge is often on the bill. If not, leave ~10%'],IN:['check','If no service charge, leave ~10%'],LK:['check','Service charge is often on the bill. Extra 5–10% is welcome'],
+AU:['yes','Not expected. 10% for great service'],NZ:['yes','Not expected. 10% for great service'],ZA:['no','10–15%'],
+BR:['check','10% “serviço” is usually on the bill. No extra needed'],AR:['no','~10%, in cash'],CL:['check','10% is usually suggested on the bill'],PE:['no','~10%'],CO:['check','10% service is often suggested on the bill'],CR:['yes','10% service is included by law. Extra optional'],
+};
+var TIP_NAMES={'united states':'US','usa':'US','canada':'CA','mexico':'MX','united kingdom':'GB','uk':'GB','england':'GB','scotland':'GB','ireland':'IE','france':'FR','germany':'DE','austria':'AT','switzerland':'CH','italy':'IT','spain':'ES','portugal':'PT','greece':'GR','cyprus':'CY','netherlands':'NL','the netherlands':'NL','belgium':'BE','luxembourg':'LU','sweden':'SE','norway':'NO','denmark':'DK','finland':'FI','iceland':'IS','poland':'PL','czechia':'CZ','czech republic':'CZ','slovakia':'SK','hungary':'HU','croatia':'HR','slovenia':'SI','romania':'RO','bulgaria':'BG','serbia':'RS','montenegro':'ME','albania':'AL','malta':'MT','turkey':'TR','türkiye':'TR','georgia':'GE','israel':'IL','united arab emirates':'AE','uae':'AE','egypt':'EG','morocco':'MA','jordan':'JO','japan':'JP','south korea':'KR','korea':'KR','china':'CN','hong kong':'HK','singapore':'SG','taiwan':'TW','thailand':'TH','vietnam':'VN','indonesia':'ID','malaysia':'MY','philippines':'PH','india':'IN','sri lanka':'LK','australia':'AU','new zealand':'NZ','south africa':'ZA','brazil':'BR','argentina':'AR','chile':'CL','peru':'PE','colombia':'CO','costa rica':'CR',
+'ελλάδα':'GR','ישראל':'IL','deutschland':'DE','españa':'ES','italia':'IT','日本':'JP','대한민국':'KR'};
+var TIP_CITIES={athens:'GR',thessaloniki:'GR',crete:'GR',rhodes:'GR',mykonos:'GR',santorini:'GR','tel aviv':'IL',jerusalem:'IL',eilat:'IL',haifa:'IL',paris:'FR',london:'GB',berlin:'DE',munich:'DE',rome:'IT',milan:'IT',barcelona:'ES',madrid:'ES',lisbon:'PT',porto:'PT',amsterdam:'NL',vienna:'AT',prague:'CZ',budapest:'HU',istanbul:'TR',dubai:'AE',tokyo:'JP',osaka:'JP',kyoto:'JP',seoul:'KR',busan:'KR',bangkok:'TH','new york':'US','los angeles':'US','las vegas':'US',miami:'US',larnaca:'CY',limassol:'CY',tbilisi:'GE',batumi:'GE'};
+function tipCountry(){
+  for(var a=0;a<arguments.length;a++){
+    var str=String(arguments[a]||'').toLowerCase().trim();if(!str)continue;
+    var parts=str.split(',').map(function(x){return x.replace(/\d+/g,'').trim()}).reverse();
+    for(var i=0;i<parts.length;i++){if(TIP_NAMES[parts[i]])return TIP_NAMES[parts[i]];if(TIP_CITIES[parts[i]])return TIP_CITIES[parts[i]]}
+    for(var k in TIP_NAMES)if(k.length>3&&str.indexOf(k)>=0)return TIP_NAMES[k];
+    for(var c in TIP_CITIES)if(str.indexOf(c)>=0)return TIP_CITIES[c];
+  }
+  return '';
+}
+function tipCountryName(cc){for(var k in TIP_NAMES)if(TIP_NAMES[k]===cc&&/^[a-z ]+$/.test(k)&&k.length>3)return k.replace(/\b\w/g,function(m){return m.toUpperCase()});return cc}
+var TIP_LABEL={yes:'✓ Service usually included',no:'✕ Tip not included',check:'⚠️ Check the bill — often a service charge'};
+// Big card (place sheet / trip plan)
+function tipCard(cc){
+  var t=TIPS[cc];if(!t)return '';
+  var bg=t[0]==='yes'?'#E7F4EC;color:#1E7A45':t[0]==='no'?'#FDEDEA;color:#9A3412':'#FFF7E6;color:#6B4A0F';
+  return '<div class="holLine" style="background:'+bg+'">💶 <b>Tipping in '+esc(tipCountryName(cc))+': '+TIP_LABEL[t[0]]+'</b><span>Recommended: '+esc(t[1])+'</span></div>';
+}
+// One short line under a restaurant stop
+function tipShort(cc){
+  var t=TIPS[cc];if(!t)return '';
+  return '<div class="tip" style="opacity:1;color:#8A5A12">💶 '+(t[0]==='yes'?'Service included':t[0]==='no'?'Tip not included':'Check bill for service')+' · '+esc(t[1].split('.')[0].split(';')[0])+'</div>';
+}
+function isFoodName(name,why){return placeCat({name:name})==='food'||/restaurant|caf[eé]|taverna|lunch|dinner|breakfast|brunch|eat|food/i.test(why||'')}
 /* ---------- Power plugs: socket types, voltage and frequency by country ---------- */
 // [types, volts, Hz]  (IEC plug letters)
 var PLUGS={
@@ -1701,6 +1752,8 @@ function drawPlan(){
   var W=plan.weather;
   if(plan.startDate&&daysUntil(plan.startDate)>EVENT_WINDOW)h+='<div class="holLine" style="background:#F3F1FB;color:#3F2A99">🎧 <b>Parties: too far ahead</b><span>Events are listed only 1–2 weeks before. Save the trip, then check each night from '+esc(eventsOpenFrom(plan.startDate).toLocaleDateString('en-GB',{day:'numeric',month:'short'}))+' (or use Ask AI → Events for my trip).</span></div>';
   if(W&&W.summary)h+='<div class="holLine" style="background:#EAF3FD;color:#1B4F8A">'+(W.kind==='forecast'?'🌤 <b>Forecast: ':'🌤 <b>Typical weather: ')+esc(W.summary)+'</b><span>'+(W.kind==='forecast'?'From the weather forecast for your dates.':'Estimate based on the same dates in past years.')+'</span></div>';
+  var planCC=tipCountry(plan.city,plan.title,((plan.days||[])[0]&&(plan.days[0].stops||[])[0]||{}).address);
+  h+=tipCard(planCC);
   // holidays: one compact line each, or a single all-clear line
   h+=hol.length?hol.map(function(x){return '<div class="holLine">🗓 <b>'+esc(x.date?fmtDay(x.date):'')+' — '+esc(x.name)+'</b>'+(x.note?'<span>'+esc(x.note)+'</span>':'')+'</div>'}).join('')
     :'<div class="holLine ok">✓ No public holidays on your dates</div>';
@@ -1713,7 +1766,7 @@ function drawPlan(){
     (d.stops||[]).forEach(function(st){
       var i=aiResults.push({name:st.name,why:(st.time?st.time+' · ':'')+(st.why||''),address:st.address,lat:st.lat,lng:st.lng,placeId:st.placeId,day:di,time:st.time||'',tip:st.why||''})-1;
       h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(st.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"></button>'+
-        '<button class="t" onclick="aiShow('+i+')"><b>'+esc(st.name)+'</b><small>'+esc(aiResults[i].why)+'</small></button>'+
+        '<button class="t" onclick="aiShow('+i+')"><b>'+esc(st.name)+'</b><small>'+esc(aiResults[i].why)+'</small>'+(isFoodName(st.name,st.why)?tipShort(tipCountry(st.address)||planCC):'')+'</button>'+
         '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')">+ Add</button></div>';
     });
     var nights=window._clubByDay[d.date]||[];
@@ -1826,7 +1879,7 @@ function aiShow(i){
   var p=aiResults[i];
   openSheet('<div class="photo" id="dtPhoto"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></div>'+
     '<div><h2>'+esc(p.name)+'</h2><div class="locName" id="locName"></div>'+(p.why?'<div class="sub" style="color:var(--ink);font-weight:600">'+esc(p.why)+'</div>':'')+'<button class="addrBtn" onclick="showLocal(aiResults['+i+'],\'aiShow('+i+')\')"><span id="dtAddr">'+esc(p.address||'Show the address')+'</span><span>🌐 Local language</span></button></div>'+
-    evBlock(p.ev)+
+    evBlock(p.ev)+(isFoodName(p.name,p.why)?tipCard(tipCountry(p.address)):'')+
     '<div id="dtInfo" class="sub">Loading details…</div>'+
     '<button class="btn blue" id="dtAdd" onclick="aiAdd('+i+')">+ Add to map or trip</button>'+
     '<div class="two"><button class="btn soft" id="navBtn" onclick="toggleNav()">Navigate</button>'+
