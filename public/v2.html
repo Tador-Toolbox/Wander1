@@ -430,10 +430,40 @@ function go(v){
 }
 
 /* ---------- map ---------- */
-function pinIcon(status,rated){
+var CAT_TAGS={museum:['museum','art-gallery'],
+  food:['restaurant','cafe','bakery','bar','meal-takeaway','meal-delivery','food','ice-cream-shop','coffee-shop'],
+  sight:['tourist-attraction','park','church','place-of-worship','synagogue','mosque','hindu-temple','amusement-park','zoo','aquarium','stadium','natural-feature','landmark','historical-landmark','castle','monument']};
+var CAT_WORDS={museum:/museum|gallery|μουσε|מוזיאון|גלרי/i,
+  food:/restaurant|caf[eé]|coffee|bakery|taverna|tavern|bistro|bar\b|pizz|sushi|ramen|grill|souvlaki|gyro|deli|brunch|מסעד|קפה|ταβέρν|εστιατ/i,
+  sight:/temple|acropolis|castle|church|cathedral|monument|ruins|park|palace|tower|square|ancient|hill|beach|viewpoint|stadium|ναός|πάρκο/i};
+function placeCat(p){
+  var t=p.tags||[],k;
+  for(k in CAT_TAGS)if(t.some(function(x){return CAT_TAGS[k].indexOf(x)>=0}))return k;
+  for(k in CAT_WORDS)if(CAT_WORDS[k].test(p.name||''))return k;
+  return '';
+}
+// Places saved without tags: read their Google type once, store it, redraw the pin
+var catAsked={};
+function fillCat(p,m){
+  if((p.tags||[]).length||!p.placeId||catAsked[p._id]||!window.google||!google.maps.places)return;
+  catAsked[p._id]=1;
+  new google.maps.places.PlacesService(map).getDetails({placeId:p.placeId,fields:['types']},function(r,st){
+    if(st!=='OK'||!r||!r.types)return;
+    var tags=r.types.filter(function(x){return x!=='point_of_interest'&&x!=='establishment'}).map(function(x){return x.replace(/_/g,'-')}).slice(0,4);
+    if(!tags.length)return;
+    p.tags=tags;
+    if(m&&m.getMap())m.setIcon(pinIcon(p.status,p.rating,placeCat(p)));
+    api('/places/'+p._id,{method:'PUT',body:{tags:tags}}).catch(function(){});
+  });
+}
+function pinIcon(status,rated,cat){
   var c=status==='been'?'#1F5FD6':status==='tobe'?'#C2551A':'#12203A';
-  var filled=status!=='tobe';
-  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="30" height="38" viewBox="0 0 30 38"><path d="M15 37C15 37 2 22 2 14a13 13 0 0 1 26 0c0 8-13 23-13 23Z" fill="'+(filled?c:'#fff')+'" stroke="'+c+'" stroke-width="2.5"/><circle cx="15" cy="14" r="5" fill="'+(filled?'#fff':c)+'"/></svg>';
+  var filled=status!=='tobe',g=filled?'#fff':c;
+  var glyph=cat==='museum'?'<g fill="none" stroke="'+g+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11.5 15 8l6 3.5Z" fill="'+g+'"/><path d="M10.5 13v5M13.5 13v5M16.5 13v5M19.5 13v5M9 19.5h12"/></g>'
+    :cat==='food'?'<g fill="none" stroke="'+g+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 8v12M9.3 8v3.2a1.7 1.7 0 0 0 3.4 0V8"/><path d="M19.5 20V8c-1.8.8-2.6 2.8-2.6 5.2V15h2.6"/></g>'
+    :cat==='sight'?'<path d="m15 7.6 2 4.1 4.5.6-3.3 3.1.8 4.4-4-2.1-4 2.1.8-4.4-3.3-3.1 4.5-.6Z" fill="'+g+'"/>'
+    :'<circle cx="15" cy="14" r="5" fill="'+g+'"/>';
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="30" height="38" viewBox="0 0 30 38"><path d="M15 37C15 37 2 22 2 14a13 13 0 0 1 26 0c0 8-13 23-13 23Z" fill="'+(filled?c:'#fff')+'" stroke="'+c+'" stroke-width="2.5"/>'+glyph+'</svg>';
   return {url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg),scaledSize:new google.maps.Size(30,38),anchor:new google.maps.Point(15,37),labelOrigin:new google.maps.Point(15,-8)};
 }
 async function initMap(){
@@ -483,9 +513,10 @@ function renderMarkers(){
   markers.forEach(function(m){m.setMap(null)});markers=[];
   var list=visible();
   list.forEach(function(p){
-    var m=new google.maps.Marker({map:map,position:{lat:p.lat,lng:p.lng},title:p.name,icon:isStay(p)?stayIcon():pinIcon(p.status,p.rating),zIndex:isStay(p)?900:undefined,
+    var m=new google.maps.Marker({map:map,position:{lat:p.lat,lng:p.lng},title:p.name,icon:isStay(p)?stayIcon():pinIcon(p.status,p.rating,placeCat(p)),zIndex:isStay(p)?900:undefined,
       label:dayFilter?{text:String(dayFilter.ids.indexOf(p._id)+1),fontSize:'12px',fontWeight:'800',color:'#fff',className:'pinNum'}:p.rating?{text:'★'+p.rating,fontSize:'11px',fontWeight:'800',color:'#12203A',className:'pinRate'}:null});
     m.addListener('click',function(){openPlace(p)});markers.push(m);
+    if(!isStay(p))fillCat(p,m);
   });
   var been=list.filter(function(p){return p.status==='been'}).length;
 }
