@@ -1385,8 +1385,10 @@ async function addTripEvent(ni,ei){
     renderMarkers();renderTrips();b.textContent='✓ Added';toast(hit?'Added to Day '+(n.i+1)+' of '+t.name:'Saved to Day '+(n.i+1)+' (venue not found on the map)');
   }catch(err){b.disabled=false;b.textContent='+ Day '+(n.i+1);toast(err.message)}
 }
-async function newTrip(){
-  var n=prompt('Trip name');if(!n)return;
+// "+ New trip" opens the AI trip planner; an empty trip is one tap away
+function newTrip(){go('vAI');buildTripForm(true)}
+async function emptyTrip(){
+  var n=prompt('Trip name');if(!n)return;closeSheet();go('vTrips');
   try{var t=await api('/trips',{method:'POST',body:{name:n}});trips.unshift(t);renderTrips();renderChips();toast('Trip created')}
   catch(e){toast(e.message)}
 }
@@ -1604,7 +1606,7 @@ function rpPick(k){
 }
 var btPace='balanced';
 function setPace(v){btPace=v;document.querySelectorAll('#btPace button').forEach(function(b,i){b.className=['relaxed','balanced','packed'][i]===v?'on':''})}
-function buildTripForm(){
+function buildTripForm(fromTrips){
   var t=new Date(),d=function(x){return new Date(t.getTime()+x*86400000).toISOString().slice(0,10)};
   openSheet('<h2>Build a trip</h2>'+
     '<label class="lbl">City or destination<input class="field" id="btCity" placeholder="e.g. Seoul"></label>'+
@@ -1613,7 +1615,8 @@ function buildTripForm(){
       [['relaxed','Relaxed','2–3 a day'],['balanced','Balanced','4 a day'],['packed','Packed','6 a day']].map(function(o){return '<button class="'+(o[0]===btPace?'on':'')+'" onclick="setPace(\''+o[0]+'\')"><b>'+o[1]+'</b><small>'+o[2]+'</small></button>'}).join('')+'</div></div>'+
     '<label class="lbl">What are you looking for?<textarea class="field" id="btWish" style="height:90px" placeholder="e.g. street food, techno clubs at night, one day of nature, not too many museums"></textarea></label>'+
     '<div class="sub" style="margin-top:-6px">Up to 14 days. Holidays and events for those dates are included.</div>'+
-    '<button class="btn blue" onclick="buildTrip()">Build my trip</button>');
+    '<button class="btn blue" onclick="buildTrip()">Build my trip</button>'+
+    (fromTrips?'<button class="linkBtn" onclick="emptyTrip()">Or just create an empty trip</button>':''));
   rp={from:null,to:null,month:new Date(t.getFullYear(),t.getMonth(),1),max:14};drawRP();
   try{new google.maps.places.Autocomplete($('btCity'),{types:['(regions)'],fields:['name']}).addListener('place_changed',function(){})}catch(e){}
 }
