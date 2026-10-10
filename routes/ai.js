@@ -562,7 +562,7 @@ router.post('/coffee', auth, async (req, res) => {
     }
     // Award winners first (newest award first), then by Google rating (more reviews breaks ties)
     const score = c => (c.rating || 0) + Math.min(c.reviews || 0, 2000) / 20000;
-    if (lat != null) cafes.sort((a, b) => a.distM - b.distM);   // near me: nearest first
+    if (lat != null) cafes.sort((a, b) => (b.winner ? 1 : 0) - (a.winner ? 1 : 0) || a.distM - b.distM);   // near me: award winners first, each group nearest first
     else cafes.sort((a, b) => (Number(b.winner) || 0) - (Number(a.winner) || 0) || score(b) - score(a));
     res.json({ found: true, total: cafes.length, cafes: cafes.slice(0, 25) });
   } catch (e) {

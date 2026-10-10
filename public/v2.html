@@ -1212,7 +1212,7 @@ async function findCoffee(city){
     });
     aiShowResults('Specialty coffee '+(body.lat!=null?'near you':'in '+body.city)+' · '+r.total+' in the guide',items);
     var more=$('aiMoreBtn');if(more)more.remove();
-    $('aiRes').insertAdjacentHTML('beforeend','<div class="sub" style="font-size:12px;margin-top:8px">Picks from <a href="https://europeancoffeetrip.com/'+encodeURIComponent((body.city||'').toLowerCase())+'/" target="_blank" style="color:var(--blue)">European Coffee Trip</a>'+(body.lat!=null?', nearest first (within ~4 km of you).':'. Award winners first, then by Google rating.')+'</div>');
+    $('aiRes').insertAdjacentHTML('beforeend','<div class="sub" style="font-size:12px;margin-top:8px">Picks from <a href="https://europeancoffeetrip.com/'+encodeURIComponent((body.city||'').toLowerCase())+'/" target="_blank" style="color:var(--blue)">European Coffee Trip</a>'+(body.lat!=null?'. Award winners first, then the rest — each nearest first (within ~4 km of you).':'. Award winners first, then by Google rating.')+'</div>');
   }catch(e){aiErr(e)}
 }
 /* ---------- Power plugs: socket types, voltage and frequency by country ---------- */
