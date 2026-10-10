@@ -796,7 +796,6 @@ function openPlace(p){
     '<div class="photo" id="plPhoto"></div>'+
     '<div><h2>'+esc(p.name)+'</h2><div class="locName" id="locName"></div><button class="addrBtn" onclick="showLocal(cur,\'openPlace(cur)\')">'+esc(p.location||'Show the address')+'<span>🌐 Local language</span></button></div>'+
     (isStay(p)?'<div class="eyebrow" style="color:#5B3FC4">🏠 Where I\'m staying</div>':segHtml(p.status,'setStatus'))+
-    (placeCat(p)==='food'?tipCard(tipCountry(p.location)):'')+
     (p.status==='been'?'<div class="rateRow"><span class="lblTxt">Your rating</span>'+starsHtml(p.rating||0,'ratePlace')+'</div>':'')+
     (!isStay(p)&&placeCat(p)==='food'?tipCard(tipCountry(p.location)):'')+
     '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
@@ -1922,7 +1921,7 @@ function aiShow(i){
   var p=aiResults[i];
   openSheet('<div class="photo" id="dtPhoto"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></div>'+
     '<div><h2>'+esc(p.name)+'</h2><div class="locName" id="locName"></div>'+(p.why?'<div class="sub" style="color:var(--ink);font-weight:600">'+esc(p.why)+'</div>':'')+'<button class="addrBtn" onclick="showLocal(aiResults['+i+'],\'aiShow('+i+')\')"><span id="dtAddr">'+esc(p.address||'Show the address')+'</span><span>🌐 Local language</span></button></div>'+
-    evBlock(p.ev)+(isFoodName(p.name,p.why)?tipCard(tipCountry(p.address)):'')+
+    evBlock(p.ev)+
     '<div id="dtInfo" class="sub">Loading details…</div>'+
     '<button class="btn blue" id="dtAdd" onclick="aiAdd('+i+')">+ Add to map or trip</button>'+
     '<div class="two"><button class="btn soft" id="navBtn" onclick="toggleNav()">Navigate</button>'+
