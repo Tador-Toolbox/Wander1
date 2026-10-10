@@ -514,6 +514,30 @@ router.get('/local-name', auth, async (req, res) => {
 });
 
 /* ─────────────────────────────────────────
+   POST /api/ai/coffee  { city, lat?, lng? }
+   Specialty cafés from the European Coffee Trip guide for that city (Europe only),
+   nearest first when a location is given.
+───────────────────────────────────────── */
+router.post('/coffee', auth, async (req, res) => {
+  try {
+    const city = String(req.body.city || '').trim();
+    if (!city) return res.status(400).json({ error: 'Which city?' });
+    const g = await require('../services/coffeeTrip').cityGuide(city);
+    if (!g.found) return res.json({ found: false, cafes: [] });
+    const lat = req.body.lat != null ? +req.body.lat : null, lng = req.body.lng != null ? +req.body.lng : null;
+    let cafes = (g.cafes || []).map(c => ({ ...c }));
+    if (lat != null) {
+      cafes.forEach(c => { const dx = (c.lat - lat) * 111, dy = (c.lng - lng) * 111 * Math.cos(lat * Math.PI / 180); c.distM = Math.round(Math.sqrt(dx * dx + dy * dy) * 1000); });
+      cafes.sort((a, b) => a.distM - b.distM);
+    }
+    res.json({ found: true, total: cafes.length, cafes: cafes.slice(0, 25) });
+  } catch (e) {
+    console.error('[ai/coffee]', e.message);
+    res.status(500).json({ error: 'Could not load the coffee guide' });
+  }
+});
+
+/* ─────────────────────────────────────────
    POST /api/ai/story/:tripId
 ───────────────────────────────────────── */
 router.post('/story/:tripId', auth, async (req, res) => {
