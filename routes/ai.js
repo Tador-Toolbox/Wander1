@@ -513,6 +513,7 @@ router.get('/local-name', auth, async (req, res) => {
   } catch (e) { console.error('[ai/local-name]', e.message); res.status(500).json({ error: 'Could not load the local name' }); }
 });
 
+const cityAtCache = new Map();
 /* GET /api/ai/city-at?lat=&lng= — nearest town/city name (fallback when the phone's geocoder fails) */
 router.get('/city-at', auth, async (req, res) => {
   try {
@@ -524,10 +525,18 @@ router.get('/city-at', auth, async (req, res) => {
     const pick = t => comps.find(c => c.types.includes(t))?.long_name || '';
     let city = pick('locality') || pick('postal_town') || pick('administrative_area_level_3'), country = pick('country');
     if (!city) {
-      const n = await get(`https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&rankby=distance&type=locality&language=en&key=${key}`);
-      city = n.results?.[0]?.name || '';
+      // Google's Geocoding API may be off for this key → OpenStreetMap reverse geocoding (free, English names)
+      const ck = `${(+lat).toFixed(2)},${(+lng).toFixed(2)}`;
+      if (cityAtCache.has(ck)) return res.json(cityAtCache.get(ck));
+      try {
+        const o = await (await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&accept-language=en`, { headers: { 'User-Agent': 'Wander1 travel app (wander1.onrender.com)' } })).json();
+        const a = o.address || {};
+        city = a.city || a.town || a.village || a.municipality || a.county || '';
+        country = country || a.country || '';
+      } catch (e) { console.log('[ai/city-at] osm error', e.message); }
+      console.log('[ai/city-at] google geocode', g.status || 'error', '→ osm:', city || 'none');
+      if (city) cityAtCache.set(ck, { city, country });
     }
-    if (!city) console.log('[ai/city-at] no city for', lat, lng, g.status);
     res.json({ city, country });
   } catch (e) { res.json({ city: '' }); }
 });
