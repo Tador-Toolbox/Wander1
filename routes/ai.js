@@ -557,8 +557,12 @@ router.post('/coffee', auth, async (req, res) => {
     let cafes = (g.cafes || []).map(c => ({ ...c }));
     if (lat != null) {
       cafes.forEach(c => { const dx = (c.lat - lat) * 111, dy = (c.lng - lng) * 111 * Math.cos(lat * Math.PI / 180); c.distM = Math.round(Math.sqrt(dx * dx + dy * dy) * 1000); });
-      cafes.sort((a, b) => a.distM - b.distM);
+      const near = cafes.filter(c => c.distM <= 4000);           // near me = within ~4 km (walk / short ride)
+      if (near.length >= 3) cafes = near;
     }
+    // Award winners first (newest award first), then by Google rating (more reviews breaks ties)
+    const score = c => (c.rating || 0) + Math.min(c.reviews || 0, 2000) / 20000;
+    cafes.sort((a, b) => (Number(b.winner) || 0) - (Number(a.winner) || 0) || score(b) - score(a));
     res.json({ found: true, total: cafes.length, cafes: cafes.slice(0, 25) });
   } catch (e) {
     console.error('[ai/coffee]', e.message);

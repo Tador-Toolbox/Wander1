@@ -1205,13 +1205,13 @@ async function findCoffee(city){
     if(!r.found){if(r.error){coffeeAsk(r.error+' for '+body.city+'. Try again, or another city.');return}
       $('aiRes').innerHTML='<button class="back" onclick="aiBack()">‹ Back</button><h2>Specialty coffee</h2><div class="loading">No European Coffee Trip guide for '+esc(body.city)+'. The guide covers European cities only.</div>';return}
     var items=r.cafes.map(function(c){
-      var bits=[];if(c.winner)bits.push('🏆 '+c.winner+' winner');if(c.rating)bits.push('★'+c.rating);
+      var bits=[];if(c.winner)bits.push('🏆 Award-winning café ('+c.winner+')');if(c.rating)bits.push('★'+c.rating);
       if(c.distM!=null)bits.push(c.distM<1000?c.distM+' m':(c.distM/1000).toFixed(1)+' km');
       return {name:c.name,why:'☕ '+bits.join(' · '),address:c.address,lat:c.lat,lng:c.lng,placeId:c.placeId,guideUrl:c.url};
     });
     aiShowResults('Specialty coffee '+(body.lat!=null?'near you':'in '+body.city)+' · '+r.total+' in the guide',items);
     var more=$('aiMoreBtn');if(more)more.remove();
-    $('aiRes').insertAdjacentHTML('beforeend','<div class="sub" style="font-size:12px;margin-top:8px">Picks from <a href="https://europeancoffeetrip.com/'+encodeURIComponent((body.city||'').toLowerCase())+'/" target="_blank" style="color:var(--blue)">European Coffee Trip</a>'+(body.lat!=null?', nearest first.':', in the guide\'s order.')+'</div>');
+    $('aiRes').insertAdjacentHTML('beforeend','<div class="sub" style="font-size:12px;margin-top:8px">Picks from <a href="https://europeancoffeetrip.com/'+encodeURIComponent((body.city||'').toLowerCase())+'/" target="_blank" style="color:var(--blue)">European Coffee Trip</a>'+'. Award winners first, then by Google rating'+(body.lat!=null?' (within ~4 km of you).':'.')+'</div>');
   }catch(e){aiErr(e)}
 }
 /* ---------- Power plugs: socket types, voltage and frequency by country ---------- */
