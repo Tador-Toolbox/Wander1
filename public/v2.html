@@ -796,6 +796,7 @@ function openPlace(p){
     '<div class="photo" id="plPhoto"></div>'+
     '<div><h2>'+esc(p.name)+'</h2><div class="locName" id="locName"></div><button class="addrBtn" onclick="showLocal(cur,\'openPlace(cur)\')">'+esc(p.location||'Show the address')+'<span>🌐 Local language</span></button></div>'+
     (isStay(p)?'<div class="eyebrow" style="color:#5B3FC4">🏠 Where I\'m staying</div>':segHtml(p.status,'setStatus'))+
+    (placeCat(p)==='food'?tipCard(tipCountry(p.location)):'')+
     (p.status==='been'?'<div class="rateRow"><span class="lblTxt">Your rating</span>'+starsHtml(p.rating||0,'ratePlace')+'</div>':'')+
     (!isStay(p)&&placeCat(p)==='food'?tipCard(tipCountry(p.location)):'')+
     '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
@@ -1033,8 +1034,9 @@ function drawPlanView(){
   var w=planWeather&&!planWeather.loading&&!planWeather.none?planWeather:null;
   var h='<div class="grab"></div><div id="planBox" style="display:flex;flex-direction:column;gap:12px"><div><div class="eyebrow">'+esc(planRange(t))+'</div><h2>'+esc(t.name)+'</h2>'+(t.plan.summary?'<div class="sub">'+esc(t.plan.summary)+'</div>':'')+'</div>'+
     '<div class="dayTabs">'+days.map(function(d,i){return '<button class="'+(i===planDay?'on':'')+'" onclick="planDay='+i+';drawPlanView()"><b>Day '+(i+1)+'</b><small>'+fmtD(d.date,{weekday:'short',day:'numeric'})+'</small></button>'}).join('')+'</div>'+
-    '<div class="dayHead"><b>'+fmtD(day.date,{weekday:'long',day:'numeric',month:'long'})+'</b>'+(day.theme?'<span>'+esc(day.theme)+'</span>':'')+'</div>'+weatherLine(w,day.date)+'<div>';
-  var tripCC=tipCountry.apply(null,[t.name].concat(days.reduce(function(a,d){return a.concat(d.places.map(function(x){var q=placeById(x.place);return q?q.location:''}))},[])));
+    '<div class="dayHead"><b>'+fmtD(day.date,{weekday:'long',day:'numeric',month:'long'})+'</b>'+(day.theme?'<span>'+esc(day.theme)+'</span>':'')+'</div>'+weatherLine(w,day.date);
+  var tripCC=tipCountry.apply(null,[t.plan.city||'',t.name].concat(days.reduce(function(a,d){return a.concat(d.places.map(function(x){var q=placeById(x.place);return q?q.location:''}))},[])));
+  h+=tipCard(tripCC)+'<div>';
   if(!day.places.length)h+='<div class="empty" style="padding:12px">No places on this day.</div>';
   var opts=function(){return days.map(function(d,k){return '<option value="'+k+'"'+(k===planDay?' selected':'')+'>Day '+(k+1)+'</option>'}).join('')};
   day.places.forEach(function(x,j){
@@ -1043,7 +1045,7 @@ function drawPlanView(){
       '<small>'+[x.time,x.duration].filter(Boolean).map(esc).join(' · ')+'</small>'+(x.tip?'<div class="tip">'+esc(x.tip)+'</div>':'')+(placeCat(p)==='food'?tipShort(tipCountry(p.location)||tripCC):'')+'</div>'+
       '<select class="moveSel" aria-label="Move '+esc(p.name)+' to another day" onchange="movePlace('+j+',this.value)">'+opts()+'</select></div>';
   });
-  h+='</div>'+tipCard(tripCC)+nightHtml(day)+'<div class="two"><button class="btn dark" onclick="navDay()">Navigate day</button><button class="btn soft" onclick="showDay()">Show on map</button></div>'+
+  h+='</div>'+nightHtml(day)+'<div class="two"><button class="btn dark" onclick="navDay()">Navigate day</button><button class="btn soft" onclick="showDay()">Show on map</button></div>'+
     '<div class="two"><button class="btn soft" onclick="shareTrip(\''+t._id+'\')">Share by days</button><button class="btn soft" onclick="planForm()">Change dates</button></div></div>';
   openSheet(h);
 }
