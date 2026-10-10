@@ -551,7 +551,8 @@ router.post('/coffee', auth, async (req, res) => {
     const city = String(req.body.city || '').trim();
     if (!city) return res.status(400).json({ error: 'Which city?' });
     const g = await require('../services/coffeeTrip').cityGuide(city);
-    if (!g.found) return res.json({ found: false, cafes: [] });
+    console.log(`[ai/coffee] city "${city}" → ${g.city}: ${g.found ? (g.cafes || []).length + ' cafés' : 'no guide'}${g.error ? ' (' + g.error + ')' : ''}`);
+    if (!g.found) return res.json({ found: false, cafes: [], error: g.error || '', slug: g.city });
     const lat = req.body.lat != null ? +req.body.lat : null, lng = req.body.lng != null ? +req.body.lng : null;
     let cafes = (g.cafes || []).map(c => ({ ...c }));
     if (lat != null) {

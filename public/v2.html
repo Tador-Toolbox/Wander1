@@ -1202,7 +1202,8 @@ async function findCoffee(city){
     if(!city){var pos=await getPos();if(!pos)throw new Error('location is blocked — type a city instead');body.lat=pos.lat;body.lng=pos.lng;city=await cityName(pos);body.city=(city||'').split(',')[0]}
     if(!body.city){coffeeAsk('I couldn\'t tell which city you\'re in.');return}
     var r=await api('/ai/coffee',{method:'POST',body:body});
-    if(!r.found){$('aiRes').innerHTML='<button class="back" onclick="aiBack()">‹ Back</button><h2>Specialty coffee</h2><div class="loading">No European Coffee Trip guide for '+esc(body.city)+'. The guide covers European cities only.</div>';return}
+    if(!r.found){if(r.error){coffeeAsk(r.error+' for '+body.city+'. Try again, or another city.');return}
+      $('aiRes').innerHTML='<button class="back" onclick="aiBack()">‹ Back</button><h2>Specialty coffee</h2><div class="loading">No European Coffee Trip guide for '+esc(body.city)+'. The guide covers European cities only.</div>';return}
     var items=r.cafes.map(function(c){
       var bits=[];if(c.winner)bits.push('🏆 '+c.winner+' winner');if(c.rating)bits.push('★'+c.rating);
       if(c.distM!=null)bits.push(c.distM<1000?c.distM+' m':(c.distM/1000).toFixed(1)+' km');

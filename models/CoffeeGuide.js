@@ -9,6 +9,7 @@ const coffeeGuideSchema = new mongoose.Schema({
     placeId: String, address: String, lat: Number, lng: Number, rating: Number, reviews: Number,
     _id: false
   }],
+  ver:       Number,
   fetchedAt: { type: Date, default: Date.now }
 });
 
