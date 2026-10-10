@@ -513,6 +513,25 @@ router.get('/local-name', auth, async (req, res) => {
   } catch (e) { console.error('[ai/local-name]', e.message); res.status(500).json({ error: 'Could not load the local name' }); }
 });
 
+/* GET /api/ai/city-at?lat=&lng= — nearest town/city name (fallback when the phone's geocoder fails) */
+router.get('/city-at', auth, async (req, res) => {
+  try {
+    const key = process.env.GOOGLE_MAPS_API_KEY, { lat, lng } = req.query;
+    if (lat == null || lng == null) return res.json({ city: '' });
+    const get = async u => { try { return await (await fetch(u)).json(); } catch { return {}; } };
+    const g = await get(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=en&key=${key}`);
+    const comps = g.results?.[0]?.address_components || [];
+    const pick = t => comps.find(c => c.types.includes(t))?.long_name || '';
+    let city = pick('locality') || pick('postal_town') || pick('administrative_area_level_3'), country = pick('country');
+    if (!city) {
+      const n = await get(`https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&rankby=distance&type=locality&language=en&key=${key}`);
+      city = n.results?.[0]?.name || '';
+    }
+    if (!city) console.log('[ai/city-at] no city for', lat, lng, g.status);
+    res.json({ city, country });
+  } catch (e) { res.json({ city: '' }); }
+});
+
 /* ─────────────────────────────────────────
    POST /api/ai/coffee  { city, lat?, lng? }
    Specialty cafés from the European Coffee Trip guide for that city (Europe only),

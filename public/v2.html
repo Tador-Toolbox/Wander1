@@ -1189,12 +1189,18 @@ function coffeeForm(){
     '<button class="btn soft" onclick="var c=$(\'coffeeCity\').value.trim();if(!c){toast(\'Type a city\');return}closeSheet();findCoffee(c)">Search this city</button>');
   try{new google.maps.places.Autocomplete($('coffeeCity'),{types:['(cities)'],fields:['name']}).addListener('place_changed',function(){})}catch(e){}
 }
+function coffeeAsk(msg){
+  $('aiRes').innerHTML='<button class="back" onclick="aiBack()">‹ Back</button><h2>Specialty coffee</h2><div class="sub">'+esc(msg)+' Type the city:</div>'+
+    '<input class="field" id="coffeeCity2" placeholder="e.g. Athens" style="margin-top:10px"><button class="btn blue" style="width:100%;margin-top:10px" onclick="var c=$(\'coffeeCity2\').value.trim();if(c)findCoffee(c)">Search</button>';
+  try{new google.maps.places.Autocomplete($('coffeeCity2'),{types:['(cities)'],fields:['name']})}catch(e){}
+  setTimeout(function(){var f=$('coffeeCity2');f&&f.focus()},50);
+}
 async function findCoffee(city){
   go('vAI');aiMode='coffee';aiTripId=null;aiLoading('Finding specialty coffee'+(city?' in '+city:' near you')+'… (first time for a city takes ~20 seconds)');
   try{
     var body={city:city};
     if(!city){var pos=await getPos();if(!pos)throw new Error('location is blocked — type a city instead');body.lat=pos.lat;body.lng=pos.lng;city=await cityName(pos);body.city=(city||'').split(',')[0]}
-    if(!body.city)throw new Error('could not tell which city you are in — type it instead');
+    if(!body.city){coffeeAsk('I couldn\'t tell which city you\'re in.');return}
     var r=await api('/ai/coffee',{method:'POST',body:body});
     if(!r.found){$('aiRes').innerHTML='<button class="back" onclick="aiBack()">‹ Back</button><h2>Specialty coffee</h2><div class="loading">No European Coffee Trip guide for '+esc(body.city)+'. The guide covers European cities only.</div>';return}
     var items=r.cafes.map(function(c){
@@ -1585,14 +1591,20 @@ function getPos(){
   });
 }
 function cityName(pos){
+  // Phone geocoder first; if it fails or finds no town, ask the server (geocode + nearest locality)
+  var viaServer=function(){return api('/ai/city-at?lat='+pos.lat+'&lng='+pos.lng).then(function(r){return [r.city,r.country].filter(Boolean).join(', ')}).catch(function(){return ''})};
   return new Promise(function(res){
     if(!pos)return res('');
-    new google.maps.Geocoder().geocode({location:pos},function(r,st){
-      if(st!=='OK'||!r||!r.length)return res('');
-      var city='',country='';
-      r[0].address_components.forEach(function(c){if(c.types.indexOf('locality')>=0)city=c.long_name;if(c.types.indexOf('country')>=0)country=c.long_name});
-      res([city,country].filter(Boolean).join(', '));
-    });
+    try{
+      new google.maps.Geocoder().geocode({location:pos},function(r,st){
+        if(st!=='OK'||!r||!r.length)return viaServer().then(res);
+        var city='',country='',alt='';
+        r[0].address_components.forEach(function(c){var t=c.types;if(t.indexOf('locality')>=0)city=c.long_name;else if(!alt&&(t.indexOf('postal_town')>=0||t.indexOf('administrative_area_level_3')>=0))alt=c.long_name;if(t.indexOf('country')>=0)country=c.long_name});
+        city=city||alt;
+        if(!city)return viaServer().then(res);
+        res([city,country].filter(Boolean).join(', '));
+      });
+    }catch(e){viaServer().then(res)}
   });
 }
 function placeSearch(query,pos,openNow,skip){
