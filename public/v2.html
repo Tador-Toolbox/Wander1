@@ -431,10 +431,10 @@ function go(v){
 }
 
 /* ---------- map ---------- */
-var CAT_TAGS={museum:['museum','art-gallery'],
+var CAT_TAGS={coffee:['cafe','coffee-shop'],museum:['museum','art-gallery'],
   food:['restaurant','cafe','bakery','bar','meal-takeaway','meal-delivery','food','ice-cream-shop','coffee-shop'],
   sight:['tourist-attraction','park','church','place-of-worship','synagogue','mosque','hindu-temple','amusement-park','zoo','aquarium','stadium','natural-feature','landmark','historical-landmark','castle','monument']};
-var CAT_WORDS={museum:/museum|gallery|μουσε|מוזיאון|גלרי/i,
+var CAT_WORDS={coffee:/caf[eé]|coffee|espresso|roaster|kaffee|καφέ|קפה/i,museum:/museum|gallery|μουσε|מוזיאון|גלרי/i,
   food:/restaurant|caf[eé]|coffee|bakery|taverna|tavern|bistro|bar\b|pizz|sushi|ramen|grill|souvlaki|gyro|deli|brunch|מסעד|קפה|ταβέρν|εστιατ/i,
   sight:/temple|acropolis|castle|church|cathedral|monument|ruins|park|palace|tower|square|ancient|hill|beach|viewpoint|stadium|ναός|πάρκο/i};
 function placeCat(p){
@@ -461,6 +461,7 @@ function pinIcon(status,rated,cat){
   var c=status==='been'?'#1F5FD6':status==='tobe'?'#C2551A':'#12203A';
   var filled=status!=='tobe',g=filled?'#fff':c;
   var glyph=cat==='museum'?'<g fill="none" stroke="'+g+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11.5 15 8l6 3.5Z" fill="'+g+'"/><path d="M10.5 13v5M13.5 13v5M16.5 13v5M19.5 13v5M9 19.5h12"/></g>'
+:cat==='coffee'?'<g fill="none" stroke="'+g+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 12.5h9v3.2a4 4 0 0 1-4 4h-1a4 4 0 0 1-4-4Z"/><path d="M18.5 13.5h1a1.7 1.7 0 0 1 0 3.4h-1.2"/><path d="M12.5 7.5c0 1 .8 1.2.8 2.2M15.5 7.5c0 1 .8 1.2.8 2.2"/></g>'
     :cat==='food'?'<g fill="none" stroke="'+g+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 8v12M9.3 8v3.2a1.7 1.7 0 0 0 3.4 0V8"/><path d="M19.5 20V8c-1.8.8-2.6 2.8-2.6 5.2V15h2.6"/></g>'
     :cat==='sight'?'<path d="m15 7.6 2 4.1 4.5.6-3.3 3.1.8 4.4-4-2.1-4 2.1.8-4.4-3.3-3.1 4.5-.6Z" fill="'+g+'"/>'
     :'<circle cx="15" cy="14" r="5" fill="'+g+'"/>';
@@ -797,7 +798,6 @@ function openPlace(p){
     '<div><h2>'+esc(p.name)+'</h2><div class="locName" id="locName"></div><button class="addrBtn" onclick="showLocal(cur,\'openPlace(cur)\')">'+esc(p.location||'Show the address')+'<span>🌐 Local language</span></button></div>'+
     (isStay(p)?'<div class="eyebrow" style="color:#5B3FC4">🏠 Where I\'m staying</div>':segHtml(p.status,'setStatus'))+
     (p.status==='been'?'<div class="rateRow"><span class="lblTxt">Your rating</span>'+starsHtml(p.rating||0,'ratePlace')+'</div>':'')+
-    (!isStay(p)&&placeCat(p)==='food'?tipCard(tipCountry(p.location)):'')+
     '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
     '<label class="lbl">Notes<textarea class="field" id="plNotes" placeholder="Add a note…" onblur="saveNotes()">'+esc(p.notes||'')+'</textarea></label>'+
     '<div class="two"><button class="btn soft" id="navBtn" onclick="toggleNav()">Navigate</button>'+
@@ -1041,7 +1041,7 @@ function drawPlanView(){
   day.places.forEach(function(x,j){
     var p=placeById(x.place);if(!p)return;
     h+='<div class="pStop'+(p.status==='been'?' done':'')+'"><span class="num">'+(j+1)+'</span><div class="pInfo"><button class="t" onclick="closeSheet();focusPlaceObj('+places.indexOf(p)+')"><b>'+esc(p.name)+'</b></button>'+
-      '<small>'+[x.time,x.duration].filter(Boolean).map(esc).join(' · ')+'</small>'+(x.tip?'<div class="tip">'+esc(x.tip)+'</div>':'')+(placeCat(p)==='food'?tipShort(tipCountry(p.location)||tripCC):'')+'</div>'+
+      '<small>'+[x.time,x.duration].filter(Boolean).map(esc).join(' · ')+'</small>'+(x.tip?'<div class="tip">'+esc(x.tip)+'</div>':'')+(/^(food|coffee)$/.test(placeCat(p))?tipShort(tipCountry(p.location)||tripCC):'')+'</div>'+
       '<select class="moveSel" aria-label="Move '+esc(p.name)+' to another day" onchange="movePlace('+j+',this.value)">'+opts()+'</select></div>';
   });
   h+='</div>'+nightHtml(day)+'<div class="two"><button class="btn dark" onclick="navDay()">Navigate day</button><button class="btn soft" onclick="showDay()">Show on map</button></div>'+
@@ -1180,7 +1180,7 @@ function tipShort(cc){
   var t=TIPS[cc];if(!t)return '';
   return '<div class="tip" style="opacity:1;color:#8A5A12">💶 '+(t[0]==='yes'?'Service included':t[0]==='no'?'Tip not included':'Check bill for service')+' · '+esc(t[1].split('.')[0].split(';')[0])+'</div>';
 }
-function isFoodName(name,why){return placeCat({name:name})==='food'||/restaurant|caf[eé]|taverna|lunch|dinner|breakfast|brunch|eat|food/i.test(why||'')}
+function isFoodName(name,why){var c=placeCat({name:name});return c==='food'||c==='coffee'||/restaurant|caf[eé]|taverna|lunch|dinner|breakfast|brunch|eat|food/i.test(why||'')}
 /* ---------- Specialty coffee (European Coffee Trip guide, Europe only) ---------- */
 function coffeeForm(){
   openSheet('<div class="grab"></div><h2>Specialty coffee</h2><div class="sub">The best specialty cafés from the European Coffee Trip guide. Europe only.</div>'+
