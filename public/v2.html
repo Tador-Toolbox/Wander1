@@ -1072,7 +1072,7 @@ function drawPlanView(){
     '<div class="dayTabs">'+days.map(function(d,i){return '<button class="'+(i===planDay?'on':'')+'" onclick="planDay='+i+';drawPlanView()"><b>Day '+(i+1)+'</b><small>'+fmtD(d.date,{weekday:'short',day:'numeric'})+'</small></button>'}).join('')+'</div>'+
     '<div class="dayHead"><b>'+fmtD(day.date,{weekday:'long',day:'numeric',month:'long'})+'</b>'+(day.theme?'<span>'+esc(day.theme)+'</span>':'')+'</div>'+weatherLine(w,day.date);
   var tripCC=tipCountry.apply(null,[t.plan.city||'',t.name].concat(days.reduce(function(a,d){return a.concat(d.places.map(function(x){var q=placeById(x.place);return q?q.location:''}))},[])));
-  h+=tipCard(tripCC)+'<div>';
+  h+=tipCard(tripCC)+plugLine(tripCC)+'<div>';
   if(!day.places.length)h+='<div class="empty" style="padding:12px">No places on this day.</div>';
   var opts=function(){return days.map(function(d,k){return '<option value="'+k+'"'+(k===planDay?' selected':'')+'>Day '+(k+1)+'</option>'}).join('')};
   day.places.forEach(function(x,j){
@@ -1211,6 +1211,16 @@ function tipCard(cc){
   var t=TIPS[cc];if(!t)return '';
   var bg=t[0]==='yes'?'#E7F4EC;color:#1E7A45':t[0]==='no'?'#FDEDEA;color:#9A3412':'#FFF7E6;color:#6B4A0F';
   return '<div class="holLine" style="background:'+bg+'">💶 <b>Tipping in '+esc(tipCountryName(cc))+': '+TIP_LABEL[t[0]]+'</b><span>Recommended: '+esc(t[1])+'</span></div>';
+}
+// Short power-plug line for a trip summary (tap → full plug card)
+function plugLine(cc){
+  var d=typeof PLUGS!=='undefined'&&PLUGS[cc];if(!d)return '';
+  var hc=plugHome||'IL',home=PLUGS[hc]||PLUGS.IL,ht=home[0].split(''),types=d[0].split('');
+  var same=types.some(function(t){return ht.indexOf(t)>=0}),euro=ht.indexOf('C')>=0&&types.some(function(t){return C_FITS.indexOf(t)>=0});
+  var adv=hc===cc?'No adapter needed':same&&euro?'Your plugs fit — no adapter needed':euro?'Thin 2-pin plugs fit; bigger ones need an adapter':same?'Some of your plugs fit — bring an adapter just in case':'Bring an adapter';
+  var ok=adv.indexOf('Bring an adapter')!==0;
+  var name=tipCountryName(cc);
+  return '<button class="holLine" style="text-align:left;width:100%;background:'+(ok?'#EAF3FD;color:#1B4F8A':'#FDEDEA;color:#9A3412')+'" onclick="plugShow([{types:[\'country\'],short_name:\''+cc+'\',long_name:\''+esc(name).replace(/'/g,'')+'\'}])">🔌 <b>Plugs: type '+types.join(' / ')+' · '+d[1]+' V</b><span>'+esc(adv)+(hc==='IL'&&hc!==cc?' (from Israel)':'')+'</span></button>';
 }
 // One short line under a restaurant stop
 function tipShort(cc){
@@ -1908,7 +1918,7 @@ function drawPlan(){
   if(plan.startDate&&daysUntil(plan.startDate)>EVENT_WINDOW)h+='<div class="holLine" style="background:#F3F1FB;color:#3F2A99">🎧 <b>Parties: too far ahead</b><span>Events are listed only 1–2 weeks before. Save the trip, then check each night from '+esc(eventsOpenFrom(plan.startDate).toLocaleDateString('en-GB',{day:'numeric',month:'short'}))+' (or use Ask AI → Events for my trip).</span></div>';
   if(W&&W.summary)h+='<div class="holLine" style="background:#EAF3FD;color:#1B4F8A">'+(W.kind==='forecast'?'🌤 <b>Forecast: ':'🌤 <b>Typical weather: ')+esc(W.summary)+'</b><span>'+(W.kind==='forecast'?'From the weather forecast for your dates.':'Estimate based on the same dates in past years.')+'</span></div>';
   var planCC=tipCountry(plan.city,plan.title,((plan.days||[])[0]&&(plan.days[0].stops||[])[0]||{}).address);
-  h+=tipCard(planCC);
+  h+=tipCard(planCC)+plugLine(planCC);
   // holidays: one compact line each, or a single all-clear line
   h+=hol.length?hol.map(function(x){return '<div class="holLine">🗓 <b>'+esc(x.date?fmtDay(x.date):'')+' — '+esc(x.name)+'</b>'+(x.note?'<span>'+esc(x.note)+'</span>':'')+'</div>'}).join('')
     :'<div class="holLine ok">✓ No public holidays on your dates</div>';
