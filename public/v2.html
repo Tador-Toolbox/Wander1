@@ -1078,7 +1078,7 @@ function drawPlanView(){
   day.places.forEach(function(x,j){
     var p=placeById(x.place);if(!p)return;
     h+='<div class="pStop'+(p.status==='been'?' done':'')+'"><span class="num">'+(j+1)+'</span><div class="pInfo"><button class="t" onclick="closeSheet();focusPlaceObj('+places.indexOf(p)+')"><b>'+esc(p.name)+'</b></button>'+
-      '<small>'+[x.time,x.duration].filter(Boolean).map(esc).join(' · ')+'</small>'+(x.tip?'<div class="tip">'+esc(x.tip)+'</div>':'')+(/^(food|coffee)$/.test(placeCat(p))?tipShort(tipCountry(p.location)||tripCC):'')+'</div>'+
+      '<small>'+[x.time,x.duration].filter(Boolean).map(esc).join(' · ')+'</small>'+(x.tip?'<div class="tip">'+esc(x.tip)+'</div>':'')+'</div>'+
       '<select class="moveSel" aria-label="Move '+esc(p.name)+' to another day" onchange="movePlace('+j+',this.value)">'+opts()+'</select></div>';
   });
   h+='</div>'+nightHtml(day)+'<div class="two"><button class="btn dark" onclick="navDay()">Navigate day</button><button class="btn soft" onclick="showDay()">Show on map</button></div>'+
@@ -1931,7 +1931,7 @@ function drawPlan(){
     (d.stops||[]).forEach(function(st){
       var i=aiResults.push({name:st.name,why:(st.time?st.time+' · ':'')+(st.badge?st.badge+' · ':'')+(st.why||''),address:st.address,lat:st.lat,lng:st.lng,placeId:st.placeId,day:di,time:st.time||'',tip:st.why||''})-1;
       h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(st.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"></button>'+
-        '<button class="t" onclick="aiShow('+i+')"><b>'+esc(st.name)+'</b><small>'+esc(aiResults[i].why)+'</small>'+(isFoodName(st.name,st.why)?tipShort(tipCountry(st.address)||planCC):'')+'</button>'+
+        '<button class="t" onclick="aiShow('+i+')"><b>'+esc(st.name)+'</b><small>'+esc(aiResults[i].why)+'</small>'+'</button>'+
         aiAddBtn(i)+'</div>';
     });
     var nights=window._clubByDay[d.date]||[];
