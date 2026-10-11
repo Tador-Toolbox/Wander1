@@ -1061,6 +1061,15 @@ function weatherLine(w,date){
   return '<div class="wx'+(far?' far':'')+'">'+(d?d.icon+' '+d.min+'–'+d.max+'°C'+(d.rain!=null?' · '+d.rain+'% chance of rain':''):'🌡️ '+esc(w.summary||''))+
     '<small>'+(far?'⚠️ Too far ahead for a real forecast. This is the typical weather for these dates in past years, so it may not be accurate. Check again about 2 weeks before the trip.':'Weather forecast')+'</small></div>';
 }
+// One line: temperature range over the trip dates (forecast, or typical for far-off dates)
+function wxSummary(w,dates){
+  if(!w||!w.days)return '';
+  var ds=dates.map(function(d){return w.days[d]}).filter(Boolean);if(!ds.length)return '';
+  var lo=Math.min.apply(null,ds.map(function(d){return d.min})),hi=Math.max.apply(null,ds.map(function(d){return d.max}));
+  var rainy=ds.filter(function(d){return d.rain!=null&&d.rain>=50}).length,far=w.kind==='typical';
+  var ic={};ds.forEach(function(d){ic[d.icon]=(ic[d.icon]||0)+1});var icon=Object.keys(ic).sort(function(a,b){return ic[b]-ic[a]})[0];
+  return '<div class="holLine" style="background:#EAF3FD;color:#1B4F8A">'+icon+' <b>Weather: '+lo+'–'+hi+'°C</b><span>'+(rainy?rainy+(rainy>1?' rainy days':' rainy day')+' · ':'Mostly dry · ')+(far?'Estimate from past years — check again 2 weeks before':'Forecast')+'</span></div>';
+}
 function drawPlanView(){
   var t=planTrip,days=t.plan.days,day=days[planDay];
   if(!planWeather||planWeather._trip!==t._id){
@@ -1918,7 +1927,7 @@ function drawPlan(){
   if(plan.startDate&&daysUntil(plan.startDate)>EVENT_WINDOW)h+='<div class="holLine" style="background:#F3F1FB;color:#3F2A99">🎧 <b>Parties: too far ahead</b><span>Events are listed only 1–2 weeks before. Save the trip, then check each night from '+esc(eventsOpenFrom(plan.startDate).toLocaleDateString('en-GB',{day:'numeric',month:'short'}))+' (or use Ask AI → Events for my trip).</span></div>';
   if(W&&W.summary)h+='<div class="holLine" style="background:#EAF3FD;color:#1B4F8A">'+(W.kind==='forecast'?'🌤 <b>Forecast: ':'🌤 <b>Typical weather: ')+esc(W.summary)+'</b><span>'+(W.kind==='forecast'?'From the weather forecast for your dates.':'Estimate based on the same dates in past years.')+'</span></div>';
   var planCC=tipCountry(plan.city,plan.title,((plan.days||[])[0]&&(plan.days[0].stops||[])[0]||{}).address);
-  h+=tipCard(planCC)+plugLine(planCC);
+  h+=wxSummary(plan.weather,(plan.days||[]).map(function(d){return d.date}))+tipCard(planCC)+plugLine(planCC);
   // holidays: one compact line each, or a single all-clear line
   h+=hol.length?hol.map(function(x){return '<div class="holLine">🗓 <b>'+esc(x.date?fmtDay(x.date):'')+' — '+esc(x.name)+'</b>'+(x.note?'<span>'+esc(x.note)+'</span>':'')+'</div>'}).join('')
     :'<div class="holLine ok">✓ No public holidays on your dates</div>';
