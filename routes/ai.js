@@ -572,6 +572,39 @@ router.post('/coffee', auth, async (req, res) => {
 });
 
 /* ─────────────────────────────────────────
+   POST /api/ai/michelin  { city } or { lat, lng }  → MICHELIN Guide restaurants
+───────────────────────────────────────── */
+router.post('/michelin', auth, async (req, res) => {
+  try {
+    const m = require('../services/michelin'), key = process.env.GOOGLE_MAPS_API_KEY;
+    let lat = req.body.lat != null ? +req.body.lat : null, lng = req.body.lng != null ? +req.body.lng : null;
+    const near = lat != null;
+    const city = String(req.body.city || '').trim();
+    if (!near) {
+      if (!city) return res.status(400).json({ error: 'Which city?' });
+      const c = await require('../services/verifyPlace').cityCenter(city, key);
+      if (!c) return res.status(404).json({ error: 'City not found' });
+      lat = c.lat; lng = c.lng;
+    }
+    let list = await m.around(lat, lng, near ? 3000 : 12000);
+    if (near && list.length < 5) list = await m.around(lat, lng, 10000);
+    list = list.map(r => { const dx = (r.lat - lat) * 111, dy = (r.lng - lng) * 111 * Math.cos(lat * Math.PI / 180); return { ...r, distM: Math.round(Math.sqrt(dx * dx + dy * dy) * 1000) }; });
+    // stars first (3→2→1), then Bib Gourmand, then the rest; near me → nearest first in each group, city → closest to the centre
+    list.sort((a, b) => b.rank - a.rank || a.distM - b.distM);
+    const total = list.length;
+    list = list.slice(0, 30);
+    let next = 0;
+    await Promise.all(Array.from({ length: 8 }, async () => { while (next < list.length) await m.google(list[next++], key); }));
+    list = list.filter(r => !r.closed);
+    console.log(`[ai/michelin] ${near ? 'near ' + lat.toFixed(3) + ',' + lng.toFixed(3) : city}: ${total} in the guide`);
+    res.json({ total, near, restaurants: list });
+  } catch (e) {
+    console.error('[ai/michelin]', e.message);
+    res.status(500).json({ error: 'Could not load the MICHELIN Guide right now' });
+  }
+});
+
+/* ─────────────────────────────────────────
    POST /api/ai/story/:tripId
 ───────────────────────────────────────── */
 router.post('/story/:tripId', auth, async (req, res) => {
