@@ -599,7 +599,7 @@ router.post('/michelin', auth, async (req, res) => {
     res.json({ total, near, restaurants: list });
   } catch (e) {
     console.error('[ai/michelin]', e.message);
-    res.status(500).json({ error: 'Could not load the MICHELIN Guide right now' });
+    res.status(500).json({ error: 'Could not load restaurants right now' });
   }
 });
 
@@ -2251,6 +2251,7 @@ router.post('/build-trip', auth, async (req, res) => {
       const c = mixCounts(bd.length), lines = [];
       lines.push(`- TRIP MIX (the traveler chose this — follow it closely). For these ${bd.length} day(s) plan about: ${c.sights} sights/culture, ${c.food} restaurants, ${c.coffee} specialty cafés, ${c.night} nightlife stops, ${c.shop} shopping stops. A category with 0 must NOT appear at all.`);
       lines.push('- Give every stop a "type": one of "sights", "food", "coffee", "night", "shop".');
+      lines.push('- Never write the word "Michelin" or name any guide in the title, summary or "why" texts.');
       if (c.food) lines.push('- Restaurants at lunch (12:30–14:00) or dinner (19:30–21:00).' + (michelin.length ? ' Choose restaurants from this MICHELIN Guide list first (stars and Bib Gourmand preferred, mix price levels):\n' + michelin.map(r => `  ${r.name} (${r.award.replace(/[^\w\s]/g, '').trim()}${r.price ? ', ' + r.price : ''})`).join('\n') : ''));
       if (c.coffee) lines.push('- Cafés in the morning or mid-afternoon.' + (cafes.length ? ' Choose cafés from this specialty coffee guide list:\n' + cafes.map(x => `  ${x.name}${x.winner ? ' (award winner)' : ''}`).join('\n') : ''));
       if (c.night) lines.push('- Nightlife stops start at 22:00 or later, at most one per night. After a night out, start the next day at 11:00 or later.');
@@ -2335,7 +2336,7 @@ Reply ONLY with valid JSON, no markdown:
     plan.days.forEach(d => d.stops.forEach(st => {
       const n = norm(st.name);
       const m = michelin.find(r => { const rn = norm(r.name); return rn && (n === rn || n.startsWith(rn + ' ') || rn.startsWith(n + ' ')); });
-      if (m) st.badge = m.rank ? 'MICHELIN ' + m.award : '🍽 In the MICHELIN Guide';
+      if (m && m.rank) st.badge = m.award;
       const c = !m && cafes.find(x => { const xn = norm(x.name); return xn && (n === xn || n.startsWith(xn + ' ') || xn.startsWith(n + ' ')); });
       if (c) st.badge = c.winner ? '🏆 Award-winning café' : '☕ Specialty coffee guide';
     }));
