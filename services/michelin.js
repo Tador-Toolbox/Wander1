@@ -26,11 +26,11 @@ async function query(params) {
 // rank: 3/2/1 stars, 0.5 Bib Gourmand, 0 Selected
 function award(h) {
   const t = JSON.stringify([h.michelin_award, h.distinction, h.award]).toLowerCase();
-  if (/\bthree[\s_-]?stars?|3[\s_-]?stars?/.test(t)) return { rank: 3, label: '⭐⭐⭐ 3 Michelin stars' };
-  if (/\btwo[\s_-]?stars?|2[\s_-]?stars?/.test(t)) return { rank: 2, label: '⭐⭐ 2 Michelin stars' };
-  if (/\bone[\s_-]?stars?|1[\s_-]?stars?/.test(t)) return { rank: 1, label: '⭐ 1 Michelin star' };
+  if (/\bthree[\s_-]?stars?|3[\s_-]?stars?/.test(t)) return { rank: 3, label: '⭐⭐⭐ 3 stars' };
+  if (/\btwo[\s_-]?stars?|2[\s_-]?stars?/.test(t)) return { rank: 2, label: '⭐⭐ 2 stars' };
+  if (/\bone[\s_-]?stars?|1[\s_-]?stars?/.test(t)) return { rank: 1, label: '⭐ 1 star' };
   if (/bib/.test(t)) return { rank: 0.5, label: '😋 Bib Gourmand' };
-  return { rank: 0, label: '🍽 Regular restaurant (in the guide)' };
+  return { rank: 0, label: 'Regular restaurant' };
 }
 const lbl = x => (x && typeof x === 'object' ? (x.label || x.name || '') : (x || ''));
 

@@ -589,8 +589,7 @@ router.post('/michelin', auth, async (req, res) => {
     let list = await m.around(lat, lng, near ? 3000 : 12000);
     if (near && list.length < 5) list = await m.around(lat, lng, 10000);
     list = list.map(r => { const dx = (r.lat - lat) * 111, dy = (r.lng - lng) * 111 * Math.cos(lat * Math.PI / 180); return { ...r, distM: Math.round(Math.sqrt(dx * dx + dy * dy) * 1000) }; });
-    // stars first (3→2→1), then Bib Gourmand, then the rest; near me → nearest first in each group, city → closest to the centre
-    list.sort((a, b) => b.rank - a.rank || a.distM - b.distM);
+    list.sort((a, b) => a.distM - b.distM);   // by distance only (city → from the centre)
     const total = list.length;
     list = list.slice(0, 30);
     let next = 0;
