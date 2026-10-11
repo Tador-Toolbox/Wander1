@@ -114,7 +114,8 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .tagRow{display:flex;flex-wrap:wrap;gap:6px}.tagRow span{font-size:13px;font-weight:700;color:var(--blue);background:var(--blue-soft);padding:4px 10px;border-radius:999px}
 .insta{background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);color:#fff;text-decoration:none}
 .add{height:36px;border-radius:10px;background:var(--blue-soft);color:var(--blue);font-weight:700;font-size:13px;padding:0 12px;flex:none}
-.add[disabled]{background:#E7F4EC;color:#1E7A45}
+.add[disabled],.add.saved{background:#E7F4EC;color:#1E7A45}
+.listItem .rm{margin-left:auto;flex:none;height:32px;padding:0 12px;border-radius:9px;background:#FDECEC;color:#B42318;font-weight:700;font-size:13px}
 .loading{padding:40px 0;text-align:center;color:var(--muted);font-weight:600}
 .spin{width:28px;height:28px;border:3px solid var(--blue-soft);border-top-color:var(--blue);border-radius:50%;margin:0 auto 12px;animation:sp 0.8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -1421,11 +1422,10 @@ function drawShopping(){
     list.forEach(function(p){
       var why=shopWhy(p,d.today);
       var i=aiResults.push({name:p.name,why:why,address:p.address,lat:p.lat,lng:p.lng,placeId:p.placeId})-1;
-      var saved=p.placeId&&places.some(function(x){return x.placeId===p.placeId});
       var cls=p.kind==='market'?(p.openToday?' ok':p.openDays?' no':''):'';
       h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(p.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"></button>'+
         '<button class="t" onclick="aiShow('+i+')"><b>'+esc(p.name)+'</b><small class="shopWhy'+cls+'">'+esc(why)+'</small></button>'+
-        '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')"'+(saved?' disabled>Saved':'>+ Add')+'</button></div>';
+        aiAddBtn(i)+'</div>';
     });
   };
   // markets open today first
@@ -1592,10 +1592,9 @@ function aiShowResults(title,items,append){
   if(tn)h+=tn+'<h3 style="font-size:17px;margin-top:6px">📍 Places for you</h3>';
   if(!items.length)h+='<div class="loading">'+(tn?'No venue picks right now.':'Nothing found right now. Try again later.')+'</div>';
   items.forEach(function(p,i){
-    var saved=p.placeId&&places.some(function(x){return x.placeId===p.placeId});
     h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(p.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"'+(p.photo?' style="background-image:url(\''+esc(p.photo)+'\')"':'')+'></button>'+
       '<button class="t" onclick="aiShow('+i+')"><b>'+esc(p.name)+'</b><small>'+esc(p.why||p.address||'')+'</small>'+(p.ev&&p.ev.maybe?'<span class="ppl" style="background:#FFF4E5;color:#8A4B0F;margin-right:6px">May turn into a party</span>':'')+(p.ev&&p.ev.match?'<span class="match">'+p.ev.match+'% match</span>'+(p.ev.people?'<span class="ppl">~'+p.ev.people+' people</span>':''):'')+'</button>'+
-      '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')"'+(saved?' disabled>Saved':'>+ Add')+'</button></div>';
+      aiAddBtn(i)+'</div>';
   });
   if(items.length)h+='<button class="btn soft" id="aiMoreBtn" style="width:100%;margin-top:4px" onclick="aiMore()">Find more places</button>';
   $('aiRes').innerHTML=h;
@@ -1831,7 +1830,7 @@ function drawPlan(){
       var i=aiResults.push({name:st.name,why:(st.time?st.time+' · ':'')+(st.why||''),address:st.address,lat:st.lat,lng:st.lng,placeId:st.placeId,day:di,time:st.time||'',tip:st.why||''})-1;
       h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(st.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"></button>'+
         '<button class="t" onclick="aiShow('+i+')"><b>'+esc(st.name)+'</b><small>'+esc(aiResults[i].why)+'</small>'+(isFoodName(st.name,st.why)?tipShort(tipCountry(st.address)||planCC):'')+'</button>'+
-        '<button class="add" id="aiAdd'+i+'" onclick="aiAdd('+i+')">+ Add</button></div>';
+        aiAddBtn(i)+'</div>';
     });
     var nights=window._clubByDay[d.date]||[];
     if(nights.length){
@@ -1863,7 +1862,7 @@ async function savePlan(){
       var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai',trip:t._id,notes:cleanWhy(p.why)}});
       ids[i]=s._id;
       var ex=places.findIndex(function(x){return x._id===s._id});if(ex>=0)places[ex]=s;else places.unshift(s); // the server reuses a place you already had
-      var ab=$('aiAdd'+i);if(ab){ab.disabled=true;ab.textContent='Saved'}
+      aiMark(i);
     }
     // Keep the whole plan: days, times, tips and each night's parties
     var cb=window._clubByDay||{};
@@ -1894,14 +1893,46 @@ async function aiTrip(id,more){
 }
 var aiTripId=null;
 // + Add → pick a trip (or just the map). Inside a trip context (Ideas for my trip / Build a trip) save straight to it.
+// Copies of a result already saved by you (one per trip at most, plus My map)
+function aiCopies(p){
+  var n=function(x){return String(x||'').toLowerCase().trim()};
+  return places.filter(function(x){
+    if(p.placeId&&x.placeId)return x.placeId===p.placeId;
+    return n(x.name)===n(p.name)&&Math.abs((x.lat||0)-(p.lat||0))<0.0006&&Math.abs((x.lng||0)-(p.lng||0))<0.0006;
+  });
+}
+function aiCopyIn(p,tripId){return aiCopies(p).find(function(x){return String(x.trip||'')===String(tripId||'')})}
+function aiAddBtn(i){var c=aiCopies(aiResults[i]).length;return '<button class="add'+(c?' saved':'')+'" id="aiAdd'+i+'" onclick="aiAdd('+i+')">'+(c?'Saved ✓':'+ Add')+'</button>'}
+function aiMark(i){
+  var c=aiCopies(aiResults[i]).length,b=$('aiAdd'+i);
+  if(b){b.disabled=false;b.className='add'+(c?' saved':'');b.textContent=c?'Saved ✓':'+ Add'}
+  var d=$('dtAdd');if(d&&d.dataset.i==String(i)){d.className='btn '+(c?'soft':'blue');d.textContent=c?'✓ Saved — add to another trip or remove':'+ Add to map or trip'}
+}
+// + Add → pick a trip (or just the map). Already saved → the same list shows where it is, with Remove.
 function aiAdd(i){
-  if(aiTripId)return aiSave(i,aiTripId);
-  var p=aiResults[i];
-  var h='<h2>Add “'+esc(p.name)+'”</h2><div class="sub" style="margin-top:-8px">Choose where to save it</div>'+
-    '<button class="listItem" onclick="aiSave('+i+',\'\')"><span class="sq" style="background:var(--blue-soft);color:var(--blue)">📍</span><span><b>My map</b><small>Goes to your to-do list</small></span></button>';
-  trips.forEach(function(t){h+='<button class="listItem" onclick="aiSave('+i+',\''+t._id+'\')">'+tripThumb(t,'thumbImg')+'<span><b>'+esc(t.name)+'</b><small>'+countFor(t._id)+' places</small></span></button>'});
+  var p=aiResults[i],copies=aiCopies(p);
+  if(aiTripId&&!aiCopyIn(p,aiTripId))return aiSave(i,aiTripId);
+  var row=function(tripId,icon,title,sub){
+    var c=aiCopyIn(p,tripId);
+    if(c)return '<div class="listItem">'+icon+'<span><b>'+esc(title)+'</b><small style="color:#1E7A45;font-weight:700">✓ Saved here</small></span><button class="rm" onclick="aiRemove('+i+',\''+c._id+'\')">Remove</button></div>';
+    return '<button class="listItem" onclick="aiSave('+i+',\''+tripId+'\')">'+icon+'<span><b>'+esc(title)+'</b><small>'+esc(sub)+'</small></span></button>';
+  };
+  var h='<h2>'+(copies.length?'“'+esc(p.name)+'” is saved':'Add “'+esc(p.name)+'”')+'</h2><div class="sub" style="margin-top:-8px">'+(copies.length?'Add it to another trip, or remove it':'Choose where to save it')+'</div>'+
+    row('','<span class="sq" style="background:var(--blue-soft);color:var(--blue)">📍</span>','My map','Goes to your to-do list');
+  trips.forEach(function(t){h+=row(t._id,tripThumb(t,'thumbImg'),t.name,countFor(t._id)+' places')});
   h+='<button class="listItem" onclick="aiNewTripSave('+i+')"><span class="sq" style="font-size:22px">＋</span><span><b>New trip…</b><small>Create a trip and add it</small></span></button>';
   openSheet(h);loadTripPhotos();
+}
+async function aiRemove(i,id){
+  var x=places.find(function(q){return q._id===id});if(!x)return;
+  var where=x.trip?tripName(String(x.trip)):'My map';
+  if(!confirm('Remove “'+x.name+'” from '+where+'?'+(x.status==='been'||x.rating||x.notes?' Its notes, rating and Visited mark will be deleted too.':'')))return;
+  try{
+    await api('/places/'+id,{method:'DELETE'});
+    places=places.filter(function(q){return q._id!==id});
+    trips.forEach(function(t){if(t.plan&&t.plan.days)t.plan.days.forEach(function(d){d.places=(d.places||[]).filter(function(y){return String(y.place)!==id})})});
+    closeSheet();renderMarkers();renderTrips();aiMark(i);toast('Removed from '+where);
+  }catch(e){toast(e.message)}
 }
 async function aiNewTripSave(i){
   var n=prompt('Trip name');if(!n)return;
@@ -1912,9 +1943,10 @@ async function aiSave(i,tripId){
   var p=aiResults[i],b=$('aiAdd'+i)||{};b.disabled=true;b.textContent='Saving…';
   try{
     var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai',trip:tripId||null,notes:cleanWhy(p.why)}});
-    places.unshift(s);renderMarkers();b.textContent='Saved';
+    var k=places.findIndex(function(q){return q._id===s._id});if(k>=0)places[k]=s;else places.unshift(s);
+    renderMarkers();renderTrips();aiMark(i);
     toast(tripId?'Added to '+tripName(tripId):'Added to Want to go');
-  }catch(e){b.disabled=false;b.textContent='+ Add';toast(e.message)}
+  }catch(e){aiMark(i);toast(e.message)}
 }
 function fmtEvDate(n){
   var d=new Date(n.startTime||n.date);if(isNaN(d))return '';
@@ -1945,12 +1977,12 @@ function aiShow(i){
     '<div><h2>'+esc(p.name)+'</h2><div class="locName" id="locName"></div>'+(p.why?'<div class="sub" style="color:var(--ink);font-weight:600">'+esc(p.why)+'</div>':'')+'<button class="addrBtn" onclick="showLocal(aiResults['+i+'],\'aiShow('+i+')\')"><span id="dtAddr">'+esc(p.address||'Show the address')+'</span><span>🌐 Local language</span></button></div>'+
     evBlock(p.ev)+
     '<div id="dtInfo" class="sub">Loading details…</div>'+
-    '<button class="btn blue" id="dtAdd" onclick="aiAdd('+i+')">+ Add to map or trip</button>'+
+    '<button class="btn blue" id="dtAdd" data-i="'+i+'" onclick="aiAdd('+i+')">+ Add to map or trip</button>'+
     '<div class="two"><button class="btn soft" id="navBtn" onclick="toggleNav()">Navigate</button>'+
     '<button class="btn soft" onclick="closeSheet();go(\'vMap\');map.panTo({lat:'+p.lat+',lng:'+p.lng+'});map.setZoom(16)">Show on map</button></div>'+navBox({name:p.name,lat:p.lat,lng:p.lng,placeId:p.placeId,location:p.address})+
     '<button class="reportBtn" onclick="reportClosed(aiResults['+i+'].name,aiResults['+i+'].address)">Is this place closed? Report it</button>');
   fillLocalName(p);
-  var b=$('aiAdd'+i);if(b&&b.disabled){$('dtAdd').disabled=true;$('dtAdd').textContent='✓ Saved';$('dtAdd').className='btn soft'}
+  aiMark(i);
   if(!p.placeId){$('dtInfo').textContent='';return}
   new google.maps.places.PlacesService(map).getDetails({placeId:p.placeId,fields:['formatted_address','rating','user_ratings_total','opening_hours','utc_offset_minutes','formatted_phone_number','website','url','photos','price_level','business_status']},function(d,st){
     var el=$('dtInfo');if(!el)return;

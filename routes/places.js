@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const auth   = require('../middleware/auth');
 const Place  = require('../models/Place');
+const Trip   = require('../models/Trip');
 
 router.use(auth);
 
@@ -101,6 +102,8 @@ router.delete('/:id', async (req, res) => {
   try {
     const place = await Place.findOneAndDelete({ _id: req.params.id, user: req.userId });
     if (!place) return res.status(404).json({ error: 'Not found' });
+    // drop it from any day plan of that trip
+    if (place.trip) await Trip.updateOne({ _id: place.trip, user: req.userId }, { $pull: { 'plan.days.$[].places': { place: place._id } } }).catch(e => console.log('[places] plan cleanup', e.message));
     res.json({ ok: true });
   } catch { res.status(500).json({ error: 'Server error' }); }
 });
