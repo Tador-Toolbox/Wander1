@@ -2223,6 +2223,41 @@ router.post('/build-trip', auth, async (req, res) => {
     clubEvents = require('../services/eventDedupe').mergeEvents(goOutEvents, phoneEvents, clubEvents)
       .sort((a, b) => String(a.startTime || a.date).localeCompare(String(b.startTime || b.date)));
     const weatherP = require('../services/weather').tripWeather(city, dates).catch(() => null);
+    // Trip mix: share of sights / food / coffee / nightlife / shopping (percent, sums to ~100)
+    const MIXK = ['sights', 'food', 'coffee', 'night', 'shop'];
+    const rawMix = req.body.mix && typeof req.body.mix === 'object' ? req.body.mix : null;
+    const mix = rawMix ? Object.fromEntries(MIXK.map(k => [k, Math.max(0, Math.min(100, Number(rawMix[k]) || 0))])) : null;
+    const baseN = pace.n;
+    const mixCounts = nd => { // stops per category for nd days
+      const total = nd * baseN, o = {};
+      MIXK.forEach(k => { o[k] = Math.round(total * mix[k] / 100); });
+      o.night = Math.min(o.night, nd); if (mix.night && !o.night) o.night = 1;
+      return o;
+    };
+    // Real lists for the mix: MICHELIN restaurants and European Coffee Trip cafés
+    let michelin = [], cafes = [];
+    if (mix) {
+      const center = await require('../services/verifyPlace').cityCenter(city, process.env.GOOGLE_MAPS_API_KEY).catch(() => null);
+      [michelin, cafes] = await Promise.all([
+        mix.food && center ? require('../services/michelin').around(center.lat, center.lng, 12000).catch(e => { console.log('[ai/build-trip] michelin', e.message); return []; }) : [],
+        mix.coffee ? require('../services/coffeeTrip').cityGuide(city.split(',')[0]).then(g => g.found ? g.cafes || [] : []).catch(() => []) : []
+      ]);
+      michelin = michelin.slice().sort((a, b) => b.rank - a.rank).slice(0, 40);
+      cafes = cafes.slice().sort((a, b) => (Number(b.winner) || 0) - (Number(a.winner) || 0) || (b.rating || 0) - (a.rating || 0)).slice(0, 25);
+      console.log(`[ai/build-trip] mix ${JSON.stringify(mix)} · michelin ${michelin.length} · cafés ${cafes.length}`);
+    }
+    const mixRules = bd => {
+      if (!mix) return '';
+      const c = mixCounts(bd.length), lines = [];
+      lines.push(`- TRIP MIX (the traveler chose this — follow it closely). For these ${bd.length} day(s) plan about: ${c.sights} sights/culture, ${c.food} restaurants, ${c.coffee} specialty cafés, ${c.night} nightlife stops, ${c.shop} shopping stops. A category with 0 must NOT appear at all.`);
+      lines.push('- Give every stop a "type": one of "sights", "food", "coffee", "night", "shop".');
+      if (c.food) lines.push('- Restaurants at lunch (12:30–14:00) or dinner (19:30–21:00).' + (michelin.length ? ' Choose restaurants from this MICHELIN Guide list first (stars and Bib Gourmand preferred, mix price levels):\n' + michelin.map(r => `  ${r.name} (${r.award.replace(/[^\w\s]/g, '').trim()}${r.price ? ', ' + r.price : ''})`).join('\n') : ''));
+      if (c.coffee) lines.push('- Cafés in the morning or mid-afternoon.' + (cafes.length ? ' Choose cafés from this specialty coffee guide list:\n' + cafes.map(x => `  ${x.name}${x.winner ? ' (award winner)' : ''}`).join('\n') : ''));
+      if (c.night) lines.push('- Nightlife stops start at 22:00 or later, at most one per night. After a night out, start the next day at 11:00 or later.');
+      if (c.shop) lines.push('- Shopping: markets ONLY on the weekdays they are open; also malls and shopping streets.');
+      return lines.join('\n') + '\n';
+    };
+    if (mix) pace.n = pace.n + (mix.night ? 1 : 0); // a night out comes on top of the day's stops
     // Long trips are planned in blocks of up to 4 days (one AI answer per block, run in parallel) so the JSON never gets cut off
     const blocks = [];
     for (let i = 0; i < dates.length; i += 4) blocks.push(dates.slice(i, i + 4));
@@ -2238,6 +2273,7 @@ ${p.atmosphere ? 'Nightlife atmosphere preference: ' + p.atmosphere : ''}${build
 Rules:
 - Use ONLY real, specific places that exist on Google Maps in or near ${city}.
 - ${pace.txt} (some may be filtered out after verification), in a sensible geographic order, with a rough time (e.g. "09:30").
+${mixRules(bd)}
 - Make sure each place is open on that weekday (e.g. many museums close on Mondays).
 - Match the traveler's wishes above all.
 - NEVER suggest these places, they are permanently closed: ${closedNames.join(', ') || 'none'}.
@@ -2253,7 +2289,7 @@ Reply ONLY with valid JSON, no markdown:
  "summary": "2 sentences",
  "holidays": [{"date":"YYYY-MM-DD","name":"","note":"short impact for traveler"}],
  "events": [{"when":"dates or 'all month'","name":"","note":"short"}],
- "days": [{"date":"YYYY-MM-DD","title":"theme of the day","stops":[{"time":"09:30","name":"exact place name","why":"max 10 words"}]}]
+ "days": [{"date":"YYYY-MM-DD","title":"theme of the day","stops":[{"time":"09:30","name":"exact place name","why":"max 10 words"${mix ? ',"type":"sights"' : ''}}]}]
 }`;
     const bdEvents = bd => clubEvents.filter(e => e.date >= bd[0] && e.date <= bd[bd.length - 1]);
     const runBlock = async (bd, bi) => {
@@ -2294,7 +2330,17 @@ Reply ONLY with valid JSON, no markdown:
     await Promise.all(Array.from({ length: Math.min(8, jobs.length) }, async () => { while (next < jobs.length) await jobs[next++](); }));
     if (dropped.length) console.log('[ai/build-trip] dropped stops:', dropped.join('; '));
     plan.days = plan.days.slice(0, nDays).map((d, i) => ({ ...d, date: dates[i], stops: (d.stops || []).filter(s => s.lat != null).slice(0, pace.n) }));
+    // Badges from the real guides
+    const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9\u00c0-\u024f]+/g, ' ').trim();
+    plan.days.forEach(d => d.stops.forEach(st => {
+      const n = norm(st.name);
+      const m = michelin.find(r => { const rn = norm(r.name); return rn && (n === rn || n.startsWith(rn + ' ') || rn.startsWith(n + ' ')); });
+      if (m) st.badge = m.rank ? 'MICHELIN ' + m.award : '🍽 In the MICHELIN Guide';
+      const c = !m && cafes.find(x => { const xn = norm(x.name); return xn && (n === xn || n.startsWith(xn + ' ') || xn.startsWith(n + ' ')); });
+      if (c) st.badge = c.winner ? '🏆 Award-winning café' : '☕ Specialty coffee guide';
+    }));
     plan.pace = req.body.pace || 'balanced';
+    plan.mix = mix;
     plan.droppedCount = dropped.length;
     plan.clubEvents = clubEvents;
     plan.weather = await weatherP;

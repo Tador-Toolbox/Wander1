@@ -190,6 +190,19 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .pinNum{background:#12203A;padding:2px 7px;border-radius:999px}
 .pace3{grid-template-columns:1fr 1fr 1fr}.pace3 button{height:auto;padding:8px 4px;flex-direction:column;gap:1px;color:var(--ink)}.pace3 button small{font-size:12px;font-weight:600;color:var(--muted)}
 .pace3 button.on{border-color:var(--ink);background:var(--ink);color:#fff}.pace3 button.on small{color:#C9D1DD}
+.mix{display:flex;flex-direction:column;gap:12px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}
+.mixBar{display:flex;height:34px;border-radius:10px;overflow:hidden;background:var(--soft)}
+.mixBar span{display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800;min-width:0;overflow:hidden;white-space:nowrap;transition:flex-grow .25s ease}
+.mixSum{font-size:13.5px;line-height:1.45;color:var(--ink)}.mixSum b{font-weight:800}
+.mixPre{display:flex;gap:6px;flex-wrap:wrap}.mixPre button{height:32px;padding:0 12px;border-radius:99px;border:1.5px solid var(--line);background:#fff;font-size:13px;font-weight:700}
+.mixPre button.on{border-color:var(--ink);background:var(--ink);color:#fff}
+.mixRow{display:grid;grid-template-columns:28px 1fr 46px;grid-template-rows:auto auto;column-gap:10px;align-items:center}
+.mixRow .ico{grid-row:1/3;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.mixRow b{font-size:14px}.mixRow small{grid-column:2;font-size:12px;color:var(--muted);font-weight:600}
+.mixRow output{grid-row:1/3;grid-column:3;text-align:right;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
+.mixRow input[type=range]{grid-column:2;width:100%;height:28px;margin:0;accent-color:var(--c)}
+.mixRow.zero b,.mixRow.zero output{color:#9AA3B2}
+@media (prefers-reduced-motion:reduce){.mixBar span{transition:none}}
 .wxChip{display:inline-flex;align-items:center;gap:6px;margin-top:6px;background:var(--soft);border-radius:999px;padding:4px 10px;font-size:13.5px;font-weight:700}.wxChip span{font-weight:600;font-size:11.5px;color:#8A5A00;background:#FFF1D6;border-radius:999px;padding:1px 6px}
 .bRow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}.bRow.off{opacity:.55}
 .bImg{flex:none;width:56px;height:56px;border-radius:12px;background:#DDE3EA center/cover no-repeat}
@@ -1763,6 +1776,7 @@ function drawRP(){
   h+='</div></div>';
   $('rp').innerHTML=h;
   var f=function(x){return new Date(x+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})};
+  if($('mix'))setTimeout(mixText,0);
   $('rpHint').textContent=!rp.from?'Tap your arrival day, then your last day':!rp.to?'Arrive '+f(rp.from)+' — now tap your last day':f(rp.from)+' → '+f(rp.to)+' ('+(Math.round((new Date(rp.to)-new Date(rp.from))/864e5)+1)+' days)';
 }
 function rpMove(n){rp.month=new Date(rp.month.getFullYear(),rp.month.getMonth()+n,1);drawRP()}
@@ -1777,7 +1791,57 @@ function rpPick(k){
   drawRP();
 }
 var btPace='balanced';
-function setPace(v){btPace=v;document.querySelectorAll('#btPace button').forEach(function(b,i){b.className=['relaxed','balanced','packed'][i]===v?'on':''})}
+function setPace(v){btPace=v;document.querySelectorAll('#btPace button').forEach(function(b,i){b.className=['relaxed','balanced','packed'][i]===v?'on':''});mixText()}
+/* Trip mix: how much of the trip is sights / food / coffee / nightlife / shopping (always 100%) */
+var MIX_CATS=[
+  {k:'sights',n:'Sights & culture',d:'Landmarks, museums, viewpoints, nature',ico:'🏛',c:'#1F5FD6',bg:'#E8EEFB',one:'sight',many:'sights'},
+  {k:'food',n:'Restaurants',d:'MICHELIN Guide picks for lunch and dinner',ico:'🍽',c:'#C2551A',bg:'#FDF1EA',one:'restaurant',many:'restaurants'},
+  {k:'coffee',n:'Coffee',d:'Specialty cafés, usually in the morning',ico:'☕',c:'#7A4A2A',bg:'#F4ECE4',one:'café',many:'cafés'},
+  {k:'night',n:'Nightlife',d:'Bars and real parties, after 22:00',ico:'🌙',c:'#5B3FC4',bg:'#F3F1FB',one:'night out',many:'nights out'},
+  {k:'shop',n:'Shopping',d:'Markets on their open days, malls, streets',ico:'🛍',c:'#9A6400',bg:'#FFF6E0',one:'shopping stop',many:'shopping stops'}];
+var MIX_PRESETS={Balanced:{sights:40,food:25,coffee:10,night:15,shop:10},Foodie:{sights:25,food:45,coffee:20,night:5,shop:5},Culture:{sights:65,food:20,coffee:10,night:0,shop:5},'Party':{sights:20,food:20,coffee:5,night:50,shop:5},Shopping:{sights:25,food:20,coffee:10,night:5,shop:40}};
+var btMix=Object.assign({},MIX_PRESETS.Balanced);
+function mixDraw(){
+  var h='<div class="mixPre" role="group" aria-label="Quick choices">'+Object.keys(MIX_PRESETS).map(function(p){return '<button data-p="'+p+'" onclick="mixPreset(\''+p+'\')">'+p+'</button>'}).join('')+'</div>'+
+    '<div class="mixBar" id="mixBar" aria-hidden="true"></div><div class="mixSum" id="mixSum" aria-live="polite"></div>';
+  MIX_CATS.forEach(function(c){
+    h+='<div class="mixRow" id="mr_'+c.k+'" style="--c:'+c.c+'"><span class="ico" style="background:'+c.bg+'">'+c.ico+'</span><b>'+c.n+'</b>'+
+      '<output id="mo_'+c.k+'"></output><input type="range" min="0" max="100" step="5" id="mi_'+c.k+'" aria-label="'+c.n+' share of the trip" oninput="mixSet(\''+c.k+'\',+this.value)"><small>'+c.d+'</small></div>';
+  });
+  $('mix').innerHTML=h;mixPaint();
+}
+function mixPreset(p){btMix=Object.assign({},MIX_PRESETS[p]);mixPaint()}
+// Move one slider; spread the difference over the others in proportion, in steps of 5, total stays 100
+function mixSet(k,v){
+  var others=MIX_CATS.map(function(c){return c.k}).filter(function(x){return x!==k});
+  var rest=100-v,cur=others.reduce(function(a,x){return a+btMix[x]},0);
+  var raw=others.map(function(x){return cur?btMix[x]*rest/cur:rest/others.length});
+  var out=raw.map(function(r){return Math.floor(r/5)*5}),left=rest-out.reduce(function(a,b){return a+b},0);
+  var order=raw.map(function(r,i){return [r-out[i],i]}).sort(function(a,b){return b[0]-a[0]});
+  for(var i=0;left>0;i=(i+1)%order.length){out[order[i][1]]+=5;left-=5}
+  btMix[k]=v;others.forEach(function(x,i){btMix[x]=out[i]});
+  mixPaint(k);
+}
+function mixPaint(skip){
+  MIX_CATS.forEach(function(c){var v=btMix[c.k];if(c.k!==skip)$('mi_'+c.k).value=v;$('mo_'+c.k).textContent=v+'%';$('mr_'+c.k).className='mixRow'+(v?'':' zero')});
+  $('mixBar').innerHTML=MIX_CATS.map(function(c){var v=btMix[c.k];return '<span style="flex-grow:'+v+';background:'+c.c+'" title="'+c.n+' '+v+'%">'+(v>=12?c.ico+' '+v+'%':v>=7?c.ico:'')+'</span>'}).join('');
+  document.querySelectorAll('.mixPre button').forEach(function(b){var p=MIX_PRESETS[b.dataset.p];b.className=MIX_CATS.every(function(c){return p[c.k]===btMix[c.k]})?'on':''});
+  mixText();
+}
+// Plain-words result: what the plan will contain for these dates and pace
+function mixCounts(nDays){
+  var per={relaxed:3,balanced:4,packed:6}[btPace]||4,total=nDays*per,o={};
+  MIX_CATS.forEach(function(c){o[c.k]=Math.round(total*btMix[c.k]/100)});
+  o.night=Math.min(o.night,nDays);if(btMix.night&&!o.night)o.night=1;
+  return o;
+}
+function mixText(){
+  var el=$('mixSum');if(!el)return;
+  var n=rp&&rp.from?Math.round((new Date(rp.to||rp.from)-new Date(rp.from))/864e5)+1:0,days=n||3,o=mixCounts(days);
+  var parts=MIX_CATS.filter(function(c){return o[c.k]>0}).map(function(c){return '<b>'+o[c.k]+' '+(o[c.k]===1?c.one:c.many)+'</b>'});
+  var last=parts.length>1?parts.pop():'';
+  el.innerHTML=(n?'For your '+n+(n===1?' day':' days'):'For a 3-day trip')+' that is about '+parts.join(', ')+(last?' and '+last:'')+'.';
+}
 function buildTripForm(fromTrips){
   var t=new Date(),d=function(x){return new Date(t.getTime()+x*86400000).toISOString().slice(0,10)};
   openSheet('<h2>Build a trip</h2>'+
@@ -1785,11 +1849,12 @@ function buildTripForm(fromTrips){
     '<div class="lbl">Dates<div class="sub" id="rpHint" style="font-weight:600">Tap your arrival day, then your last day</div></div><div id="rp"></div>'+
     '<div class="lbl">How busy should the days be?<div class="seg pace3" id="btPace">'+
       [['relaxed','Relaxed','2–3 a day'],['balanced','Balanced','4 a day'],['packed','Packed','6 a day']].map(function(o){return '<button class="'+(o[0]===btPace?'on':'')+'" onclick="setPace(\''+o[0]+'\')"><b>'+o[1]+'</b><small>'+o[2]+'</small></button>'}).join('')+'</div></div>'+
-    '<label class="lbl">What are you looking for?<textarea class="field" id="btWish" style="height:90px" placeholder="e.g. street food, techno clubs at night, one day of nature, not too many museums"></textarea></label>'+
+    '<div class="lbl">What should the trip be made of?<div class="sub" style="font-weight:600">Slide to change. The rest adjusts so it always adds up to 100%.</div></div><div class="mix" id="mix"></div>'+
+    '<label class="lbl">Anything else? (optional)<textarea class="field" id="btWish" style="height:80px" placeholder="e.g. techno clubs, one day of nature, vegetarian food"></textarea></label>'+
     '<div class="sub" style="margin-top:-6px">Up to 14 days. Holidays and events for those dates are included.</div>'+
     '<button class="btn blue" onclick="buildTrip()">Build my trip</button>'+
     (fromTrips?'<button class="linkBtn" onclick="emptyTrip()">Or just create an empty trip</button>':''));
-  rp={from:null,to:null,month:new Date(t.getFullYear(),t.getMonth(),1),max:14};drawRP();
+  rp={from:null,to:null,month:new Date(t.getFullYear(),t.getMonth(),1),max:14};drawRP();mixDraw();
   try{new google.maps.places.Autocomplete($('btCity'),{types:['(regions)'],fields:['name']}).addListener('place_changed',function(){})}catch(e){}
 }
 /* Go-Out: fetched by the phone (it filters by the visitor's country; allows any origin) */
@@ -1821,7 +1886,7 @@ async function buildTrip(){
   var nd=Math.round((new Date(to)-new Date(from))/864e5)+1;
   closeSheet();aiMode=null;aiTripId=null;aiLoading('Building your '+nd+'-day trip to '+city+'… ('+(nd>8?'about a minute':nd>4?'about 40 seconds':'about 20 seconds')+')');
   var extra=[];try{extra=await goOutEvents(city,from,to||from)}catch(e){}
-  try{plan=await api('/ai/build-trip',{method:'POST',body:{city:city,startDate:from,endDate:to||from,wishes:wish,pace:btPace,extraEvents:extra}});drawPlan()}
+  try{plan=await api('/ai/build-trip',{method:'POST',body:{city:city,startDate:from,endDate:to||from,wishes:wish,pace:btPace,mix:btMix,extraEvents:extra}});drawPlan()}
   catch(e){aiErr(e)}
 }
 function fmtDay(iso){var d=new Date(iso+'T12:00:00');return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
@@ -1854,7 +1919,7 @@ function drawPlan(){
     h+='<div style="margin-top:8px"><div class="eyebrow">Day '+(di+1)+' · '+esc(fmtDay(d.date))+'</div><h3 style="font-size:17px;margin-top:2px">'+esc(d.title||'')+'</h3>'+
       (wd?'<div class="wxChip">'+wd.icon+' '+wd.min+'–'+wd.max+'°C'+(wd.rain!=null?' · '+wd.rain+'% rain':'')+(plan.weather.kind==='typical'?' <span>typical</span>':'')+'</div>':'')+'</div>';
     (d.stops||[]).forEach(function(st){
-      var i=aiResults.push({name:st.name,why:(st.time?st.time+' · ':'')+(st.why||''),address:st.address,lat:st.lat,lng:st.lng,placeId:st.placeId,day:di,time:st.time||'',tip:st.why||''})-1;
+      var i=aiResults.push({name:st.name,why:(st.time?st.time+' · ':'')+(st.badge?st.badge+' · ':'')+(st.why||''),address:st.address,lat:st.lat,lng:st.lng,placeId:st.placeId,day:di,time:st.time||'',tip:st.why||''})-1;
       h+='<div class="sug"><button class="thumb" aria-label="Open '+esc(st.name)+'" onclick="aiShow('+i+')" id="aiTh'+i+'"></button>'+
         '<button class="t" onclick="aiShow('+i+')"><b>'+esc(st.name)+'</b><small>'+esc(aiResults[i].why)+'</small>'+(isFoodName(st.name,st.why)?tipShort(tipCountry(st.address)||planCC):'')+'</button>'+
         aiAddBtn(i)+'</div>';
