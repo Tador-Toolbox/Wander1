@@ -2345,6 +2345,11 @@ Reply ONLY with valid JSON, no markdown:
     plan.droppedCount = dropped.length;
     plan.clubEvents = clubEvents;
     plan.weather = await weatherP;
+    if (!plan.weather) { // regions like "Sicily" aren't found by the weather service → use the first real stop's location
+      const st = plan.days.flatMap(d => d.stops || []).find(x => x.lat != null);
+      if (st) plan.weather = await require('../services/weather').tripWeather({ lat: st.lat, lng: st.lng }, dates).catch(() => null);
+      console.log('[ai/build-trip] weather by stop location:', plan.weather ? plan.weather.summary : 'none');
+    }
     plan.city = city; plan.startDate = dates[0]; plan.endDate = dates[dates.length - 1];
     res.json(plan);
   } catch (err) {
