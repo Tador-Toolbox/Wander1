@@ -1909,6 +1909,34 @@ async function buildTrip(){
   catch(e){aiErr(e)}
 }
 function fmtDay(iso){var d=new Date(iso+'T12:00:00');return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
+// Weather straight from Open-Meteo in the browser when the server couldn't get it (uses the first stop's location)
+var WX_ICON=function(c){return c==null?'':c===0?'☀️':c<=2?'🌤️':c===3?'☁️':c<=48?'🌫️':c<=67?'🌧️':c<=77?'❄️':c<=82?'🌦️':'⛈️'};
+async function planWeatherFetch(p){
+  p._wxTried=true;
+  var st=(p.days||[]).reduce(function(a,d){return a.concat(d.stops||[])},[]).find(function(x){return x.lat!=null});if(!st)return;
+  var dates=(p.days||[]).map(function(d){return d.date}),from=dates[0],to=dates[dates.length-1],days={},kind;
+  var j=function(u){return fetch(u).then(function(r){return r.ok?r.json():null}).catch(function(){return null})};
+  try{
+    if(daysUntil(to)<=15){
+      kind='forecast';
+      var d=await j('https://api.open-meteo.com/v1/forecast?latitude='+st.lat+'&longitude='+st.lng+'&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&timezone=auto&start_date='+from+'&end_date='+to);
+      if(!d||!d.daily)return;
+      d.daily.time.forEach(function(t,i){days[t]={max:Math.round(d.daily.temperature_2m_max[i]),min:Math.round(d.daily.temperature_2m_min[i]),rain:(d.daily.precipitation_probability_max||[])[i],icon:WX_ICON((d.daily.weather_code||[])[i])}});
+    }else{
+      kind='typical';var y=new Date().getFullYear(),sh=function(s,yr){return yr+s.slice(4)};
+      var res=await Promise.all([y-1,y-2,y-3].map(function(yr){return j('https://archive-api.open-meteo.com/v1/archive?latitude='+st.lat+'&longitude='+st.lng+'&start_date='+sh(from,yr)+'&end_date='+sh(to,yr)+'&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto')}));
+      dates.forEach(function(date,i){
+        var v=res.filter(function(r){return r&&r.daily&&r.daily.time[i]!=null}).map(function(r){return {max:r.daily.temperature_2m_max[i],min:r.daily.temperature_2m_min[i],rain:r.daily.precipitation_sum[i]}});
+        if(!v.length)return;var avg=function(k){return v.reduce(function(a,x){return a+(x[k]||0)},0)/v.length},wet=v.filter(function(x){return (x.rain||0)>=1}).length;
+        days[date]={max:Math.round(avg('max')),min:Math.round(avg('min')),rain:Math.round(wet/v.length*100),icon:wet*2>v.length?'🌦️':avg('max')>=18?'☀️':'🌤️'};
+      });
+    }
+    var vals=Object.keys(days).map(function(k){return days[k]});if(!vals.length)return;
+    var hi=Math.max.apply(null,vals.map(function(v){return v.max})),lo=Math.min.apply(null,vals.map(function(v){return v.min})),wetD=vals.filter(function(v){return (v.rain||0)>=50}).length;
+    p.weather={kind:kind,days:days,summary:lo+'–'+hi+'°C'+(wetD?' · rain likely on '+wetD+' day'+(wetD>1?'s':''):' · mostly dry')};
+    if(plan===p&&$('savePlanBtn'))drawPlan();
+  }catch(e){}
+}
 function drawPlan(){
   aiResults=[];
   var ce=plan.clubEvents||[];
@@ -1927,7 +1955,8 @@ function drawPlan(){
   if(plan.startDate&&daysUntil(plan.startDate)>EVENT_WINDOW)h+='<div class="holLine" style="background:#F3F1FB;color:#3F2A99">🎧 <b>Parties: too far ahead</b><span>Events are listed only 1–2 weeks before. Save the trip, then check each night from '+esc(eventsOpenFrom(plan.startDate).toLocaleDateString('en-GB',{day:'numeric',month:'short'}))+' (or use Ask AI → Events for my trip).</span></div>';
   if(W&&W.summary)h+='<div class="holLine" style="background:#EAF3FD;color:#1B4F8A">'+(W.kind==='forecast'?'🌤 <b>Forecast: ':'🌤 <b>Typical weather: ')+esc(W.summary)+'</b><span>'+(W.kind==='forecast'?'From the weather forecast for your dates.':'Estimate based on the same dates in past years.')+'</span></div>';
   var planCC=tipCountry(plan.city,plan.title,((plan.days||[])[0]&&(plan.days[0].stops||[])[0]||{}).address);
-  h+=wxSummary(plan.weather,(plan.days||[]).map(function(d){return d.date}))+tipCard(planCC)+plugLine(planCC);
+  if(!W&&!plan._wxTried)planWeatherFetch(plan);
+  h+=tipCard(planCC)+plugLine(planCC);
   // holidays: one compact line each, or a single all-clear line
   h+=hol.length?hol.map(function(x){return '<div class="holLine">🗓 <b>'+esc(x.date?fmtDay(x.date):'')+' — '+esc(x.name)+'</b>'+(x.note?'<span>'+esc(x.note)+'</span>':'')+'</div>'}).join('')
     :'<div class="holLine ok">✓ No public holidays on your dates</div>';
