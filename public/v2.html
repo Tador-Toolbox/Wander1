@@ -795,7 +795,7 @@ function openPlace(p){
   cur=p;
   openSheet('<div class="grab"></div>'+
     '<div class="photo" id="plPhoto"></div>'+
-    '<div><h2>'+esc(p.name)+'</h2><div class="locName" id="locName"></div><button class="addrBtn" onclick="showLocal(cur,\'openPlace(cur)\')">'+esc(p.location||'Show the address')+'<span>🌐 Local language</span></button></div>'+
+    '<div><h2>'+esc(p.name)+'</h2><div class="locName" id="locName"></div><button class="addrBtn" onclick="showLocal(cur,\'openPlace(cur)\')">'+esc(p.location||'Show the address')+'<span>🌐 Local language</span></button><div id="plInfo" class="sub" style="font-size:15px;line-height:1.8"></div></div>'+
     (isStay(p)?'<div class="eyebrow" style="color:#5B3FC4">🏠 Where I\'m staying</div>':segHtml(p.status,'setStatus'))+
     (p.status==='been'?'<div class="rateRow"><span class="lblTxt">Your rating</span>'+starsHtml(p.rating||0,'ratePlace')+'</div>':'')+
     '<label class="lbl">Trip<select class="field" onchange="tripChange(this,\'edit\')">'+tripOptions(p.trip||'')+'</select></label>'+
@@ -804,7 +804,7 @@ function openPlace(p){
     '<button class="btn soft" id="shareBtn" onclick="toggleShare()">Share</button></div>'+navBox(p,true)+
     '<button class="btn danger" onclick="deletePlace()">Delete place</button>'+
     '<button class="reportBtn" onclick="reportClosed(cur.name,cur.location||\'\')">Is this place closed? Report it</button>');
-  fillLocalName(p);
+  fillLocalName(p);placeHours(p);
   var ph=(p.coverPhoto)||(p.photos&&p.photos[0]&&(p.photos[0].url||p.photos[0]));
   if(ph)$('plPhoto').style.backgroundImage='url("'+ph+'")';
   else if(p.placeId&&window.google){
@@ -844,6 +844,28 @@ function rateDone(){var f=rateNext;rateNext=null;if(f)f();else closeSheet()}
 async function ratePlace(n){
   if(!cur)return;if(cur.rating===n)n=0; // tap the same star again to clear
   await updatePlace({rating:n});openPlace(cur);
+}
+// Saved place: rating, open now, today's hours (tap for the whole week) from Google
+function cleanWhy(w){ // drop distance / star rating / emoji labels that only make sense in a result list
+  return String(w||'').replace(/\s*·?\s*\d+(\.\d+)?\s?k?m\b/g,'').replace(/★\s?[\d.]+/g,'').replace(/^[☕\s·]+/,'').replace(/\s*·\s*$/,'').trim();
+}
+function placeHours(p){
+  if(!p||!p.placeId||!window.google||isStay(p))return;
+  new google.maps.places.PlacesService(map).getDetails({placeId:p.placeId,fields:['rating','user_ratings_total','opening_hours','utc_offset_minutes','business_status']},function(d,st){
+    var el=$('plInfo');if(!el||cur!==p||st!=='OK'||!d)return;
+    var rows=[];
+    if(d.business_status==='CLOSED_PERMANENTLY')rows.push('<b style="color:#B42318">⛔ Google lists this place as permanently closed</b>');
+    if(d.rating)rows.push('<b style="color:var(--ink)">★ '+d.rating+'</b> ('+(d.user_ratings_total||0)+' reviews)');
+    var open=null;try{open=d.opening_hours&&d.opening_hours.isOpen?d.opening_hours.isOpen():null}catch(e){}
+    var wt=d.opening_hours&&d.opening_hours.weekday_text;
+    if(open!=null||wt){
+      var today=wt?(wt[(new Date().getDay()+6)%7]||'').replace(/^[^:]+:\s*/,''):'';
+      rows.push((open!=null?'<b style="color:'+(open?'#1E7A45':'#B42318')+'">'+(open?'Open now':'Closed now')+'</b>'+(today?' · ':''):'')+(today?'Today: '+esc(today):'')+
+        (wt?' <button class="moreLink" style="padding:0;display:inline" onclick="var w=$(\'plWeek\');w.style.display=w.style.display===\'none\'?\'block\':\'none\'">All hours</button>'+
+        '<div id="plWeek" style="display:none;font-size:14px;line-height:1.7">'+wt.map(esc).join('<br>')+'</div>':''));
+    }
+    el.innerHTML=rows.join('<br>');
+  });
 }
 function saveNotes(){var v=$('plNotes').value;if(cur&&v!==(cur.notes||''))updatePlace({notes:v})}
 /* Navigate: choose the app (Google Maps / Waze / Apple Maps; KakaoMap + NaverMap in Korea) — links as in V1 */
@@ -1838,7 +1860,7 @@ async function savePlan(){
     var ids=[];
     for(var i=0;i<aiResults.length;i++){
       var p=aiResults[i];
-      var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai',trip:t._id,notes:p.why}});
+      var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai',trip:t._id,notes:cleanWhy(p.why)}});
       ids[i]=s._id;
       var ex=places.findIndex(function(x){return x._id===s._id});if(ex>=0)places[ex]=s;else places.unshift(s); // the server reuses a place you already had
       var ab=$('aiAdd'+i);if(ab){ab.disabled=true;ab.textContent='Saved'}
@@ -1889,7 +1911,7 @@ async function aiSave(i,tripId){
   closeSheet();
   var p=aiResults[i],b=$('aiAdd'+i)||{};b.disabled=true;b.textContent='Saving…';
   try{
-    var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai',trip:tripId||null,notes:p.why||''}});
+    var s=await api('/places',{method:'POST',body:{name:p.name,location:p.address,placeId:p.placeId,lat:p.lat,lng:p.lng,status:'tobe',source:'ai',trip:tripId||null,notes:cleanWhy(p.why)}});
     places.unshift(s);renderMarkers();b.textContent='Saved';
     toast(tripId?'Added to '+tripName(tripId):'Added to Want to go');
   }catch(e){b.disabled=false;b.textContent='+ Add';toast(e.message)}
