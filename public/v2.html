@@ -188,7 +188,7 @@ select.field{appearance:none;-webkit-appearance:none;background:#fff url("data:i
 .tip{font-size:13.5px;color:var(--ink);opacity:.85;line-height:1.4}
 .moveSel{flex:none;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;padding:0 6px}
 .pinNum{background:#12203A;padding:2px 7px;border-radius:999px}
-.pace3{grid-template-columns:1fr 1fr 1fr}.pace3 button{height:auto;padding:8px 4px;flex-direction:column;gap:1px;color:var(--ink)}.pace3 button small{font-size:12px;font-weight:600;color:var(--muted)}
+.pace3{grid-template-columns:1fr 1fr}.pace3 button{height:auto;padding:8px 4px;flex-direction:column;gap:1px;color:var(--ink)}.pace3 button small{font-size:12px;font-weight:600;color:var(--muted)}
 .pace3 button.on{border-color:var(--ink);background:var(--ink);color:#fff}.pace3 button.on small{color:#C9D1DD}
 .mix{display:flex;flex-direction:column;gap:12px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}
 .mixBar{display:flex;height:34px;border-radius:10px;overflow:hidden;background:var(--soft)}
@@ -1791,7 +1791,7 @@ function rpPick(k){
   drawRP();
 }
 var btPace='balanced';
-function setPace(v){btPace=v;document.querySelectorAll('#btPace button').forEach(function(b,i){b.className=['relaxed','balanced','packed'][i]===v?'on':''});mixText()}
+function setPace(v){btPace=v;document.querySelectorAll('#btPace button').forEach(function(b,i){b.className=['relaxed','balanced'][i]===v?'on':''});mixText()}
 /* Trip mix: how much of the trip is sights / food / coffee / nightlife / shopping (always 100%) */
 var MIX_CATS=[
   {k:'sights',n:'Sights & culture',d:'Landmarks, museums, viewpoints, nature',ico:'🏛',c:'#1F5FD6',bg:'#E8EEFB',one:'sight',many:'sights'},
@@ -1830,7 +1830,7 @@ function mixPaint(skip){
 }
 // Plain-words result: what the plan will contain for these dates and pace
 function mixCounts(nDays){
-  var per={relaxed:3,balanced:4,packed:6}[btPace]||4,total=nDays*per,o={};
+  var per={relaxed:3,balanced:4}[btPace]||4,total=nDays*per,o={};
   MIX_CATS.forEach(function(c){o[c.k]=Math.round(total*btMix[c.k]/100)});
   o.night=Math.min(o.night,nDays);if(btMix.night&&!o.night)o.night=1;
   return o;
@@ -1848,7 +1848,7 @@ function buildTripForm(fromTrips){
     '<label class="lbl">City or destination<input class="field" id="btCity" placeholder="e.g. Seoul"></label>'+
     '<div class="lbl">Dates<div class="sub" id="rpHint" style="font-weight:600">Tap your arrival day, then your last day</div></div><div id="rp"></div>'+
     '<div class="lbl">How busy should the days be?<div class="seg pace3" id="btPace">'+
-      [['relaxed','Relaxed','2–3 a day'],['balanced','Balanced','4 a day'],['packed','Packed','6 a day']].map(function(o){return '<button class="'+(o[0]===btPace?'on':'')+'" onclick="setPace(\''+o[0]+'\')"><b>'+o[1]+'</b><small>'+o[2]+'</small></button>'}).join('')+'</div></div>'+
+      [['relaxed','Relaxed','2–3 a day'],['balanced','Balanced','4 a day']].map(function(o){return '<button class="'+(o[0]===btPace?'on':'')+'" onclick="setPace(\''+o[0]+'\')"><b>'+o[1]+'</b><small>'+o[2]+'</small></button>'}).join('')+'</div></div>'+
     '<div class="lbl">What should the trip be made of?<div class="sub" style="font-weight:600">Slide to change. The rest adjusts so it always adds up to 100%.</div></div><div class="mix" id="mix"></div>'+
     '<label class="lbl">Anything else? (optional)<textarea class="field" id="btWish" style="height:80px" placeholder="e.g. techno clubs, one day of nature, vegetarian food"></textarea></label>'+
     '<div class="sub" style="margin-top:-6px">Up to 14 days. Holidays and events for those dates are included.</div>'+
