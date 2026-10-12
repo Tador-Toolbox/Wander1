@@ -1674,7 +1674,15 @@ function getPos(){
 }
 function cityName(pos){
   // Phone geocoder first; if it fails or finds no town, ask the server (geocode + nearest locality)
-  var viaServer=function(){return api('/ai/city-at?lat='+pos.lat+'&lng='+pos.lng).then(function(r){return [r.city,r.country].filter(Boolean).join(', ')}).catch(function(){return ''})};
+  // Last resorts straight from the phone: BigDataCloud, then OpenStreetMap (both free, no key)
+  var viaPhone=function(){
+    return fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='+pos.lat+'&longitude='+pos.lng+'&localityLanguage=en').then(function(r){return r.json()}).then(function(d){
+      var c=d.city||d.locality||'';if(c)return [c,d.countryName].filter(Boolean).join(', ');throw 0;
+    }).catch(function(){
+      return fetch('https://nominatim.openstreetmap.org/reverse?format=json&zoom=10&accept-language=en&lat='+pos.lat+'&lon='+pos.lng).then(function(r){return r.json()}).then(function(o){var a=o.address||{},c=a.city||a.town||a.village||a.municipality||'';return c?[c,a.country].filter(Boolean).join(', '):''}).catch(function(){return ''});
+    });
+  };
+  var viaServer=function(){return api('/ai/city-at?lat='+pos.lat+'&lng='+pos.lng).then(function(r){return [r.city,r.country].filter(Boolean).join(', ')}).catch(function(){return ''}).then(function(c){return c||viaPhone()})};
   return new Promise(function(res){
     if(!pos)return res('');
     try{
