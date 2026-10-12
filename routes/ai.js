@@ -14,12 +14,24 @@ function extractJSON(text) {
 /* ─────────────────────────────────────────
    GOOGLE PLACES HELPERS
 ───────────────────────────────────────── */
-async function searchGooglePlaces(query, apiKey) {
+// center {lat,lng}: bias the search there and DROP results farther than maxKm (stops "VOID Athens" → VOID Bangkok)
+function kmBetween(a, b) {
+  const dx = (a.lat - b.lat) * 111, dy = (a.lng - b.lng) * 111 * Math.cos(a.lat * Math.PI / 180);
+  return Math.sqrt(dx * dx + dy * dy);
+}
+async function searchGooglePlaces(query, apiKey, center, maxKm = 60) {
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`;
+    const bias = center && center.lat != null ? `&location=${center.lat},${center.lng}&radius=30000` : '';
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}${bias}&key=${apiKey}`;
     const r = await fetch(url);
     const d = await r.json();
-    return d.results || [];
+    let out = d.results || [];
+    if (bias) {
+      const far = out.filter(p => p.geometry && kmBetween(center, p.geometry.location) > maxKm);
+      if (far.length) console.log('[places] dropped far results for', query, '→', far.map(p => p.name + ' (' + (p.formatted_address || '').split(',').slice(-1)[0].trim() + ')').join('; '));
+      out = out.filter(p => !p.geometry || kmBetween(center, p.geometry.location) <= maxKm);
+    }
+    return out;
   } catch (e) { console.error('Places search error:', e.message); return []; }
 }
 
@@ -1288,6 +1300,9 @@ router.post('/event-discover', auth, async (req, res) => {
     const exclude = Array.isArray(req.body.exclude) ? req.body.exclude.slice(0, 60).map(x => String(x).toLowerCase().trim()) : [];
     const isExcluded = n => { const v = String(n || '').toLowerCase().trim(); return !!v && exclude.some(x => x && (v === x || v.includes(x) || x.includes(v))); };
     const mapsKey = process.env.GOOGLE_MAPS_API_KEY;
+    // Where the user is: phone GPS, else the city centre — every venue must be near it
+    let evCenter = req.body.lat != null && req.body.lng != null ? { lat: +req.body.lat, lng: +req.body.lng } : null;
+    if (!evCenter) evCenter = await require('../services/verifyPlace').cityCenter(locationStr, mapsKey).catch(() => null);
 
     // Load Identity Cube
     const User = require('../models/User');
@@ -1317,7 +1332,7 @@ router.post('/event-discover', auth, async (req, res) => {
 
     // Run up to 5 searches in parallel
     const searchResults = await Promise.all(
-      queries.slice(0, 5).map(q => searchGooglePlaces(q, mapsKey))
+      queries.slice(0, 5).map(q => searchGooglePlaces(q, mapsKey, evCenter))
     );
 
     // Flatten + deduplicate by place_id
@@ -1541,12 +1556,12 @@ Return ONLY valid JSON:
           
           // First try exact quoted search — forces Google to find THIS specific venue
           const exactQuery = `"${ev.name}" ${locationStr}`;
-          let results = await searchGooglePlaces(exactQuery, mapsKey);
+          let results = await searchGooglePlaces(exactQuery, mapsKey, evCenter);
           
           // If no results with quotes, fall back to unquoted search
           if (!results.length) {
             const fallbackQuery = `${ev.name} ${venueType} ${locationStr}`.trim();
-            results = await searchGooglePlaces(fallbackQuery, mapsKey);
+            results = await searchGooglePlaces(fallbackQuery, mapsKey, evCenter);
           }
 
           if (!results.length) {
@@ -1564,7 +1579,8 @@ Return ONLY valid JSON:
 
               // Strict name match — normalize both, require 75% overlap
               const placeName = (d.name || '').toLowerCase().replace(/[^a-z0-9]/g,'');
-              const searchName = ev.name.toLowerCase().replace(/[^a-z0-9]/g,'');
+              const cityWords = String(locationStr || '').toLowerCase().split(/[\s,]+/).filter(w => w.length > 2);
+              const searchName = ev.name.toLowerCase().split(/[^a-z0-9]+/).filter(w => w && !cityWords.includes(w) && !['club','nightclub','bar','the','disco'].includes(w)).join('') || ev.name.toLowerCase().replace(/[^a-z0-9]/g,'');
 
               // Exact substring match required — one must fully contain the other
               const directMatch = placeName === searchName ||
@@ -1689,7 +1705,7 @@ Do not explain. Just one word.`;
                   // to fix name mismatches like "Jimmy's Bar" → "JIMMYWHO? Bar & Lounge"
                   try {
                     const reCheckQuery = `"${ev.name}" ${locationStr}`;
-                    const reResults = await searchGooglePlaces(reCheckQuery, mapsKey);
+                    const reResults = await searchGooglePlaces(reCheckQuery, mapsKey, evCenter);
                     if (reResults.length) {
                       const reDetails = await getPlaceDetails(reResults[0].place_id, mapsKey);
                       if (reDetails) {
