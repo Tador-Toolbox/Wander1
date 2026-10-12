@@ -1774,6 +1774,9 @@ async function aiEvents(more){
       p.ev={match:ev.matchScore||0,people:ev.estimatedCapacity||0,capSrc:ev.capacitySource==='sources'?'by sources':'estimate by AI',price:ev.price||'',note:ev.conciergeNote||'',insta:ev.instagramUrl||'',web:ev.websiteUrl||'',tags:ev.tags||[],next:ev.nextEvent||null,maybe:ev.partyUnconfirmed?(ev.venueKind||'venue'):'',verified:!!ev.openConfirmed,unverified:!!ev.unverified};
       return p;
     }));
+    // Google opening hours: is it actually open tonight?
+    await Promise.all(items.map(function(p){if(!p||!p.placeId)return null;return googleNight(p.placeId).then(function(g){if(g&&g.closed){p.ev.closedTonight=g.next||' ';p.why='⛔ Closed tonight · '+p.why}})}));
+    items.sort(function(a,b){return (a&&a.ev&&a.ev.closedTonight?1:0)-(b&&b.ev&&b.ev.closedTonight?1:0)});
     if(!more&&tonightP)await tonightP;
     var seenP={};items=items.filter(function(x){if(!x)return false;var k=x.placeId||x.name;if(seenP[k])return false;seenP[k]=1;return true});
     aiShowResults('Events near you',items,more);
@@ -2100,15 +2103,35 @@ function fmtEvDate(n){
   var d=new Date(n.startTime||n.date);if(isNaN(d))return '';
   return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+(n.startTime?' · '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):'');
 }
+// Is the place open at any time tonight (21:00–03:00 its local time), by Google's opening hours?
+function googleNight(placeId){
+  return new Promise(function(res){
+    try{new google.maps.places.PlacesService(map).getDetails({placeId:placeId,fields:['opening_hours','utc_offset_minutes','business_status']},function(d,st){
+      if(st!=='OK'||!d)return res(null);
+      if(d.business_status&&d.business_status!=='OPERATIONAL')return res({closed:true,next:''});
+      var per=d.opening_hours&&d.opening_hours.periods;if(!per||!per.length)return res(null);
+      if(per.length===1&&per[0].open&&!per[0].close)return res({closed:false}); // open 24/7
+      var W=10080,now=new Date(Date.now()+(d.utc_offset_minutes||0)*60000),nowM=now.getUTCDay()*1440+now.getUTCHours()*60+now.getUTCMinutes();
+      var nd=now.getUTCHours()<6?(now.getUTCDay()+6)%7:now.getUTCDay(),w0=nd*1440+21*60,w1=w0+6*60;
+      var mm=function(x){return x.day*1440+parseInt(String(x.time).slice(0,2),10)*60+parseInt(String(x.time).slice(2),10)};
+      var open=per.some(function(p){if(!p.open||!p.close)return false;var o=mm(p.open),c=mm(p.close);if(c<=o)c+=W;
+        return [0,W,-W].some(function(k){return o+k<w1&&c+k>w0})});
+      if(open)return res({closed:false});
+      var nxt=per.filter(function(p){return p.open}).map(function(p){var o=mm(p.open);return {o:o<=nowM?o+W:o,p:p}}).sort(function(a,b){return a.o-b.o})[0];
+      var t=nxt?String(nxt.p.open.time):'';
+      res({closed:true,next:nxt?['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][nxt.p.open.day]+' '+t.slice(0,2)+':'+t.slice(2):''});
+    })}catch(e){res(null)}
+  });
+}
 function evBlock(e){
   if(!e)return '';
-  var h='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+  var h=(e.closedTonight?'<div style="background:#FDECEC;color:#B42318;border-radius:12px;padding:10px 12px;font-weight:700">⛔ Closed tonight according to Google'+(e.closedTonight.trim()?' · opens '+esc(e.closedTonight):'')+'</div>':'')+'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
   if(e.match)h+='<span class="match" style="font-size:15px;padding:6px 12px;margin:0">'+e.match+'% match</span>';
   if(e.people)h+='<span class="ppl" style="font-size:14px;padding:6px 12px;margin:0">👥 ~'+e.people+' people <span style="font-weight:600;opacity:.7">('+e.capSrc+')</span></span>';
   if(e.price)h+='<span class="ppl" style="font-size:14px;padding:6px 12px;margin:0">💰 '+esc(e.price)+'</span>';
   h+='</div>';
   if(e.maybe)h+='<div style="background:#FFF4E5;border-radius:12px;padding:10px 12px;font-size:14px;color:#8A4B0F;font-weight:600">⚠ This is a '+esc(e.maybe)+', not a club. It sometimes turns into a party — check before you go.</div>';
-  if(e.verified)h+='<div style="color:#1E7A45;font-weight:700;font-size:14px">✓ Verified open</div>';
+  if(e.verified&&!e.closedTonight)h+='<div style="color:#1E7A45;font-weight:700;font-size:14px">✓ Verified open</div>';
   else if(e.unverified)h+='<div style="color:#B45309;font-weight:700;font-size:14px">⚠ Verify before going</div>';
   if(e.next&&e.next.title)h+='<div style="background:#FFF7E6;border-radius:14px;padding:12px 14px;font-size:15px"><div class="eyebrow" style="color:#B45309">Next event</div><b>'+esc(e.next.title)+'</b><div class="sub" style="margin-top:2px">'+esc(fmtEvDate(e.next))+'</div></div>';
   if(e.tags&&e.tags.length)h+='<div class="tagRow">'+e.tags.slice(0,5).map(function(t){return '<span>'+esc(t)+'</span>'}).join('')+'</div>';
